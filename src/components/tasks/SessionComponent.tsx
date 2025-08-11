@@ -1,6 +1,6 @@
 import { Coffee, LunchDining, Work } from "@mui/icons-material";
 import { IconButton, Tooltip } from "@mui/material";
-import { SessionItem } from "../context/TimerContext";
+import { SessionItem } from "@/features/timer/types";
 
 type SessionComponentProps = {
   session: SessionItem;

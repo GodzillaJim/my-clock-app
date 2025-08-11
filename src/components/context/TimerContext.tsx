@@ -10,11 +10,21 @@ import { v4 } from "uuid";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import { createStorageService } from "@/services/storage";
+import { 
+  SessionRecord, 
+  SessionType as TimerSessionType, 
+  SessionItem,
+  CompletionStatus,
+  fromSessionItem,
+  toSessionItem 
+} from "@/features/timer/types";
 
 dayjs.extend(duration);
 
 export type SessionType = "focus" | "shortBreak" | "longBreak" | "completion";
-export type SessionItem = {
+
+// Legacy session type for internal use
+type LegacySessionItem = {
   id: string;
   type: SessionType;
   minutes: number;
@@ -24,13 +34,13 @@ export type SessionItem = {
 };
 
 type TimerContextType = {
-  sessions: SessionItem[];
-  setSessions: React.Dispatch<React.SetStateAction<SessionItem[]>>;
+  sessions: LegacySessionItem[];
+  setSessions: React.Dispatch<React.SetStateAction<LegacySessionItem[]>>;
   currentSessionIndex: number;
   setCurrentSessionIndex: (index: number) => void;
   isRunning: boolean;
   setIsRunning: React.Dispatch<React.SetStateAction<boolean>>;
-  handleSessionComplete?: (updatedData: SessionItem[]) => void;
+  handleSessionComplete?: (updatedData: LegacySessionItem[]) => void;
   tasks: TaskType[];
   setTasks: (tasks: TaskType[]) => void;
   currentTaskIndex: number;
@@ -42,7 +52,7 @@ type TimerContextType = {
 };
 
 type SessionStorageType = {
-  sessions: SessionItem[];
+  sessions: LegacySessionItem[];
   tasks: TaskType[];
   currentTaskIndex: number;
   currentSessionIndex: number;
@@ -74,25 +84,45 @@ export const TimerContextProvider = ({
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
 
-  const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [sessions, setSessions] = useState<LegacySessionItem[]>([]);
   const [currentSessionIndex, setCurrentSessionIndex] = useState<number>(0);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const task = tasks[currentTaskIndex];
 
   const timerRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  const handleSessionComplete = (updatedData: SessionItem[]) => {
+  const handleSessionComplete = (updatedData: LegacySessionItem[]) => {
     // If there is a next session, move forward
     if (currentSessionIndex < updatedData.length - 1) {
       setCurrentSessionIndex((prev) => prev + 1);
 
-      // Add session to task
+      // Add session to task - convert legacy session to proper SessionItem
       const updatedTasks = [...tasks];
       const currentTask = updatedTasks[currentTaskIndex];
+      const legacySession = updatedData[currentSessionIndex];
+      
+      // Convert legacy session to SessionItem format
+      const sessionItem: SessionItem = {
+        ...toSessionItem({
+          id: legacySession.id,
+          type: legacySession.type === 'focus' ? TimerSessionType.FOCUS : 
+                legacySession.type === 'shortBreak' ? TimerSessionType.SHORT_BREAK :
+                legacySession.type === 'longBreak' ? TimerSessionType.LONG_BREAK : TimerSessionType.FOCUS,
+          sessionNumber: legacySession.sessionNumber || 0,
+          plannedDuration: legacySession.minutes,
+          actualDuration: legacySession.minutes - legacySession.remainingMinutes,
+          startTime: new Date(),
+          endTime: new Date(),
+          pausedTime: 0,
+          completionStatus: legacySession.skipped ? CompletionStatus.SKIPPED : CompletionStatus.COMPLETED,
+          remainingTime: legacySession.remainingMinutes * 60
+        })
+      };
+      
       if (currentTask?.sessions) {
-        currentTask.sessions.push(updatedData[currentSessionIndex]);
+        currentTask.sessions.push(sessionItem);
       } else {
-        currentTask.sessions = [updatedData[currentSessionIndex]];
+        currentTask.sessions = [sessionItem];
       }
       setTasks(updatedTasks);
     } else {
@@ -150,11 +180,11 @@ export const TimerContextProvider = ({
     // Add a 15 minute break after 4 sessions
     // Repeat until time is up
     // Return an array of session objects
-    const sessions: SessionItem[] = [];
+    const sessions: LegacySessionItem[] = [];
     let sessionNumber = 1;
     let remainingMinutes = timeInMinutes;
     while (remainingMinutes > 0) {
-      const session: SessionItem = {
+      const session: LegacySessionItem = {
         id: v4(),
         type: "focus",
         minutes: Math.min(remainingMinutes, 25),
@@ -164,7 +194,7 @@ export const TimerContextProvider = ({
       sessions.push(session);
       remainingMinutes -= session.minutes;
       if (remainingMinutes > 0) {
-        const breakSession: SessionItem = {
+        const breakSession: LegacySessionItem = {
           id: v4(),
           type: sessionNumber % 4 === 0 ? "longBreak" : "shortBreak",
           minutes: sessionNumber % 4 === 0 ? 15 : 5,

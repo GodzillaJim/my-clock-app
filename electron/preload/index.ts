@@ -23,6 +23,35 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   // ...
 })
 
+// --------- Expose Focus Sessions Electron API ---------
+contextBridge.exposeInMainWorld('electronAPI', {
+  // System tray functions
+  minimizeToTray: () => ipcRenderer.invoke('minimize-to-tray'),
+  showWindow: () => ipcRenderer.invoke('show-window'),
+  updateTrayStatus: (status: string) => ipcRenderer.invoke('update-tray-status', status),
+  sessionNotification: (notification: { title: string; body: string }) => 
+    ipcRenderer.invoke('session-notification', notification),
+  
+  // Event listeners for tray actions
+  onTrayStartSession: (callback: () => void) => {
+    ipcRenderer.on('tray-start-session', callback)
+  },
+  onTrayOpenSettings: (callback: () => void) => {
+    ipcRenderer.on('tray-open-settings', callback)
+  },
+  onTrayOpenHistory: (callback: () => void) => {
+    ipcRenderer.on('tray-open-history', callback)
+  },
+  onGlobalShortcutStartSession: (callback: () => void) => {
+    ipcRenderer.on('global-shortcut-start-session', callback)
+  },
+  
+  // Remove listeners
+  removeAllListeners: (channel: string) => {
+    ipcRenderer.removeAllListeners(channel)
+  }
+})
+
 // --------- Preload scripts loading ---------
 function domReady(condition: DocumentReadyState[] = ['complete', 'interactive']) {
   return new Promise(resolve => {

@@ -1,5 +1,5 @@
 import { v4 } from "uuid";
-import { SessionItem, SessionType } from "../types";
+import { SessionItem, SessionType, CompletionStatus, TimerState } from "../types";
 
 interface SessionConfig {
   focusDuration: number;
@@ -11,15 +11,22 @@ interface SessionConfig {
 export const createSession = (
   type: SessionType,
   minutes: number,
-  sessionNumber?: number
+  sessionNumber: number = 1
 ): SessionItem => ({
   id: v4(),
   type,
-  minutes,
   sessionNumber,
+  plannedDuration: minutes,
+  actualDuration: 0,
+  startTime: new Date(),
+  endTime: null,
+  pausedTime: 0,
+  completionStatus: CompletionStatus.INTERRUPTED,
+  remainingTime: minutes * 60,
+  // Backward compatibility properties
+  minutes,
   remainingMinutes: minutes,
-  createdAt: new Date(),
-  skipped: false,
+  completedAt: undefined
 });
 
 export const createSessionGenerator = (config: SessionConfig) => {
@@ -42,10 +49,9 @@ export const createSessionGenerator = (config: SessionConfig) => {
             : "shortBreak";
         const breakDuration =
           breakType === "longBreak" ? config.longBreak : config.shortBreak;
-        yield createSession(SessionType.LONG_BREAK, breakDuration);
+        const breakSessionType = breakType === "longBreak" ? SessionType.LONG_BREAK : SessionType.SHORT_BREAK;
+        yield createSession(breakSessionType, breakDuration);
       }
     }
-
-    yield createSession(SessionType.COMPLETION, 0);
   };
 };

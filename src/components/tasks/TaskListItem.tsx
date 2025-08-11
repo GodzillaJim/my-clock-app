@@ -38,13 +38,13 @@ import { number, object, string } from "yup";
 type TaskListItemProps = {
   taskIndex: number;
   task: TaskType;
-  setTask: (task: TaskType) => void;
+  updateTask: (id: string, updates: Partial<TaskType>) => void;
   deleteTask: (id: string) => void;
 };
 
 export const TaskListItem = ({
   task,
-  setTask,
+  updateTask,
   deleteTask,
 }: TaskListItemProps) => {
   const [taskEdit, setTaskEdit] = useState(false);
@@ -73,11 +73,12 @@ export const TaskListItem = ({
       durationInMinutes: number().required("Duration is required"),
     }),
     onSubmit: (values) => {
-      setTask({
+      updateTask(task.id, {
         ...task,
         title: values.title || "",
         durationInMinutes: values.durationInMinutes || 0,
       });
+
       setTaskEdit(false);
     },
   });
@@ -165,46 +166,49 @@ export const TaskListItem = ({
           </Box>
           <Box>
             <Collapse in={taskEdit}>
-              <Box display={"flex"} gap={3}>
-                <TextField
-                  name="title"
-                  value={formik.values.title}
-                  onChange={formik.handleChange}
-                  size="small"
-                  error={formik.touched.title && Boolean(formik.errors.title)}
-                  helperText={formik.touched.title && formik.errors.title}
-                />
-                <TextField
-                  type="number"
-                  sx={{ height: 20, width: 60 }}
-                  size="small"
-                  name="durationInMinutes"
-                  value={formik.values.durationInMinutes}
-                  onChange={formik.handleChange}
-                  slotProps={{
-                    htmlInput: {
-                      sx: { py: 1, px: 0.5, pl: 1.5 },
-                    },
-                  }}
-                  error={
-                    formik.touched.durationInMinutes &&
-                    Boolean(formik.errors.durationInMinutes)
-                  }
-                  helperText={
-                    formik.touched.durationInMinutes &&
-                    formik.errors.durationInMinutes
-                  }
-                />
-                <Button
-                  variant="contained"
-                  color="success"
-                  onClick={() => {
-                    setTaskEdit(false);
-                  }}
-                >
-                  Save
-                </Button>
-              </Box>
+              <form noValidate onSubmit={formik.handleSubmit}>
+                <Box display={"flex"} gap={3}>
+                  <TextField
+                    name="title"
+                    value={formik.values.title}
+                    onChange={formik.handleChange}
+                    size="small"
+                    error={formik.touched.title && Boolean(formik.errors.title)}
+                    helperText={formik.touched.title && formik.errors.title}
+                  />
+                  <TextField
+                    type="number"
+                    sx={{ height: 20, width: 60 }}
+                    size="small"
+                    name="durationInMinutes"
+                    value={formik.values.durationInMinutes}
+                    onChange={formik.handleChange}
+                    slotProps={{
+                      htmlInput: {
+                        sx: { py: 1, px: 0.5, pl: 1.5 },
+                      },
+                    }}
+                    error={
+                      formik.touched.durationInMinutes &&
+                      Boolean(formik.errors.durationInMinutes)
+                    }
+                    helperText={
+                      formik.touched.durationInMinutes &&
+                      formik.errors.durationInMinutes
+                    }
+                  />
+                  <Button
+                    variant="contained"
+                    color="success"
+                    type="submit"
+                    onClick={() => {
+                      setTaskEdit(false);
+                    }}
+                  >
+                    Save
+                  </Button>
+                </Box>
+              </form>
             </Collapse>
 
             <Collapse in={!taskEdit}>

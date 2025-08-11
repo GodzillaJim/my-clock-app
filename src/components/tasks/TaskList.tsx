@@ -32,7 +32,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Draggable } from "react-drag-reorder";
 import { v4 } from "uuid";
 import { TaskListItem } from "./TaskListItem";
-import { SessionItem } from "../context/TimerContext";
+import { SessionItem, toSessionItem } from "../../features/timer/types";
 import { useTimerContext } from "@/features/timer/context/TimerContext";
 import { TaskType as ITask } from "../../features/timer/types";
 // sx={{ maxHeight: 500, overflow: "auto" }}
@@ -70,7 +70,7 @@ type TaskListProps = {
 };
 
 export const TaskList = () => {
-  const { tasks, setTasks, addTask, removeTask } = useTimerContext();
+  const { tasks, setTasks, addTask, removeTask, updateTask } = useTimerContext();
 
   const deleteTask = (taskId: string) => {
     removeTask(taskId);
@@ -122,7 +122,8 @@ export const TaskList = () => {
         let remainingMinutes = 0;
         if (task?.sessions?.length) {
           task.sessions.forEach((session) => {
-            remainingMinutes += session.remainingMinutes;
+            const sessionItem = toSessionItem(session);
+            remainingMinutes += sessionItem.remainingMinutes;
           });
         }
 
@@ -145,7 +146,8 @@ export const TaskList = () => {
         let remainingMinutes = 0;
         if (task?.sessions?.length) {
           task.sessions.forEach((session) => {
-            remainingMinutes += session.remainingMinutes;
+            const sessionItem = toSessionItem(session);
+            remainingMinutes += sessionItem.remainingMinutes;
           });
         }
 
@@ -155,6 +157,23 @@ export const TaskList = () => {
 
     return totalMinutes - remainingMinutesAcrossTasks;
   };
+
+  const taskList = useMemo(() => {
+    console.log('TaskList: tasks', tasks);
+    return (
+      <CustomList>
+        {tasks.map((task, index) => (
+          <TaskListItem
+            taskIndex={index}
+            key={task.id}
+            updateTask={updateTask}
+            deleteTask={deleteTask}
+            task={task}
+          />
+        ))}
+      </CustomList>
+    );
+  }, [tasks]);
 
   return (
     <Grid2 m={2} width={"100%"}>
@@ -247,17 +266,7 @@ export const TaskList = () => {
               </List>
             </Box>
             <Divider />
-            <CustomList as={Draggable}>
-              {tasks.map((task, index) => (
-                <TaskListItem
-                  taskIndex={index}
-                  key={task.id}
-                  setTask={setTask}
-                  deleteTask={deleteTask}
-                  task={task}
-                />
-              ))}
-            </CustomList>
+            {taskList}
           </Box>
         </CardContent>
       </Card>

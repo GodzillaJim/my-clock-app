@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { TaskType } from '../types';
 import { v4 } from 'uuid';
 import { createStorageService } from '@/services/storage';
@@ -28,6 +28,14 @@ export const useTasks = (storageKey = 'pomodoro-tasks') => {
     setCurrentTaskIndex(prev => validateTaskIndex(tasks, prev));
   }, [tasks, storage]);
 
+  const updateTask = useCallback((taskId: string, updates: Partial<TaskType>) => {
+    setTasks(prev => prev.map(task => 
+      task.id === taskId ? { ...task, ...updates } : task
+    ));
+  },
+    [tasks]
+  );
+
   return {
     tasks,
     currentTaskIndex,
@@ -40,6 +48,7 @@ export const useTasks = (storageKey = 'pomodoro-tasks') => {
     },
     removeTask: (taskId: string) => {
       setTasks(prev => prev.filter(t => t.id !== taskId));
-    }
+    },
+    updateTask
   };
 };

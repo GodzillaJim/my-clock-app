@@ -1,60 +1,131 @@
-# electron-vite-react
+# Focus Sessions - Pomodoro Timer App
 
-[![awesome-vite](https://awesome.re/mentioned-badge.svg)](https://github.com/vitejs/awesome-vite)
-![GitHub stars](https://img.shields.io/github/stars/caoxiemeihao/vite-react-electron?color=fa6470)
-![GitHub issues](https://img.shields.io/github/issues/caoxiemeihao/vite-react-electron?color=d8b22d)
-![GitHub license](https://img.shields.io/github/license/caoxiemeihao/vite-react-electron)
-[![Required Node.JS >= 14.18.0 || >=16.0.0](https://img.shields.io/static/v1?label=node&message=14.18.0%20||%20%3E=16.0.0&logo=node.js&color=3f893e)](https://nodejs.org/about/releases)
+[![Built with Electron](https://img.shields.io/badge/Built%20with-Electron-47848f.svg)](https://electronjs.org/)
+[![React](https://img.shields.io/badge/React-18.3.1-61dafb.svg)](https://reactjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-5.4.11-646cff.svg)](https://vitejs.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4.2-3178c6.svg)](https://www.typescriptlang.org/)
+[![MUI](https://img.shields.io/badge/MUI-6.3.0-0081cb.svg)](https://mui.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 English | [简体中文](README.zh-CN.md)
 
 ## 👀 Overview
 
-📦 Ready out of the box  
-🎯 Based on the official [template-react-ts](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts), project structure will be familiar to you  
-🌱 Easily extendable and customizable  
-💪 Supports Node.js API in the renderer process  
-🔩 Supports C/C++ native addons  
-🐞 Debugger configuration included  
-🖥 Easy to implement multiple windows  
+A modern, feature-rich Pomodoro Timer application built with Electron, React, and TypeScript. Focus Sessions helps you maintain productivity through structured work sessions with comprehensive tracking and customization options.
 
-## 🛫 Quick Setup
+### ✨ Key Features
 
-```sh
-# clone the project
-git clone https://github.com/electron-vite/electron-vite-react.git
+🍅 **Smart Pomodoro Timer**
+- Customizable focus sessions (1-120 minutes)
+- Automatic break scheduling (short & long breaks)
+- Quick duration presets for flexible session lengths
+- Accurate timing with pause/resume functionality
 
-# enter the project directory
-cd electron-vite-react
+📊 **Session Tracking & Analytics**
+- Daily session history with completion status
+- Real-time statistics (focus time, streaks, averages)
+- Export data to CSV/JSON formats
+- Persistent storage with IndexedDB
 
-# install dependency
+🔔 **Rich Notification System**
+- Audio notifications with volume control
+- System tray integration with status updates
+- Visual and system notifications
+- Customizable notification sounds
+
+⚙️ **Comprehensive Settings**
+- Light/dark/system theme support
+- Flexible time formats (12h/24h)
+- Auto-start options for sessions and breaks
+- Keyboard shortcuts for quick control
+
+🖥️ **Cross-Platform Desktop App**
+- System tray integration for background operation
+- Window state persistence
+- Global keyboard shortcuts
+- Auto-updater support  
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js (>= 18.0.0)
+- npm or yarn package manager
+
+### Installation & Development
+
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd focus-sessions
+
+# Install dependencies
 npm install
 
-# develop
+# Start development server
 npm run dev
 ```
 
-## 🐞 Debug
+### Building for Production
 
-![electron-vite-react-debug.gif](/electron-vite-react-debug.gif)
+```bash
+# Build for current platform
+npm run build
 
-## 📂 Directory structure
+# Build for specific platforms
+npm run build:win    # Windows
+npm run build:mac    # macOS
+npm run build:linux  # Linux
 
-Familiar React application structure, just with `electron` folder on the top :wink:  
-*Files in this folder will be separated from your React application and built into `dist-electron`*  
+# Create distribution packages
+npm run dist         # Current platform
+npm run dist:win     # Windows installer
+```
+
+## 🏗️ Technical Architecture
+
+### Built With
+- **Frontend**: React 18, TypeScript, Material-UI (MUI)
+- **Desktop**: Electron 33 with secure IPC communication
+- **Build Tool**: Vite for fast development and optimized builds
+- **Storage**: IndexedDB for persistent local data
+- **Styling**: Emotion CSS-in-JS with MUI theme system
+- **Testing**: Vitest for unit tests, Playwright for E2E testing
+
+## 📂 Project Structure
 
 ```tree
-├── electron                                 Electron-related code
-│   ├── main                                 Main-process source code
-│   └── preload                              Preload-scripts source code
+├── electron/                    # Electron main process
+│   ├── main/                   # Main process source code
+│   │   ├── index.ts           # Application entry point
+│   │   └── update.ts          # Auto-updater implementation
+│   └── preload/               # Preload scripts for secure IPC
 │
-├── release                                  Generated after production build, contains executables
-│   └── {version}
-│       ├── {os}-{os_arch}                   Contains unpacked application executable
-│       └── {app_name}_{version}.{ext}       Installer for the application
+├── src/                        # React application source
+│   ├── components/            # UI components
+│   │   ├── timer/            # Timer-related components
+│   │   │   ├── FocusTimer.tsx # Main timer interface
+│   │   │   └── TimerDisplay.tsx
+│   │   ├── history/          # Session history components
+│   │   │   └── SessionHistory.tsx
+│   │   └── settings/         # Settings interface
+│   │       └── FocusSettings.tsx
+│   ├── features/             # Feature modules
+│   │   └── timer/           # Timer business logic
+│   │       ├── hooks/       # Custom React hooks
+│   │       ├── types/       # TypeScript type definitions
+│   │       └── utils/       # Utility functions
+│   ├── services/            # Application services
+│   │   ├── focusStorage.ts  # Data persistence layer
+│   │   └── notificationService.ts # Notification handling
+│   └── styles/              # Theme and styling
 │
-├── public                                   Static assets
-└── src                                      Renderer source code, your React application
+├── public/                     # Static assets
+│   ├── sounds/                # Notification sounds
+│   └── icon.svg              # Application icon
+│
+├── build/                     # Build configuration
+├── release/                   # Production builds (generated)
+└── test/                     # Test files
 ```
 
 <!--
@@ -80,12 +151,78 @@ export default {
 ```
 -->
 
-## 🔧 Additional features
+## 🎯 Core Features
 
-1. electron-updater 👉 [see docs](src/components/update/README.md)
-1. playwright
+### Timer Functionality
+- **Flexible Session Lengths**: Set focus sessions from 1-120 minutes
+- **Smart Break System**: Automatic short (5min) and long (15min) breaks
+- **Quick Presets**: Common durations (15, 25, 30, 45, 60 minutes)
+- **Pause & Resume**: Full control over session timing
+- **Progress Tracking**: Visual progress indicators and remaining time
 
-## ❔ FAQ
+### Data Management
+- **Session History**: Complete record of daily sessions
+- **Statistics**: Focus time, completion rates, streak tracking
+- **Data Export**: Export session data to CSV or JSON
+- **Persistent Storage**: Data survives app restarts
+- **Daily Reset**: Automatic daily history organization
 
-- [C/C++ addons, Node.js modules - Pre-Bundling](https://github.com/electron-vite/vite-plugin-electron-renderer#dependency-pre-bundling)
-- [dependencies vs devDependencies](https://github.com/electron-vite/vite-plugin-electron-renderer#dependencies-vs-devdependencies)
+### User Experience
+- **System Tray**: Background operation with tray icon
+- **Notifications**: Audio, visual, and system notifications
+- **Themes**: Light, dark, and system-based themes
+- **Keyboard Shortcuts**: Quick access to all functions
+- **Time Formats**: 12-hour or 24-hour display options
+
+### Advanced Features
+- **Auto-updater**: Seamless application updates
+- **Multi-platform**: Windows, macOS, and Linux support
+- **Accessibility**: Screen reader friendly interface
+- **Performance**: Optimized for minimal resource usage
+
+## 🧪 Testing
+
+```bash
+# Run unit tests
+npm run test
+
+# Run E2E tests
+npm run test:e2e
+
+# Build for testing
+npm run pretest
+```
+
+## 📋 Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production (current platform) |
+| `npm run build:win` | Build for Windows |
+| `npm run build:mac` | Build for macOS |
+| `npm run build:linux` | Build for Linux |
+| `npm run dist` | Create distribution package |
+| `npm run dist:win` | Create Windows installer |
+| `npm run preview` | Preview production build |
+| `npm run test` | Run unit tests |
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Built on the foundation of [electron-vite-react](https://github.com/electron-vite/electron-vite-react)
+- Material-UI for the beautiful component library
+- The Electron and Vite communities for excellent tooling

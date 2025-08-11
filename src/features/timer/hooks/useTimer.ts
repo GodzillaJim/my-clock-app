@@ -1,6 +1,6 @@
 // src/features/timer/hooks/useTimer.ts
 import { useState, useRef, useEffect, useCallback } from "react";
-import { TimerState, type SessionItem, type ServiceError } from "../types";
+import { TimerState, CompletionStatus, type SessionItem, type ServiceError } from "../types";
 import { notificationService } from "@/services/notification";
 
 const PRECISION = 100; // Update interval in ms
@@ -27,6 +27,7 @@ export const useTimer = (
         origin: "timer",
         error: new Error("Invalid session state"),
         context: { currentSession },
+        timestamp: new Date(),
       });
       return false;
     }
@@ -71,6 +72,7 @@ export const useTimer = (
         origin: "notification",
         error: err as Error,
         context: { session: currentSession },
+        timestamp: new Date(),
       });
     }
 
@@ -150,7 +152,7 @@ export const useTimer = (
   const skipSession = useCallback(() => {
     updateSession(currentSession.id, {
       remainingMinutes: 0,
-      skipped: true,
+      completionStatus: CompletionStatus.SKIPPED,
     });
     handleSessionEnd();
   }, [currentSession?.id, handleSessionEnd, updateSession]);
