@@ -16,7 +16,7 @@ A modern, feature-rich Pomodoro Timer application built with Electron, React, an
 ### ✨ Key Features
 
 🍅 **Smart Pomodoro Timer**
-- Customizable focus sessions (1-120 minutes)
+- Customizable focus sessions (1-240 minutes)
 - Automatic break scheduling (short & long breaks)
 - Quick duration presets for flexible session lengths
 - Accurate timing with pause/resume functionality
@@ -154,7 +154,7 @@ export default {
 ## 🎯 Core Features
 
 ### Timer Functionality
-- **Flexible Session Lengths**: Set focus sessions from 1-120 minutes
+- **Flexible Session Lengths**: Set focus sessions from 1-240 minutes
 - **Smart Break System**: Automatic short (5min) and long (15min) breaks
 - **Quick Presets**: Common durations (15, 25, 30, 45, 60 minutes)
 - **Pause & Resume**: Full control over session timing

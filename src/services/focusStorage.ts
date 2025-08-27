@@ -11,11 +11,12 @@ import {
   SessionStats,
   formatDuration 
 } from '@/features/timer/types';
+import { FeedbackItem } from '@/components/feedback/FeedbackForm';
 
 class FocusStorageService {
   private readonly STORAGE_KEY = 'focus_sessions_app_state';
   private readonly DB_NAME = 'FocusSessionsDB';
-  private readonly DB_VERSION = 1;
+  private readonly DB_VERSION = 2;
   private db: IDBDatabase | null = null;
 
   async initialize(): Promise<void> {
@@ -44,6 +45,14 @@ class FocusStorageService {
         
         if (!db.objectStoreNames.contains('appState')) {
           db.createObjectStore('appState', { keyPath: 'key' });
+        }
+        
+        if (!db.objectStoreNames.contains('feedback')) {
+          const feedbackStore = db.createObjectStore('feedback', { keyPath: 'id' });
+          feedbackStore.createIndex('timestamp', 'timestamp', { unique: false });
+          feedbackStore.createIndex('type', 'type', { unique: false });
+          feedbackStore.createIndex('status', 'status', { unique: false });
+          feedbackStore.createIndex('severity', 'severity', { unique: false });
         }
       };
     });
@@ -406,6 +415,185 @@ class FocusStorageService {
       
       this.scheduleAutomaticReset();
     }, millisecondsUntilMidnight);
+  }
+
+  // Feedback Management Methods
+  async addFeedback(feedback: Omit<FeedbackItem, 'id' | 'timestamp' | 'status'>): Promise<string> {
+    if (!this.db) {
+      await this.initialize();
+    }
+
+    const feedbackItem: FeedbackItem = {
+      ...feedback,
+      id: `feedback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date(),
+      status: 'open'
+    };
+
+    const transaction = this.db!.transaction(['feedback'], 'readwrite');
+    const store = transaction.objectStore('feedback');
+    
+    await new Promise<void>((resolve, reject) => {
+      const request = store.add(feedbackItem);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+
+    return feedbackItem.id;
+  }
+
+  async getFeedback(filters?: {
+    status?: FeedbackItem['status'];
+    type?: FeedbackItem['type'];
+    severity?: FeedbackItem['severity'];
+    startDate?: Date;
+    endDate?: Date;
+  }): Promise<FeedbackItem[]> {
+    if (!this.db) {
+      await this.initialize();
+    }
+
+    const transaction = this.db!.transaction(['feedback'], 'readonly');
+    const store = transaction.objectStore('feedback');
+    
+    return new Promise((resolve) => {
+      const feedback: FeedbackItem[] = [];
+      const request = store.openCursor();
+      
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (cursor) {
+          const item = cursor.value as FeedbackItem;
+          let includeItem = true;
+
+          if (filters) {
+            if (filters.status && item.status !== filters.status) includeItem = false;
+            if (filters.type && item.type !== filters.type) includeItem = false;
+            if (filters.severity && item.severity !== filters.severity) includeItem = false;
+            if (filters.startDate && item.timestamp < filters.startDate) includeItem = false;
+            if (filters.endDate && item.timestamp > filters.endDate) includeItem = false;
+          }
+
+          if (includeItem) {
+            feedback.push(item);
+          }
+
+          cursor.continue();
+        } else {
+          // Sort by timestamp (newest first)
+          feedback.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+          resolve(feedback);
+        }
+      };
+      
+      request.onerror = () => resolve([]);
+    });
+  }
+
+  async updateFeedbackStatus(id: string, status: FeedbackItem['status']): Promise<void> {
+    if (!this.db) {
+      await this.initialize();
+    }
+
+    const transaction = this.db!.transaction(['feedback'], 'readwrite');
+    const store = transaction.objectStore('feedback');
+    
+    const getRequest = store.get(id);
+    
+    return new Promise((resolve, reject) => {
+      getRequest.onsuccess = () => {
+        const feedback = getRequest.result;
+        if (feedback) {
+          feedback.status = status;
+          const updateRequest = store.put(feedback);
+          updateRequest.onsuccess = () => resolve();
+          updateRequest.onerror = () => reject(updateRequest.error);
+        } else {
+          reject(new Error('Feedback item not found'));
+        }
+      };
+      
+      getRequest.onerror = () => reject(getRequest.error);
+    });
+  }
+
+  async deleteFeedback(id: string): Promise<void> {
+    if (!this.db) {
+      await this.initialize();
+    }
+
+    const transaction = this.db!.transaction(['feedback'], 'readwrite');
+    const store = transaction.objectStore('feedback');
+    
+    return new Promise((resolve, reject) => {
+      const request = store.delete(id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getFeedbackStats(): Promise<{
+    total: number;
+    open: number;
+    resolved: number;
+    byType: Record<FeedbackItem['type'], number>;
+    bySeverity: Record<FeedbackItem['severity'], number>;
+  }> {
+    const allFeedback = await this.getFeedback();
+    
+    const stats = {
+      total: allFeedback.length,
+      open: allFeedback.filter(f => f.status === 'open').length,
+      resolved: allFeedback.filter(f => f.status === 'resolved').length,
+      byType: {
+        'bug': 0,
+        'feature-request': 0,
+        'issue': 0,
+        'general': 0
+      } as Record<FeedbackItem['type'], number>,
+      bySeverity: {
+        'low': 0,
+        'medium': 0,
+        'high': 0,
+        'critical': 0
+      } as Record<FeedbackItem['severity'], number>
+    };
+
+    allFeedback.forEach(feedback => {
+      stats.byType[feedback.type]++;
+      stats.bySeverity[feedback.severity]++;
+    });
+
+    return stats;
+  }
+
+  async exportFeedback(format: 'csv' | 'json' = 'csv'): Promise<string> {
+    const allFeedback = await this.getFeedback();
+    
+    if (format === 'json') {
+      return JSON.stringify(allFeedback, null, 2);
+    }
+    
+    // CSV format
+    const headers = [
+      'ID', 'Type', 'Title', 'Description', 'Severity', 'Category', 
+      'Status', 'Timestamp', 'User Agent', 'App Version'
+    ];
+    
+    const rows = allFeedback.map(item => [
+      item.id,
+      item.type,
+      `"${item.title.replace(/"/g, '""')}"`, // Escape quotes
+      `"${item.description.replace(/"/g, '""')}"`,
+      item.severity,
+      item.category,
+      item.status,
+      item.timestamp.toISOString(),
+      item.userAgent || '',
+      item.appVersion || ''
+    ]);
+    
+    return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
   }
 }
 

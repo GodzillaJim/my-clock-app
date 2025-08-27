@@ -224,7 +224,7 @@ function createTray() {
 }
 
 function setupGlobalShortcuts() {
-  globalShortcut.register('CommandOrControl+Shift+F', () => {
+  globalShortcut.register('CommandOrControl+Shift+Alt+T', () => {
     if (win) {
       if (win.isMinimized()) win.restore()
       win.show()

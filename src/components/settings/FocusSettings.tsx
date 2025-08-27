@@ -22,14 +22,19 @@ import {
   Tab,
   Grid,
   Card,
-  CardContent
+  CardContent,
+  Chip,
+  IconButton,
+  Stack
 } from '@mui/material';
 import {
   Settings as SettingsIcon,
   Timer,
   Notifications,
   Palette,
-  Storage
+  Storage,
+  Add,
+  Remove
 } from '@mui/icons-material';
 import {
   AppSettings,
@@ -43,6 +48,7 @@ interface FocusSettingsProps {
   onClose: () => void;
   settings: AppSettings;
   onSettingsChange: (settings: AppSettings) => void;
+  onOpenFeedbackManager?: () => void;
 }
 
 interface TabPanelProps {
@@ -71,7 +77,8 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
   open,
   onClose,
   settings,
-  onSettingsChange
+  onSettingsChange,
+  onOpenFeedbackManager
 }) => {
   const [localSettings, setLocalSettings] = useState<AppSettings>(settings);
   const [activeTab, setActiveTab] = useState(0);
@@ -114,6 +121,23 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
     setIsDirty(true);
   };
 
+  const handlePresetAdd = (value: number) => {
+    const newPresets = [...localSettings.quickPresets, value].sort((a, b) => a - b);
+    handleSettingChange('quickPresets', newPresets);
+  };
+
+  const handlePresetRemove = (value: number) => {
+    const newPresets = localSettings.quickPresets.filter(preset => preset !== value);
+    handleSettingChange('quickPresets', newPresets);
+  };
+
+  const handlePresetEdit = (oldValue: number, newValue: number) => {
+    const newPresets = localSettings.quickPresets
+      .map(preset => preset === oldValue ? newValue : preset)
+      .sort((a, b) => a - b);
+    handleSettingChange('quickPresets', newPresets);
+  };
+
   const handleCancel = () => {
     setLocalSettings(settings);
     setIsDirty(false);
@@ -142,12 +166,14 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
                 value={localSettings.focusDuration}
                 onChange={(_, value) => handleSettingChange('focusDuration', value as number)}
                 min={1}
-                max={120}
+                max={240}
                 step={1}
                 marks={[
                   { value: 25, label: '25m' },
                   { value: 45, label: '45m' },
-                  { value: 90, label: '90m' }
+                  { value: 120, label: '120m' },
+                  { value: 180, label: '180m' },
+                  { value: 240, label: '240m' }
                 ]}
                 valueLabelDisplay="auto"
                 valueLabelFormat={(value) => `${value}m`}
@@ -157,10 +183,10 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
                 type="number"
                 value={localSettings.focusDuration}
                 onChange={(e) => handleSettingChange('focusDuration', parseInt(e.target.value) || 25)}
-                inputProps={{ min: 1, max: 120 }}
+                inputProps={{ min: 1, max: 240 }}
                 sx={{ mt: 1 }}
                 fullWidth
-                helperText="1-120 minutes"
+                helperText="1-240 minutes"
               />
             </CardContent>
           </Card>
@@ -252,6 +278,62 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
           valueLabelDisplay="auto"
           sx={{ maxWidth: 400 }}
         />
+      </Box>
+
+      <Box sx={{ mt: 3 }}>
+        <Typography variant="subtitle2" gutterBottom>
+          Quick Presets
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Customize the quick duration buttons shown in the timer
+        </Typography>
+        
+        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2 }}>
+          {localSettings.quickPresets.map((preset, index) => (
+            <Chip
+              key={`preset-${preset}-${index}`}
+              label={`${preset}m`}
+              onDelete={() => handlePresetRemove(preset)}
+              deleteIcon={<Remove />}
+              variant="outlined"
+              sx={{ mb: 1 }}
+            />
+          ))}
+        </Stack>
+
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          <TextField
+            size="small"
+            type="number"
+            placeholder="Add preset"
+            inputProps={{ min: 1, max: 240 }}
+            sx={{ width: 120 }}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                const value = parseInt((e.target as HTMLInputElement).value);
+                if (value >= 1 && value <= 240 && !localSettings.quickPresets.includes(value)) {
+                  handlePresetAdd(value);
+                  (e.target as HTMLInputElement).value = '';
+                }
+              }
+            }}
+          />
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<Add />}
+            onClick={(e) => {
+              const input = (e.currentTarget.parentElement?.querySelector('input[type="number"]') as HTMLInputElement);
+              const value = parseInt(input?.value || '');
+              if (value >= 1 && value <= 240 && !localSettings.quickPresets.includes(value)) {
+                handlePresetAdd(value);
+                input.value = '';
+              }
+            }}
+          >
+            Add
+          </Button>
+        </Box>
       </Box>
 
       <Divider sx={{ my: 3 }} />
@@ -577,6 +659,11 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
         <Button onClick={handleReset} color="warning">
           Reset to Defaults
         </Button>
+        {onOpenFeedbackManager && (
+          <Button onClick={onOpenFeedbackManager} variant="outlined">
+            Manage Feedback
+          </Button>
+        )}
         <Box sx={{ flex: 1 }} />
         <Button onClick={handleCancel}>
           Cancel

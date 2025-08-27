@@ -50,10 +50,11 @@ export interface DailyHistory {
 // Application settings
 export interface AppSettings {
   // Timer Configuration
-  focusDuration: number; // minutes (1-120)
+  focusDuration: number; // minutes (1-240)
   shortBreakDuration: number; // minutes
   longBreakDuration: number; // minutes
   sessionsBeforeLongBreak: number;
+  quickPresets: number[]; // Quick duration presets in minutes
   
   // Display Settings
   timeFormat: '12h' | '24h';
@@ -170,6 +171,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   shortBreakDuration: 5,
   longBreakDuration: 15,
   sessionsBeforeLongBreak: 4,
+  quickPresets: [15, 25, 30, 45, 60],
   timeFormat: '12h',
   showSessionStartTime: true,
   showSessionEndTime: true,

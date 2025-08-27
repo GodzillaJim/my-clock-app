@@ -4,6 +4,8 @@ import { createTheme } from '@mui/material/styles';
 import { FocusTimer } from './components/timer/FocusTimer';
 import { SessionHistory } from './components/history/SessionHistory';
 import { FocusSettings } from './components/settings/FocusSettings';
+import { FeedbackForm } from './components/feedback/FeedbackForm';
+import { FeedbackManager } from './components/feedback/FeedbackManager';
 import { AppSettings, DEFAULT_SETTINGS } from './features/timer/types';
 import { focusStorage } from './services/focusStorage';
 import { notificationService } from './services/notificationService';
@@ -13,6 +15,8 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackManagerOpen, setFeedbackManagerOpen] = useState(false);
   const [theme, setTheme] = useState(createTheme());
 
   useEffect(() => {
@@ -141,6 +145,10 @@ const App: React.FC = () => {
           setSettingsOpen(false);
         } else if (historyOpen) {
           setHistoryOpen(false);
+        } else if (feedbackOpen) {
+          setFeedbackOpen(false);
+        } else if (feedbackManagerOpen) {
+          setFeedbackManagerOpen(false);
         }
         break;
       case 's':
@@ -153,6 +161,12 @@ const App: React.FC = () => {
         if (event.ctrlKey || event.metaKey) {
           event.preventDefault();
           setHistoryOpen(true);
+        }
+        break;
+      case 'f':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          setFeedbackOpen(true);
         }
         break;
       default:
@@ -188,6 +202,7 @@ const App: React.FC = () => {
           <FocusTimer
             onOpenSettings={() => setSettingsOpen(true)}
             onOpenHistory={() => setHistoryOpen(true)}
+            onOpenFeedback={() => setFeedbackOpen(true)}
             settings={settings}
           />
         </Box>
@@ -203,6 +218,20 @@ const App: React.FC = () => {
           onClose={() => setSettingsOpen(false)}
           settings={settings}
           onSettingsChange={handleSettingsChange}
+          onOpenFeedbackManager={() => setFeedbackManagerOpen(true)}
+        />
+
+        <FeedbackForm
+          open={feedbackOpen}
+          onClose={() => setFeedbackOpen(false)}
+          onSubmit={async (feedback) => {
+            await focusStorage.addFeedback(feedback);
+          }}
+        />
+
+        <FeedbackManager
+          open={feedbackManagerOpen}
+          onClose={() => setFeedbackManagerOpen(false)}
         />
       </Box>
     </ThemeProvider>

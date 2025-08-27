@@ -19,7 +19,8 @@ import {
   History as HistoryIcon,
   Remove,
   Add,
-  Timer as TimerIcon
+  Timer as TimerIcon,
+  Feedback
 } from '@mui/icons-material';
 import { 
   TimerState, 
@@ -38,12 +39,14 @@ import { v4 as uuidv4 } from 'uuid';
 interface FocusTimerProps {
   onOpenSettings: () => void;
   onOpenHistory: () => void;
+  onOpenFeedback: () => void;
   settings: AppSettings;
 }
 
 export const FocusTimer: React.FC<FocusTimerProps> = ({ 
   onOpenSettings, 
   onOpenHistory, 
+  onOpenFeedback,
   settings 
 }) => {
   const [timerState, setTimerState] = useState<TimerState>(TimerState.IDLE);
@@ -58,6 +61,9 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   const [sessionCount, setSessionCount] = useState(0);
   const [nextSessionType, setNextSessionType] = useState<SessionType>(SessionType.FOCUS);
   const [quickDuration, setQuickDuration] = useState<number>(25); // Quick duration input
+  const [sessionPlan, setSessionPlan] = useState<Array<{type: SessionType, duration: number, completed: boolean, current: boolean}>>([]);
+  const [totalPlannedDuration, setTotalPlannedDuration] = useState<number>(0);
+  const [currentSessionIndex, setCurrentSessionIndex] = useState<number>(0);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastTickRef = useRef<number>(Date.now());
@@ -237,20 +243,57 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   const getSessionDuration = (type: SessionType): number => {
     switch (type) {
       case SessionType.FOCUS:
-        // Use quick duration if timer is idle and it's a focus session
-        return timerState === TimerState.IDLE ? quickDuration : settings.focusDuration;
+        return settings.focusDuration;
       case SessionType.SHORT_BREAK:
         return settings.shortBreakDuration;
       case SessionType.LONG_BREAK:
         return settings.longBreakDuration;
       default:
-        return timerState === TimerState.IDLE ? quickDuration : settings.focusDuration;
+        return settings.focusDuration;
     }
   };
 
   const handleQuickDurationChange = (value: number) => {
-    const clampedValue = Math.max(1, Math.min(120, value));
+    const clampedValue = Math.max(1, Math.min(240, value));
     setQuickDuration(clampedValue);
+  };
+
+  const generateSessionPlan = (totalMinutes: number, currentSessionIndex: number = 0) => {
+    const plan: Array<{type: SessionType, duration: number, completed: boolean, current: boolean}> = [];
+    let remainingMinutes = totalMinutes;
+    let focusSessionCount = 0;
+    let sessionIndex = 0;
+
+    while (remainingMinutes > 0) {
+      // Add focus session
+      const focusDuration = Math.min(remainingMinutes, settings.focusDuration);
+      focusSessionCount++;
+      plan.push({
+        type: SessionType.FOCUS,
+        duration: focusDuration,
+        completed: sessionIndex < currentSessionIndex,
+        current: sessionIndex === currentSessionIndex
+      });
+      remainingMinutes -= focusDuration;
+      sessionIndex++;
+
+      // Add break session if there's more time
+      if (remainingMinutes > 0) {
+        const isLongBreak = focusSessionCount % settings.sessionsBeforeLongBreak === 0;
+        const breakDuration = isLongBreak ? settings.longBreakDuration : settings.shortBreakDuration;
+        const breakType = isLongBreak ? SessionType.LONG_BREAK : SessionType.SHORT_BREAK;
+        
+        plan.push({
+          type: breakType,
+          duration: breakDuration,
+          completed: sessionIndex < currentSessionIndex,
+          current: sessionIndex === currentSessionIndex
+        });
+        sessionIndex++;
+      }
+    }
+
+    return plan;
   };
 
   const startSession = async (type: SessionType = nextSessionType) => {
@@ -277,6 +320,15 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       if (type === SessionType.FOCUS) {
         setSessionCount(prev => prev + 1);
         setNextSessionType(determineNextSessionType());
+        
+        // Initialize session plan if this is the first focus session
+        if (sessionCount === 0) {
+          // Use the quick duration as the total planned duration when starting fresh
+          const totalDuration = timerState === TimerState.IDLE ? quickDuration : settings.focusDuration;
+          setTotalPlannedDuration(totalDuration);
+          setCurrentSessionIndex(0);
+          setSessionPlan(generateSessionPlan(totalDuration, 0));
+        }
       } else {
         setNextSessionType(SessionType.FOCUS);
       }
@@ -434,6 +486,10 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     isActiveRef.current = false;
     await saveCompletedSession(currentSession, CompletionStatus.SKIPPED);
     
+    // Update session plan progress
+    setCurrentSessionIndex(prev => prev + 1);
+    setSessionPlan(prev => generateSessionPlan(totalPlannedDuration, currentSessionIndex + 1));
+
     if (settings.autoStartNextSession) {
       const nextType = currentSession.type === SessionType.FOCUS ? 
         determineNextSessionType() : SessionType.FOCUS;
@@ -474,6 +530,10 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       });
       await window.electronAPI.updateTrayStatus('Session Complete');
     }
+
+    // Update session plan progress
+    setCurrentSessionIndex(prev => prev + 1);
+    setSessionPlan(prev => generateSessionPlan(totalPlannedDuration, currentSessionIndex + 1));
 
     if (settings.autoStartNextSession) {
       const nextType = session.type === SessionType.FOCUS ? 
@@ -529,6 +589,10 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     setCurrentSession(null);
     setTimerState(TimerState.IDLE);
     setNextSessionType(SessionType.FOCUS);
+    setSessionCount(0);
+    setSessionPlan([]);
+    setTotalPlannedDuration(0);
+    setCurrentSessionIndex(0);
     isActiveRef.current = false;
     startTimeRef.current = null;
     
@@ -620,6 +684,52 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
             }}
           />
         )}
+
+        {/* Session Plan Visualization */}
+        {sessionPlan.length > 0 && (
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+              Session Breakdown
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center', flexWrap: 'wrap', mb: 2 }}>
+              {sessionPlan.map((session, index) => (
+                <Box
+                  key={index}
+                  sx={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    backgroundColor: session.completed ? 
+                      (session.type === SessionType.FOCUS ? 'success.main' : 'info.main') :
+                      session.current ?
+                      (session.type === SessionType.FOCUS ? 'primary.main' : 'warning.main') :
+                      'grey.300',
+                    border: session.current ? '2px solid' : 'none',
+                    borderColor: session.current ? 'primary.dark' : 'transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '10px',
+                    color: session.completed || session.current ? 'white' : 'grey.600',
+                    fontWeight: 'bold'
+                  }}
+                  title={`${getSessionTypeLabel(session.type)} - ${session.duration}min`}
+                >
+                  {session.type === SessionType.FOCUS ? 'F' : 
+                   session.type === SessionType.SHORT_BREAK ? 'S' : 'L'}
+                </Box>
+              ))}
+            </Box>
+            
+            {/* Next Session Preview */}
+            {sessionPlan.length > currentSessionIndex + 1 && (
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Next: {getSessionTypeLabel(sessionPlan[currentSessionIndex + 1].type)} 
+                ({sessionPlan[currentSessionIndex + 1].duration}min)
+              </Typography>
+            )}
+          </Box>
+        )}
       </Box>
     );
   };
@@ -627,7 +737,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   const renderQuickDurationInput = () => {
     if (timerState !== TimerState.IDLE) return null;
     
-    const commonDurations = [15, 25, 30, 45, 60];
+    const commonDurations = settings.quickPresets;
     
     return (
       <Box sx={{ textAlign: 'center', mb: 4 }}>
@@ -662,7 +772,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
           <IconButton
             size="small"
             onClick={() => handleQuickDurationChange(quickDuration + 5)}
-            disabled={quickDuration >= 120}
+            disabled={quickDuration >= 240}
           >
             <Add />
           </IconButton>
@@ -810,6 +920,11 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       <Tooltip title="Session History">
         <IconButton onClick={onOpenHistory}>
           <HistoryIcon />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Send Feedback">
+        <IconButton onClick={onOpenFeedback}>
+          <Feedback />
         </IconButton>
       </Tooltip>
     </Stack>
