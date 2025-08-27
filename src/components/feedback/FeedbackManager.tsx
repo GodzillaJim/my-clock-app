@@ -43,7 +43,7 @@ import {
   Cancel,
   Schedule
 } from '@mui/icons-material';
-import { FeedbackItem } from './FeedbackForm';
+import { FeedbackItem } from '@/types/feedback';
 import { focusStorage } from '@/services/focusStorage';
 
 interface FeedbackManagerProps {

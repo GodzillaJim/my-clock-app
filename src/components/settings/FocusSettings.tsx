@@ -156,43 +156,59 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
       </Typography>
       
       <Grid container spacing={3}>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12}>
           <Card>
-            <CardContent>
+            <CardContent sx={{ pb: 4 }}>
               <Typography variant="subtitle2" gutterBottom>
-                Focus Session
+                Focus Session Duration
               </Typography>
-              <Slider
-                value={localSettings.focusDuration}
-                onChange={(_, value) => handleSettingChange('focusDuration', value as number)}
-                min={1}
-                max={240}
-                step={1}
-                marks={[
-                  { value: 25, label: '25m' },
-                  { value: 45, label: '45m' },
-                  { value: 120, label: '120m' },
-                  { value: 180, label: '180m' },
-                  { value: 240, label: '240m' }
-                ]}
-                valueLabelDisplay="auto"
-                valueLabelFormat={(value) => `${value}m`}
-              />
-              <TextField
-                size="small"
-                type="number"
-                value={localSettings.focusDuration}
-                onChange={(e) => handleSettingChange('focusDuration', parseInt(e.target.value) || 25)}
-                inputProps={{ min: 1, max: 240 }}
-                sx={{ mt: 1 }}
-                fullWidth
-                helperText="1-240 minutes"
-              />
+              <Box sx={{ px: 1, pt: 2, pb: 3 }}>
+                <Slider
+                  value={localSettings.focusDuration}
+                  onChange={(_, value) => handleSettingChange('focusDuration', value as number)}
+                  min={1}
+                  max={240}
+                  step={1}
+                  marks={[
+                    { value: 25, label: '25' },
+                    { value: 60, label: '60' },
+                    { value: 120, label: '120' },
+                    { value: 240, label: '240' }
+                  ]}
+                  valueLabelDisplay="auto"
+                  valueLabelFormat={(value) => `${value}m`}
+                  sx={{
+                    '& .MuiSlider-markLabel': {
+                      fontSize: '0.75rem',
+                      transform: 'translateX(-50%)',
+                      whiteSpace: 'nowrap'
+                    },
+                    '& .MuiSlider-mark': {
+                      height: 8,
+                      width: 2
+                    }
+                  }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
+                <TextField
+                  size="small"
+                  type="number"
+                  value={localSettings.focusDuration}
+                  onChange={(e) => handleSettingChange('focusDuration', parseInt(e.target.value) || 25)}
+                  inputProps={{ min: 1, max: 240 }}
+                  sx={{ width: 100 }}
+                  label="Minutes"
+                />
+                <Typography variant="caption" color="text.secondary">
+                  1-240 minutes
+                </Typography>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={6}>
           <Card>
             <CardContent>
               <Typography variant="subtitle2" gutterBottom>
@@ -225,7 +241,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={6}>
           <Card>
             <CardContent>
               <Typography variant="subtitle2" gutterBottom>

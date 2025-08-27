@@ -11,7 +11,7 @@ import {
   SessionStats,
   formatDuration 
 } from '@/features/timer/types';
-import { FeedbackItem } from '@/components/feedback/FeedbackForm';
+import { FeedbackItem } from '@/types/feedback';
 
 class FocusStorageService {
   private readonly STORAGE_KEY = 'focus_sessions_app_state';

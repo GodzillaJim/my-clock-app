@@ -637,52 +637,83 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     const isIdle = timerState === TimerState.IDLE;
     
     return (
-      <Box sx={{ textAlign: 'center', mb: 4 }}>
+      <Box sx={{ textAlign: 'center', width: '100%' }}>
+        {/* Session Type Indicator */}
         {currentSession ? (
           <Chip 
             label={getSessionTypeLabel(currentSession.type)}
             color={getSessionTypeColor(currentSession.type)}
-            sx={{ mb: 2, fontSize: '0.9rem' }}
+            size="small"
+            sx={{ mb: 3 }}
           />
         ) : (
           <Typography 
-            variant="h6" 
+            variant="body2" 
             sx={{ 
-              mb: 2, 
               color: 'text.secondary',
-              fontWeight: 500 
+              mb: 3,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              fontSize: '0.75rem',
+              fontWeight: 500
             }}
           >
             Ready to Focus
           </Typography>
         )}
         
+        {/* Clean Timer Display */}
         <Typography 
           variant="h1" 
+          component="div"
           sx={{ 
-            fontSize: { xs: '4rem', md: '6rem' },
+            fontSize: { xs: '4rem', sm: '5rem', md: '6rem' },
             fontWeight: 300,
-            fontFamily: 'monospace',
+            fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace',
             lineHeight: 1,
             mb: 2,
-            opacity: isIdle ? 0.8 : 1,
-            color: isIdle ? 'text.secondary' : 'text.primary'
+            color: isIdle ? 'text.secondary' : 'primary.main',
+            transition: 'color 0.3s ease',
+            tabularNums: true,
+            WebkitFontFeatureSettings: '"tnum"',
+            fontFeatureSettings: '"tnum"'
           }}
         >
           {displayTime}
         </Typography>
+        
+        {/* Session Status */}
+        {currentSession && (
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              color: 'text.secondary',
+              display: 'block',
+              mb: 3
+            }}
+          >
+            {timerState === TimerState.RUNNING && `${Math.round(timeDisplay.progress)}% complete`}
+            {timerState === TimerState.PAUSED && 'Paused'}
+            {timerState === TimerState.COMPLETED && 'Session complete!'}
+          </Typography>
+        )}
 
         {currentSession && (
-          <LinearProgress 
-            variant="determinate" 
-            value={timeDisplay.progress}
-            sx={{ 
-              height: 8, 
-              borderRadius: 4, 
-              mb: 3,
-              backgroundColor: 'rgba(0,0,0,0.1)'
-            }}
-          />
+          <Box sx={{ width: '100%', mb: 4 }}>
+            <LinearProgress 
+              variant="determinate" 
+              value={timeDisplay.progress}
+              sx={{ 
+                height: 4, 
+                borderRadius: 2,
+                backgroundColor: 'divider',
+                '& .MuiLinearProgress-bar': {
+                  borderRadius: 2,
+                  backgroundColor: 'primary.main'
+                }
+              }}
+            />
+          </Box>
         )}
 
         {/* Session Plan Visualization */}
@@ -740,66 +771,49 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     const commonDurations = settings.quickPresets;
     
     return (
-      <Box sx={{ textAlign: 'center', mb: 4 }}>
-        {/* Main duration control */}
-        <Paper 
-          elevation={1} 
-          sx={{ 
-            display: 'inline-flex', 
-            alignItems: 'center', 
-            p: 1, 
-            borderRadius: 2,
-            backgroundColor: 'background.paper',
-            mb: 2
-          }}
-        >
-          <TimerIcon sx={{ mr: 1, color: 'text.secondary' }} />
+      <Box sx={{ textAlign: 'center', mb: 4, width: '100%' }}>
+        {/* Duration selector */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
           <IconButton
-            size="small"
             onClick={() => handleQuickDurationChange(quickDuration - 5)}
             disabled={quickDuration <= 5}
+            size="small"
           >
-            <Remove />
+            <Remove fontSize="small" />
           </IconButton>
-          <Box sx={{ mx: 2, textAlign: 'center', minWidth: 90 }}>
-            <Typography variant="body2" color="text.secondary">
-              Session Length
+          
+          <Box sx={{ mx: 3, textAlign: 'center', minWidth: 100 }}>
+            <Typography variant="h5" sx={{ fontWeight: 500, mb: 0.5 }}>
+              {quickDuration}
             </Typography>
-            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-              {quickDuration} min
+            <Typography variant="caption" color="text.secondary">
+              minutes
             </Typography>
           </Box>
+          
           <IconButton
-            size="small"
             onClick={() => handleQuickDurationChange(quickDuration + 5)}
             disabled={quickDuration >= 240}
+            size="small"
           >
-            <Add />
+            <Add fontSize="small" />
           </IconButton>
-        </Paper>
-
-        {/* Quick preset buttons */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 1 }}>
-          {commonDurations.map((duration) => (
-            <Button
-              key={duration}
-              variant={quickDuration === duration ? 'contained' : 'outlined'}
-              size="small"
-              onClick={() => setQuickDuration(duration)}
-              sx={{ 
-                minWidth: 45, 
-                fontSize: '0.75rem',
-                color: quickDuration === duration ? 'white' : 'text.secondary'
-              }}
-            >
-              {duration}m
-            </Button>
-          ))}
         </Box>
 
-        <Typography variant="caption" display="block" sx={{ color: 'text.secondary' }}>
-          Quick presets • Use ±5min buttons • Settings for advanced options
-        </Typography>
+        {/* Quick presets */}
+        <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
+          {commonDurations.map((duration) => (
+            <Chip
+              key={duration}
+              label={`${duration}m`}
+              variant={quickDuration === duration ? 'filled' : 'outlined'}
+              color={quickDuration === duration ? 'primary' : 'default'}
+              onClick={() => setQuickDuration(duration)}
+              size="small"
+              sx={{ cursor: 'pointer' }}
+            />
+          ))}
+        </Stack>
       </Box>
     );
   };
@@ -830,14 +844,23 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   );
 
   const renderControls = () => (
-    <Stack direction="row" spacing={2} justifyContent="center" sx={{ mb: 4 }}>
+    <Stack 
+      direction={{ xs: 'column', sm: 'row' }} 
+      spacing={2} 
+      justifyContent="center" 
+      alignItems="center"
+      sx={{ width: '100%' }}
+    >
       {timerState === TimerState.IDLE && (
         <Button
           variant="contained"
           size="large"
           startIcon={<PlayArrow />}
           onClick={() => startSession()}
-          sx={{ px: 4 }}
+          sx={{ 
+            minWidth: { xs: '100%', sm: 200 },
+            py: 1.5
+          }}
         >
           Start {quickDuration}min Focus
         </Button>
@@ -850,6 +873,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
             size="large"
             startIcon={<Pause />}
             onClick={pauseTimer}
+            sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
           >
             Pause
           </Button>
@@ -859,14 +883,19 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
             startIcon={<Stop />}
             onClick={stopSession}
             color="error"
+            sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
           >
             Stop
           </Button>
           <Button
-            variant="outlined"
+            variant="text"
             size="large"
             startIcon={<SkipNext />}
             onClick={skipSession}
+            sx={{ 
+              minWidth: { xs: '100%', sm: 'auto' },
+              color: 'text.secondary' 
+            }}
           >
             Skip
           </Button>
@@ -880,7 +909,8 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
             size="large"
             startIcon={<PlayArrow />}
             onClick={resumeTimer}
-            sx={{ px: 4 }}
+            color="success"
+            sx={{ minWidth: { xs: '100%', sm: 160 } }}
           >
             Resume
           </Button>
@@ -890,6 +920,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
             startIcon={<Stop />}
             onClick={stopSession}
             color="error"
+            sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
           >
             Stop
           </Button>
@@ -902,7 +933,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
           size="large"
           startIcon={<PlayArrow />}
           onClick={() => startSession()}
-          sx={{ px: 4 }}
+          sx={{ minWidth: { xs: '100%', sm: 200 } }}
         >
           Start Next Session
         </Button>
@@ -913,38 +944,29 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   const renderActionButtons = () => (
     <Stack direction="row" spacing={1} justifyContent="center">
       <Tooltip title="Settings">
-        <IconButton onClick={onOpenSettings}>
-          <Settings />
+        <IconButton onClick={onOpenSettings} size="small">
+          <Settings fontSize="small" />
         </IconButton>
       </Tooltip>
       <Tooltip title="Session History">
-        <IconButton onClick={onOpenHistory}>
-          <HistoryIcon />
+        <IconButton onClick={onOpenHistory} size="small">
+          <HistoryIcon fontSize="small" />
         </IconButton>
       </Tooltip>
       <Tooltip title="Send Feedback">
-        <IconButton onClick={onOpenFeedback}>
-          <Feedback />
+        <IconButton onClick={onOpenFeedback} size="small">
+          <Feedback fontSize="small" />
         </IconButton>
       </Tooltip>
     </Stack>
   );
 
   return (
-    <Paper 
-      elevation={0} 
-      sx={{ 
-        p: 4, 
-        maxWidth: 600, 
-        mx: 'auto',
-        backgroundColor: 'transparent'
-      }}
-    >
+    <Box sx={{ width: '100%', textAlign: 'center' }}>
       {renderTimerDisplay()}
       {renderQuickDurationInput()}
-      {renderTimeInfo()}
       {renderControls()}
       {renderActionButtons()}
-    </Paper>
+    </Box>
   );
 };

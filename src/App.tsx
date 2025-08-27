@@ -55,27 +55,90 @@ const App: React.FC = () => {
       palette: {
         mode: isDarkMode ? 'dark' : 'light',
         primary: {
-          main: '#2196f3',
+          main: '#2563eb', // Clean blue
+          dark: '#1d4ed8',
+          light: '#3b82f6'
         },
         secondary: {
-          main: '#ff9800',
+          main: '#64748b', // Neutral gray
+          dark: '#475569',
+          light: '#94a3b8'
         },
         success: {
-          main: '#4caf50',
+          main: '#059669',
+        },
+        error: {
+          main: '#dc2626',
+        },
+        warning: {
+          main: '#d97706',
         },
         background: {
-          default: isDarkMode ? '#121212' : '#fafafa',
-          paper: isDarkMode ? '#1e1e1e' : '#ffffff',
+          default: isDarkMode ? '#0f172a' : '#ffffff',
+          paper: isDarkMode ? '#1e293b' : '#ffffff'
         },
+        text: {
+          primary: isDarkMode ? '#f1f5f9' : '#0f172a',
+          secondary: isDarkMode ? '#94a3b8' : '#64748b'
+        },
+        divider: isDarkMode ? '#334155' : '#e2e8f0'
       },
       typography: {
-        fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+        fontFamily: '"Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
         h1: {
+          fontSize: '4rem',
           fontWeight: 300,
+          lineHeight: 1.1,
+          letterSpacing: '-0.025em'
         },
+        h2: {
+          fontSize: '2.5rem',
+          fontWeight: 400,
+          lineHeight: 1.2,
+          letterSpacing: '-0.025em'
+        },
+        h3: {
+          fontSize: '1.875rem',
+          fontWeight: 500,
+          lineHeight: 1.3
+        },
+        h4: {
+          fontSize: '1.5rem',
+          fontWeight: 500,
+          lineHeight: 1.4
+        },
+        h5: {
+          fontSize: '1.25rem',
+          fontWeight: 500,
+          lineHeight: 1.5
+        },
+        h6: {
+          fontSize: '1.125rem',
+          fontWeight: 500,
+          lineHeight: 1.5
+        },
+        body1: {
+          fontSize: '1rem',
+          lineHeight: 1.6
+        },
+        body2: {
+          fontSize: '0.875rem',
+          lineHeight: 1.5
+        },
+        button: {
+          fontSize: '0.875rem',
+          fontWeight: 500,
+          textTransform: 'none' as const,
+          letterSpacing: '0.01em'
+        },
+        caption: {
+          fontSize: '0.75rem',
+          lineHeight: 1.4,
+          color: isDarkMode ? '#94a3b8' : '#64748b'
+        }
       },
       shape: {
-        borderRadius: 12,
+        borderRadius: 8,
       },
       components: {
         MuiButton: {
@@ -83,16 +146,44 @@ const App: React.FC = () => {
             root: {
               textTransform: 'none',
               borderRadius: 8,
+              fontWeight: 500,
+              boxShadow: 'none',
+              '&:hover': {
+                boxShadow: 'none',
+              }
             },
+            contained: {
+              boxShadow: 'none',
+              '&:hover': {
+                boxShadow: 'none',
+              }
+            }
           },
         },
-        MuiCard: {
+        MuiPaper: {
           styleOverrides: {
             root: {
-              borderRadius: 12,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            },
-          },
+              backgroundImage: 'none',
+              boxShadow: isDarkMode 
+                ? '0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2)'
+                : '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+            }
+          }
+        },
+        MuiIconButton: {
+          styleOverrides: {
+            root: {
+              borderRadius: 8
+            }
+          }
+        },
+        MuiChip: {
+          styleOverrides: {
+            root: {
+              borderRadius: 6,
+              fontWeight: 500
+            }
+          }
         },
       },
     });
@@ -109,23 +200,27 @@ const App: React.FC = () => {
     document.addEventListener('keydown', handleKeyDown);
     
     // Setup Electron IPC listeners for tray and global shortcuts
-    if (window.electronAPI) {
-      window.electronAPI.onTrayStartSession(() => {
-        // This would trigger the start session functionality
-        // We'll need to expose this through a ref or context
-      });
-      
-      window.electronAPI.onTrayOpenSettings(() => {
-        setSettingsOpen(true);
-      });
-      
-      window.electronAPI.onTrayOpenHistory(() => {
-        setHistoryOpen(true);
-      });
-      
-      window.electronAPI.onGlobalShortcutStartSession(() => {
-        // This would trigger the start session functionality
-      });
+    try {
+      if (window.electronAPI) {
+        window.electronAPI.onTrayStartSession(() => {
+          // This would trigger the start session functionality
+          // We'll need to expose this through a ref or context
+        });
+        
+        window.electronAPI.onTrayOpenSettings(() => {
+          setSettingsOpen(true);
+        });
+        
+        window.electronAPI.onTrayOpenHistory(() => {
+          setHistoryOpen(true);
+        });
+        
+        window.electronAPI.onGlobalShortcutStartSession(() => {
+          // This would trigger the start session functionality
+        });
+      }
+    } catch (error) {
+      console.warn('Electron API not available:', error);
     }
   };
 
@@ -184,19 +279,19 @@ const App: React.FC = () => {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          p: 2,
-          background: theme.palette.mode === 'dark'
-            ? 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)'
-            : 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+          p: { xs: 2, sm: 4 },
+          backgroundColor: 'background.default'
         }}
       >
         <Box
+          component="main"
           sx={{
             width: '100%',
-            maxWidth: 800,
+            maxWidth: 480,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
+            gap: 4
           }}
         >
           <FocusTimer
