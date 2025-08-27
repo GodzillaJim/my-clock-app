@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage, globalShor
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import url from 'node:url'
 import os from 'node:os'
 import { update } from './update'
 
@@ -38,6 +39,16 @@ if (!app.requestSingleInstanceLock()) {
   app.quit()
   process.exit(0)
 }
+
+// Register custom protocol for file loading before app is ready
+app.whenReady().then(() => {
+  const { protocol } = require('electron')
+  protocol.registerFileProtocol('app', (request: Electron.ProtocolRequest, callback: (response: Electron.ProtocolResponse) => void) => {
+    const url = request.url.substr(6)
+    callback({ path: path.normalize(`${RENDERER_DIST}/${url}`) })
+  })
+  createWindow()
+})
 
 let win: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -123,10 +134,16 @@ function createAppIcon(): Electron.NativeImage {
   }
 }
 
+function createSimpleTrayIcon(): Electron.NativeImage {
+  // Create the absolute simplest possible icon
+  return nativeImage.createEmpty().resize({ width: 16, height: 16 })
+}
+
 function updateTrayIcon(isActive: boolean = false) {
   if (tray) {
-    const newIcon = createTrayIcon(isActive)
-    tray.setImage(newIcon)
+    // Keep using the same reliable icon
+    const trayIcon = createSimpleTrayIcon()
+    tray.setImage(trayIcon)
   }
 }
 
@@ -137,8 +154,8 @@ function updateWindowTitle(status: string) {
 }
 
 function createTray() {
-  // Create a simple tray icon programmatically since we don't have icon files
-  const trayIcon = createTrayIcon()
+  // Create a simple, reliable tray icon
+  const trayIcon = createSimpleTrayIcon()
   tray = new Tray(trayIcon)
   
   const contextMenu = Menu.buildFromTemplate([
@@ -264,7 +281,8 @@ async function createWindow() {
     // Open devTool if the app is not packaged
     win.webContents.openDevTools()
   } else {
-    win.loadFile(indexHtml)
+    // Try custom app protocol for Electron
+    win.loadURL('app://./index.html')
   }
 
   // Show window when ready
@@ -300,15 +318,15 @@ async function createWindow() {
     return { action: 'deny' }
   })
 
-  // Setup tray and global shortcuts
-  createTray()
+  // Setup global shortcuts (tray disabled temporarily)  
   setupGlobalShortcuts()
+  // createTray() // Disabled until tray icon issues are resolved
 
   // Auto update
   update(win)
 }
 
-app.whenReady().then(createWindow)
+// Protocol registration and window creation handled above
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

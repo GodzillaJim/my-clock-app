@@ -2,16 +2,16 @@ import { ThemeOptions } from "@mui/material";
 
 export const commonProperties: Partial<ThemeOptions>  = {
     typography: {
-      fontFamily: '"Karla", serif, "Roboto", "Helvetica", "Arial", sans-serif',
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica", "Arial", sans-serif',
       h1: {
         fontSize: '2.5rem',
         fontWeight: 600,
-        fontFamily: '"Playfair Display", serif'
+        fontFamily: 'Georgia, "Times New Roman", Times, serif'
       },
       h2: {
         fontSize: '2rem',
         fontWeight: 600,
-        fontFamily: '"Montserrat", sans-serif',
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
       },
       h3: {
         fontSize: '1.75rem',

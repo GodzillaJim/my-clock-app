@@ -49,6 +49,10 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   onOpenFeedback,
   settings 
 }) => {
+  // Defensive check to prevent rendering with undefined settings
+  if (!settings) {
+    return <Box>Loading...</Box>;
+  }
   const [timerState, setTimerState] = useState<TimerState>(TimerState.IDLE);
   const [currentSession, setCurrentSession] = useState<TimerSession | null>(null);
   const [timeDisplay, setTimeDisplay] = useState<TimeDisplay>({
@@ -101,12 +105,12 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
 
   useEffect(() => {
     updateTimeDisplay();
-  }, [currentSession, timerState, settings.timeFormat]);
+  }, [currentSession, timerState, settings?.timeFormat]);
 
   useEffect(() => {
     // Update quick duration when settings change
-    setQuickDuration(settings.focusDuration);
-  }, [settings.focusDuration]);
+    setQuickDuration(settings?.focusDuration || DEFAULT_SETTINGS.focusDuration);
+  }, [settings?.focusDuration]);
 
   // Sync timer with actual elapsed time to fix accuracy issues
   const syncTimer = useCallback(() => {
@@ -198,13 +202,13 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     const now = new Date();
     
     setTimeDisplay({
-      current: formatTime(now, settings.timeFormat),
-      sessionStart: currentSession ? formatTime(currentSession.startTime, settings.timeFormat) : '',
+      current: formatTime(now, settings?.timeFormat || DEFAULT_SETTINGS.timeFormat),
+      sessionStart: currentSession ? formatTime(currentSession.startTime, settings?.timeFormat || DEFAULT_SETTINGS.timeFormat) : '',
       expectedEnd: currentSession ? calculateExpectedEndTime() : '',
       remainingTime: currentSession ? formatRemainingTime(currentSession.remainingTime) : '',
       progress: currentSession ? calculateProgress() : 0
     });
-  }, [currentSession, settings.timeFormat]);
+  }, [currentSession, settings?.timeFormat]);
 
   const calculateExpectedEndTime = (): string => {
     if (!currentSession) return '';
@@ -213,7 +217,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     const remainingMs = currentSession.remainingTime * 1000;
     const expectedEnd = new Date(now.getTime() + remainingMs);
     
-    return formatTime(expectedEnd, settings.timeFormat);
+    return formatTime(expectedEnd, settings?.timeFormat || DEFAULT_SETTINGS.timeFormat);
   };
 
   const formatRemainingTime = (seconds: number): string => {
@@ -232,7 +236,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   const determineNextSessionType = (): SessionType => {
     if (nextSessionType === SessionType.FOCUS) {
       const completedFocusSessions = sessionCount + 1;
-      if (completedFocusSessions % settings.sessionsBeforeLongBreak === 0) {
+      if (completedFocusSessions % (settings?.sessionsBeforeLongBreak || DEFAULT_SETTINGS.sessionsBeforeLongBreak) === 0) {
         return SessionType.LONG_BREAK;
       }
       return SessionType.SHORT_BREAK;
@@ -243,13 +247,13 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   const getSessionDuration = (type: SessionType): number => {
     switch (type) {
       case SessionType.FOCUS:
-        return settings.focusDuration;
+        return settings?.focusDuration || DEFAULT_SETTINGS.focusDuration;
       case SessionType.SHORT_BREAK:
-        return settings.shortBreakDuration;
+        return settings?.shortBreakDuration || DEFAULT_SETTINGS.shortBreakDuration;
       case SessionType.LONG_BREAK:
-        return settings.longBreakDuration;
+        return settings?.longBreakDuration || DEFAULT_SETTINGS.longBreakDuration;
       default:
-        return settings.focusDuration;
+        return settings?.focusDuration || DEFAULT_SETTINGS.focusDuration;
     }
   };
 
@@ -266,7 +270,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
 
     while (remainingMinutes > 0) {
       // Add focus session
-      const focusDuration = Math.min(remainingMinutes, settings.focusDuration);
+      const focusDuration = Math.min(remainingMinutes, settings?.focusDuration || DEFAULT_SETTINGS.focusDuration);
       focusSessionCount++;
       plan.push({
         type: SessionType.FOCUS,
@@ -279,8 +283,8 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
 
       // Add break session if there's more time
       if (remainingMinutes > 0) {
-        const isLongBreak = focusSessionCount % settings.sessionsBeforeLongBreak === 0;
-        const breakDuration = isLongBreak ? settings.longBreakDuration : settings.shortBreakDuration;
+        const isLongBreak = focusSessionCount % (settings?.sessionsBeforeLongBreak || DEFAULT_SETTINGS.sessionsBeforeLongBreak) === 0;
+        const breakDuration = isLongBreak ? (settings?.longBreakDuration || DEFAULT_SETTINGS.longBreakDuration) : (settings?.shortBreakDuration || DEFAULT_SETTINGS.shortBreakDuration);
         const breakType = isLongBreak ? SessionType.LONG_BREAK : SessionType.SHORT_BREAK;
         
         plan.push({
@@ -324,7 +328,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         // Initialize session plan if this is the first focus session
         if (sessionCount === 0) {
           // Use the quick duration as the total planned duration when starting fresh
-          const totalDuration = timerState === TimerState.IDLE ? quickDuration : settings.focusDuration;
+          const totalDuration = timerState === TimerState.IDLE ? quickDuration : (settings?.focusDuration || DEFAULT_SETTINGS.focusDuration);
           setTotalPlannedDuration(totalDuration);
           setCurrentSessionIndex(0);
           setSessionPlan(generateSessionPlan(totalDuration, 0));
@@ -374,7 +378,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         const actualRemainingTime = Math.max(0, totalPlannedSeconds - actualElapsedSeconds);
 
         // Play tick sound in last 10 seconds
-        if (settings.enableTickSound && actualRemainingTime <= 10 && actualRemainingTime > 0) {
+        if ((settings?.enableTickSound || DEFAULT_SETTINGS.enableTickSound) && actualRemainingTime <= 10 && actualRemainingTime > 0) {
           notificationService.playTickSound();
         }
 
@@ -490,7 +494,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     setCurrentSessionIndex(prev => prev + 1);
     setSessionPlan(prev => generateSessionPlan(totalPlannedDuration, currentSessionIndex + 1));
 
-    if (settings.autoStartNextSession) {
+    if (settings?.autoStartNextSession || DEFAULT_SETTINGS.autoStartNextSession) {
       const nextType = currentSession.type === SessionType.FOCUS ? 
         determineNextSessionType() : SessionType.FOCUS;
       startSession(nextType);
@@ -535,7 +539,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     setCurrentSessionIndex(prev => prev + 1);
     setSessionPlan(prev => generateSessionPlan(totalPlannedDuration, currentSessionIndex + 1));
 
-    if (settings.autoStartNextSession) {
+    if (settings?.autoStartNextSession || DEFAULT_SETTINGS.autoStartNextSession) {
       const nextType = session.type === SessionType.FOCUS ? 
         determineNextSessionType() : SessionType.FOCUS;
       
@@ -674,7 +678,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
             mb: 2,
             color: isIdle ? 'text.secondary' : 'primary.main',
             transition: 'color 0.3s ease',
-            tabularNums: true,
+            fontVariantNumeric: 'tabular-nums',
             WebkitFontFeatureSettings: '"tnum"',
             fontFeatureSettings: '"tnum"'
           }}
@@ -768,7 +772,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   const renderQuickDurationInput = () => {
     if (timerState !== TimerState.IDLE) return null;
     
-    const commonDurations = settings.quickPresets;
+    const commonDurations = settings?.quickPresets || DEFAULT_SETTINGS.quickPresets;
     
     return (
       <Box sx={{ textAlign: 'center', mb: 4, width: '100%' }}>
@@ -826,14 +830,14 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
           <Typography variant="h6">{timeDisplay.current}</Typography>
         </Box>
         
-        {currentSession && settings.showSessionStartTime && (
+        {currentSession && (settings?.showSessionStartTime || DEFAULT_SETTINGS.showSessionStartTime) && (
           <Box sx={{ textAlign: 'center' }}>
             <Typography variant="body2" color="text.secondary">Started</Typography>
             <Typography variant="h6">{timeDisplay.sessionStart}</Typography>
           </Box>
         )}
         
-        {currentSession && settings.showSessionEndTime && (
+        {currentSession && (settings?.showSessionEndTime || DEFAULT_SETTINGS.showSessionEndTime) && (
           <Box sx={{ textAlign: 'right' }}>
             <Typography variant="body2" color="text.secondary">Ends at</Typography>
             <Typography variant="h6">{timeDisplay.expectedEnd}</Typography>
@@ -966,7 +970,9 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       {renderTimerDisplay()}
       {renderQuickDurationInput()}
       {renderControls()}
-      {renderActionButtons()}
+      <Box sx={{ mt: 4 }}>
+        {renderActionButtons()}
+      </Box>
     </Box>
   );
 };
