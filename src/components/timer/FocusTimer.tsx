@@ -20,7 +20,9 @@ import {
   Remove,
   Add,
   Timer as TimerIcon,
-  Feedback
+  Feedback,
+  History,
+  FastForward
 } from '@mui/icons-material';
 import { 
   TimerState, 
@@ -35,6 +37,30 @@ import {
 import { focusStorage } from '@/services/focusStorage';
 import { notificationService } from '@/services/notificationService';
 import { v4 as uuidv4 } from 'uuid';
+
+export const generateSessionPlan = (totalMinutes: number, currentSessionIndex: number = 0, settings: AppSettings) => {
+  const plan: Array<{type: SessionType, duration: number, completed: boolean, current: boolean}> = [];
+  
+  // Single continuous focus session for the entire duration
+  plan.push({
+    type: SessionType.FOCUS,
+    duration: totalMinutes,
+    completed: currentSessionIndex > 0,
+    current: currentSessionIndex === 0
+  });
+
+  // Log the simplified plan
+  console.log(`Generated session plan: Single ${totalMinutes}min focus session`);
+  console.log('Sessions:', plan.map((s, i) => ({ 
+    index: i, 
+    type: s.type, 
+    duration: s.duration,
+    completed: s.completed, 
+    current: s.current 
+  })));
+
+  return plan;
+};
 
 interface FocusTimerProps {
   onOpenSettings: () => void;
@@ -63,7 +89,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     progress: 0
   });
   const [sessionCount, setSessionCount] = useState(0);
-  const [nextSessionType, setNextSessionType] = useState<SessionType>(SessionType.FOCUS);
+  // Removed nextSessionType since we only have continuous focus sessions
   const [quickDuration, setQuickDuration] = useState<number>(25); // Quick duration input
   const [sessionPlan, setSessionPlan] = useState<Array<{type: SessionType, duration: number, completed: boolean, current: boolean}>>([]);
   const [totalPlannedDuration, setTotalPlannedDuration] = useState<number>(0);
@@ -112,6 +138,15 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     setQuickDuration(settings?.focusDuration || DEFAULT_SETTINGS.focusDuration);
   }, [settings?.focusDuration]);
 
+  // Generate session plan whenever quickDuration changes (when idle)
+  useEffect(() => {
+    if (timerState === TimerState.IDLE && quickDuration > 0) {
+      setTotalPlannedDuration(quickDuration);
+      setCurrentSessionIndex(0);
+      setSessionPlan(generateSessionPlan(quickDuration, 0, settings));
+    }
+  }, [quickDuration, timerState, settings]);
+
   // Sync timer with actual elapsed time to fix accuracy issues
   const syncTimer = useCallback(() => {
     if (!currentSession || !startTimeRef.current || timerState !== TimerState.RUNNING) {
@@ -157,10 +192,10 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
             
             // Show notification for completed session
             await notificationService.showNotification({
-              type: session.type === SessionType.FOCUS ? 'session_complete' : 'break_complete',
+              type: 'session_complete',
               title: 'Session Completed!',
-              body: `Your ${session.type} session finished while the app was inactive.`,
-              sound: session.type === SessionType.FOCUS ? 'complete' : 'break',
+              body: 'Your focus session finished while the app was inactive.',
+              sound: 'complete',
               timestamp: new Date()
             });
           } else {
@@ -179,7 +214,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
           
           // Update tray for paused sessions
           if (window.electronAPI && session.state === TimerState.PAUSED) {
-            await window.electronAPI.updateTrayStatus(`${session.type} Session Paused`);
+            await window.electronAPI.updateTrayStatus('Focus Session Paused');
           }
         }
       } else {
@@ -233,28 +268,11 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     return Math.max(0, Math.min(100, (elapsed / totalSeconds) * 100));
   };
 
-  const determineNextSessionType = (): SessionType => {
-    if (nextSessionType === SessionType.FOCUS) {
-      const completedFocusSessions = sessionCount + 1;
-      if (completedFocusSessions % (settings?.sessionsBeforeLongBreak || DEFAULT_SETTINGS.sessionsBeforeLongBreak) === 0) {
-        return SessionType.LONG_BREAK;
-      }
-      return SessionType.SHORT_BREAK;
-    }
-    return SessionType.FOCUS;
-  };
+  // Removed determineNextSessionType since we only have continuous focus sessions
 
   const getSessionDuration = (type: SessionType): number => {
-    switch (type) {
-      case SessionType.FOCUS:
-        return settings?.focusDuration || DEFAULT_SETTINGS.focusDuration;
-      case SessionType.SHORT_BREAK:
-        return settings?.shortBreakDuration || DEFAULT_SETTINGS.shortBreakDuration;
-      case SessionType.LONG_BREAK:
-        return settings?.longBreakDuration || DEFAULT_SETTINGS.longBreakDuration;
-      default:
-        return settings?.focusDuration || DEFAULT_SETTINGS.focusDuration;
-    }
+    // Always use the quick duration for continuous sessions
+    return quickDuration;
   };
 
   const handleQuickDurationChange = (value: number) => {
@@ -262,52 +280,14 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     setQuickDuration(clampedValue);
   };
 
-  const generateSessionPlan = (totalMinutes: number, currentSessionIndex: number = 0) => {
-    const plan: Array<{type: SessionType, duration: number, completed: boolean, current: boolean}> = [];
-    let remainingMinutes = totalMinutes;
-    let focusSessionCount = 0;
-    let sessionIndex = 0;
-
-    while (remainingMinutes > 0) {
-      // Add focus session
-      const focusDuration = Math.min(remainingMinutes, settings?.focusDuration || DEFAULT_SETTINGS.focusDuration);
-      focusSessionCount++;
-      plan.push({
-        type: SessionType.FOCUS,
-        duration: focusDuration,
-        completed: sessionIndex < currentSessionIndex,
-        current: sessionIndex === currentSessionIndex
-      });
-      remainingMinutes -= focusDuration;
-      sessionIndex++;
-
-      // Add break session if there's more time
-      if (remainingMinutes > 0) {
-        const isLongBreak = focusSessionCount % (settings?.sessionsBeforeLongBreak || DEFAULT_SETTINGS.sessionsBeforeLongBreak) === 0;
-        const breakDuration = isLongBreak ? (settings?.longBreakDuration || DEFAULT_SETTINGS.longBreakDuration) : (settings?.shortBreakDuration || DEFAULT_SETTINGS.shortBreakDuration);
-        const breakType = isLongBreak ? SessionType.LONG_BREAK : SessionType.SHORT_BREAK;
-        
-        plan.push({
-          type: breakType,
-          duration: breakDuration,
-          completed: sessionIndex < currentSessionIndex,
-          current: sessionIndex === currentSessionIndex
-        });
-        sessionIndex++;
-      }
-    }
-
-    return plan;
-  };
-
-  const startSession = async (type: SessionType = nextSessionType) => {
+  const startSession = async (customDuration?: number) => {
     try {
-      const duration = getSessionDuration(type);
+      const duration = customDuration || quickDuration;
       const now = new Date();
       const newSession: TimerSession = {
         id: uuidv4(),
-        type,
-        sessionNumber: type === SessionType.FOCUS ? sessionCount + 1 : 0,
+        type: SessionType.FOCUS,
+        sessionNumber: sessionCount + 1,
         plannedDuration: duration,
         remainingTime: duration * 60,
         startTime: now,
@@ -321,21 +301,12 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       startTimeRef.current = now.getTime();
       isActiveRef.current = true;
       
-      if (type === SessionType.FOCUS) {
-        setSessionCount(prev => prev + 1);
-        setNextSessionType(determineNextSessionType());
-        
-        // Initialize session plan if this is the first focus session
-        if (sessionCount === 0) {
-          // Use the quick duration as the total planned duration when starting fresh
-          const totalDuration = timerState === TimerState.IDLE ? quickDuration : (settings?.focusDuration || DEFAULT_SETTINGS.focusDuration);
-          setTotalPlannedDuration(totalDuration);
-          setCurrentSessionIndex(0);
-          setSessionPlan(generateSessionPlan(totalDuration, 0));
-        }
-      } else {
-        setNextSessionType(SessionType.FOCUS);
-      }
+      setSessionCount(prev => prev + 1);
+      
+      // Initialize session plan with the requested duration
+      setTotalPlannedDuration(duration);
+      setCurrentSessionIndex(0);
+      setSessionPlan(generateSessionPlan(duration, 0, settings));
 
       const appState = await focusStorage.getAppState();
       appState.currentSession = newSession;
@@ -343,7 +314,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
 
       // Update system tray and window title
       if (window.electronAPI) {
-        await window.electronAPI.updateTrayStatus(`${type} Session Running`);
+        await window.electronAPI.updateTrayStatus('Focus Session Running');
       }
 
       startTimer();
@@ -383,7 +354,8 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         }
 
         // Check if session is complete
-        if (actualRemainingTime === 0) {
+        if (actualRemainingTime === 0 && prev.state !== TimerState.COMPLETED) {
+          console.log('Timer reached 0 - calling completeSession for focus session');
           completeSession(prev);
           return { ...prev, remainingTime: 0, state: TimerState.COMPLETED };
         }
@@ -402,7 +374,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
           const remainingMinutes = Math.floor(actualRemainingTime / 60);
           const remainingSeconds = actualRemainingTime % 60;
           const timeStr = `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-          window.electronAPI.updateTrayStatus(`${prev.type} Session - ${timeStr} remaining`);
+          window.electronAPI.updateTrayStatus(`Focus Session - ${timeStr} remaining`);
         }
 
         return updatedSession;
@@ -434,7 +406,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
 
     // Update system tray
     if (window.electronAPI) {
-      await window.electronAPI.updateTrayStatus(`${currentSession.type} Session Paused`);
+      await window.electronAPI.updateTrayStatus('Focus Session Paused');
     }
   };
 
@@ -462,10 +434,32 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
 
     // Update system tray
     if (window.electronAPI) {
-      await window.electronAPI.updateTrayStatus(`${currentSession.type} Session Running`);
+      await window.electronAPI.updateTrayStatus('Focus Session Running');
     }
 
     startTimer();
+  };
+
+  const fastForwardSession = (seconds: number) => {
+    if (!startTimeRef.current) return;
+
+    // To fast-forward, we pretend the session started earlier.
+    startTimeRef.current -= seconds * 1000;
+
+    setCurrentSession(prev => {
+      if (!prev) return prev;
+
+      const newRemainingTime = Math.max(0, prev.remainingTime - seconds);
+      
+      const updatedSession = { ...prev, remainingTime: newRemainingTime };
+
+      if (newRemainingTime === 0 && prev.state !== TimerState.COMPLETED) {
+        completeSession(updatedSession);
+        return { ...updatedSession, state: TimerState.COMPLETED };
+      }
+      
+      return updatedSession;
+    });
   };
 
   const stopSession = async () => {
@@ -490,66 +484,53 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     isActiveRef.current = false;
     await saveCompletedSession(currentSession, CompletionStatus.SKIPPED);
     
-    // Update session plan progress
-    setCurrentSessionIndex(prev => prev + 1);
-    setSessionPlan(prev => generateSessionPlan(totalPlannedDuration, currentSessionIndex + 1));
-
-    if (settings?.autoStartNextSession || DEFAULT_SETTINGS.autoStartNextSession) {
-      const nextType = currentSession.type === SessionType.FOCUS ? 
-        determineNextSessionType() : SessionType.FOCUS;
-      startSession(nextType);
-    } else {
-      resetTimer();
+    // Since we only have single sessions, skipping means ending the session
+    setTimerState(TimerState.COMPLETED);
+    if (window.electronAPI) {
+      await window.electronAPI.sessionNotification({
+        title: 'Session Skipped',
+        body: `Session was skipped after ${Math.floor((currentSession.plannedDuration * 60 - currentSession.remainingTime) / 60)} minutes.`
+      });
     }
+    
+    setTimeout(() => resetTimer(), 2000);
   };
 
   const completeSession = async (session: TimerSession) => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
-
     isActiveRef.current = false;
     await saveCompletedSession(session, CompletionStatus.COMPLETED);
     
-    const notificationTitle = session.type === SessionType.FOCUS ? 
-      'Focus Session Complete!' : 'Break Time Over!';
-    
-    const notificationBody = session.type === SessionType.FOCUS ?
-      `Great job! You completed a ${session.plannedDuration}-minute focus session.` :
-      `Break time is over. Ready for your next focus session?`;
+    const notificationTitle = 'Session Complete!';
+    const notificationBody = `Great job! You completed a ${session.plannedDuration}-minute session.`;
 
     await notificationService.showNotification({
-      type: session.type === SessionType.FOCUS ? 'session_complete' : 'break_complete',
+      type: 'session_complete',
       title: notificationTitle,
       body: notificationBody,
-      sound: session.type === SessionType.FOCUS ? 'complete' : 'break',
+      sound: 'complete',
       timestamp: new Date()
     });
 
-    // Also send Electron notification
     if (window.electronAPI) {
-      await window.electronAPI.sessionNotification({
-        title: notificationTitle,
-        body: notificationBody
-      });
+      await window.electronAPI.sessionNotification({ title: notificationTitle, body: notificationBody });
       await window.electronAPI.updateTrayStatus('Session Complete');
     }
 
-    // Update session plan progress
-    setCurrentSessionIndex(prev => prev + 1);
-    setSessionPlan(prev => generateSessionPlan(totalPlannedDuration, currentSessionIndex + 1));
-
-    if (settings?.autoStartNextSession || DEFAULT_SETTINGS.autoStartNextSession) {
-      const nextType = session.type === SessionType.FOCUS ? 
-        determineNextSessionType() : SessionType.FOCUS;
-      
-      setTimeout(() => {
-        startSession(nextType);
-      }, 2000);
-    } else {
-      setTimerState(TimerState.COMPLETED);
-      setTimeout(resetTimer, 3000);
+    // Session completed
+    setTimerState(TimerState.COMPLETED);
+    
+    if (window.electronAPI) {
+      window.electronAPI.sessionNotification({
+        title: 'Session Complete!',
+        body: `Great work! You've completed your ${session.plannedDuration} minute focus session.`
+      });
     }
+    
+    // Reset after a short delay
+    setTimeout(resetTimer, 3000);
   };
 
   const saveCompletedSession = async (session: TimerSession, status: CompletionStatus) => {
@@ -592,7 +573,6 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   const resetTimer = async () => {
     setCurrentSession(null);
     setTimerState(TimerState.IDLE);
-    setNextSessionType(SessionType.FOCUS);
     setSessionCount(0);
     setSessionPlan([]);
     setTotalPlannedDuration(0);
@@ -931,6 +911,14 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         </>
       )}
 
+      {(timerState === TimerState.RUNNING || timerState === TimerState.PAUSED) && (
+        <Tooltip title="Fast Forward 60s (for testing)">
+          <IconButton onClick={() => fastForwardSession(60)} color="secondary">
+            <FastForward />
+          </IconButton>
+        </Tooltip>
+      )}
+
       {timerState === TimerState.COMPLETED && (
         <Button
           variant="contained"
@@ -954,7 +942,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       </Tooltip>
       <Tooltip title="Session History">
         <IconButton onClick={onOpenHistory} size="small">
-          <HistoryIcon fontSize="small" />
+          <History fontSize="small" />
         </IconButton>
       </Tooltip>
       <Tooltip title="Send Feedback">
@@ -967,6 +955,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
 
   return (
     <Box sx={{ width: '100%', textAlign: 'center' }}>
+      {renderTimeInfo()}
       {renderTimerDisplay()}
       {renderQuickDurationInput()}
       {renderControls()}

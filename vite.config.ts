@@ -19,6 +19,21 @@ export default defineConfig(({ command }) => {
         '@': path.join(__dirname, 'src')
       },
     },
+    optimizeDeps: {
+      include: ['@mui/icons-material'],
+      force: true
+    },
+    build: {
+      rollupOptions: {
+        external: (id) => {
+          // Don't externalize MUI icons
+          if (id.includes('@mui/icons-material')) {
+            return false;
+          }
+          return false;
+        }
+      }
+    },
     plugins: [
       react(),
       electron({

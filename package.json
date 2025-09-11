@@ -42,6 +42,9 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.48.2",
+    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/lodash": "^4.17.13",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
@@ -49,6 +52,7 @@
     "autoprefixer": "^10.4.20",
     "electron": "^33.2.0",
     "electron-builder": "^24.13.3",
+    "jsdom": "^26.1.0",
     "lodash": "^4.17.21",
     "postcss": "^8.4.49",
     "postcss-import": "^16.1.0",

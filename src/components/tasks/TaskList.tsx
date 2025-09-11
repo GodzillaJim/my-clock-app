@@ -1,13 +1,11 @@
-import {
-  Add,
-  Check,
-  Delete,
-  DeleteOutline,
-  DoneAllOutlined,
-  Edit,
-  HourglassTop,
-  PlayArrow,
-} from "@mui/icons-material";
+import Add from "@mui/icons-material/Add";
+import Check from "@mui/icons-material/Check";
+import Delete from "@mui/icons-material/Delete";
+import DeleteOutline from "@mui/icons-material/DeleteOutline";
+import DoneAllOutlined from "@mui/icons-material/DoneAllOutlined";
+import Edit from "@mui/icons-material/Edit";
+import HourglassTop from "@mui/icons-material/HourglassTop";
+import PlayArrow from "@mui/icons-material/PlayArrow";
 import {
   Accordion,
   Box,

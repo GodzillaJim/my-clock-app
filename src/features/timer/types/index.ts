@@ -205,6 +205,7 @@ export interface SessionItem extends SessionRecord {
   minutes: number; // Same as plannedDuration
   remainingMinutes: number; // Calculated from remainingTime
   completedAt?: Date; // Same as endTime
+  isCurrent?: boolean; // Indicates if this session is the current active session
 }
 
 // Utility functions for backward compatibility

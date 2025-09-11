@@ -86,31 +86,37 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
   const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
-    setLocalSettings(settings);
-    setIsDirty(false);
-  }, [settings]);
-
-  useEffect(() => {
     if (open) {
+      console.log('Settings dialog opened, resetting local settings to:', settings);
+      setLocalSettings(settings);
+      setIsDirty(false);
       setNotificationPermission(notificationService.getPermissionStatus());
     }
-  }, [open]);
+  }, [open, settings]);
 
   const handleSettingChange = <K extends keyof AppSettings>(
     key: K,
     value: AppSettings[K]
   ) => {
-    setLocalSettings(prev => ({ ...prev, [key]: value }));
+    console.log('Setting change:', key, 'to:', value);
+    setLocalSettings(prev => {
+      const newSettings = { ...prev, [key]: value };
+      console.log('New local settings:', newSettings);
+      return newSettings;
+    });
     setIsDirty(true);
   };
 
   const handleSave = async () => {
     try {
+      console.log('Saving settings with presets:', localSettings.quickPresets);
       const appState = await focusStorage.getAppState();
       appState.settings = localSettings;
+      console.log('App state before save:', appState);
       await focusStorage.saveAppState(appState);
       onSettingsChange(localSettings);
       setIsDirty(false);
+      console.log('Settings saved successfully');
     } catch (error) {
       console.error('Failed to save settings:', error);
     }
@@ -122,7 +128,9 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
   };
 
   const handlePresetAdd = (value: number) => {
+    console.log('Adding preset:', value, 'Current presets:', localSettings.quickPresets);
     const newPresets = [...localSettings.quickPresets, value].sort((a, b) => a - b);
+    console.log('New presets array:', newPresets);
     handleSettingChange('quickPresets', newPresets);
   };
 

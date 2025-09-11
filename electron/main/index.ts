@@ -141,8 +141,8 @@ function createSimpleTrayIcon(): Electron.NativeImage {
 
 function updateTrayIcon(isActive: boolean = false) {
   if (tray) {
-    // Keep using the same reliable icon
-    const trayIcon = createSimpleTrayIcon()
+    // Use the proper tray icon instead of empty one
+    const trayIcon = createTrayIcon(isActive)
     tray.setImage(trayIcon)
   }
 }
@@ -154,8 +154,8 @@ function updateWindowTitle(status: string) {
 }
 
 function createTray() {
-  // Create a simple, reliable tray icon
-  const trayIcon = createSimpleTrayIcon()
+  // Create a proper tray icon
+  const trayIcon = createTrayIcon(false)
   tray = new Tray(trayIcon)
   
   const contextMenu = Menu.buildFromTemplate([
@@ -166,13 +166,17 @@ function createTray() {
     },
     { type: 'separator' },
     {
-      label: 'Show Window',
+      label: 'Show/Hide Window',
       type: 'normal',
       click: () => {
         if (win) {
-          if (win.isMinimized()) win.restore()
-          win.show()
-          win.focus()
+          if (win.isVisible()) {
+            win.hide()
+          } else {
+            if (win.isMinimized()) win.restore()
+            win.show()
+            win.focus()
+          }
         }
       }
     },
@@ -268,7 +272,9 @@ async function createWindow() {
     webPreferences: {
       preload,
       // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
-      nodeIntegration: true,
+      nodeIntegration: false,
+      contextIsolation: true,
+      webSecurity: false,
 
       // Consider using contextBridge.exposeInMainWorld
       // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
@@ -318,9 +324,9 @@ async function createWindow() {
     return { action: 'deny' }
   })
 
-  // Setup global shortcuts (tray disabled temporarily)  
+  // Setup global shortcuts and tray
   setupGlobalShortcuts()
-  // createTray() // Disabled until tray icon issues are resolved
+  createTray()
 
   // Auto update
   update(win)
@@ -407,8 +413,9 @@ ipcMain.handle('open-win', (_, arg) => {
   const childWindow = new BrowserWindow({
     webPreferences: {
       preload,
-      nodeIntegration: true,
-      contextIsolation: false,
+      nodeIntegration: false,
+      contextIsolation: true,
+      webSecurity: false,
     },
   })
 

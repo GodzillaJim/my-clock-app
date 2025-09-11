@@ -11,15 +11,12 @@ export const SessionComponent = ({
   currentSessionId,
 }: SessionComponentProps) => {
   const getSessionColor = (session: SessionItem) => {
-    const sessionIsRunning = session.id === currentSessionId;
-    if (sessionIsRunning) {
+    if (session.isCurrent) {
       return "secondary.main";
     }
-
     if (session.remainingMinutes === 0) {
       return "success.main";
     }
-
     return "GrayText";
   };
 
@@ -27,11 +24,9 @@ export const SessionComponent = ({
     if (session.remainingMinutes === 0) {
       return "Session completed";
     }
-
-    if (session.id === currentSessionId) {
+    if (session.isCurrent) {
       return "Session is running";
     }
-
     return "Session in progress";
   };
 

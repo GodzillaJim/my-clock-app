@@ -80,15 +80,26 @@ class FocusStorageService {
         request.onsuccess = () => {
           const result = request.result;
           if (result && result.data) {
-            const state = { ...defaultState, ...result.data };
+            // Deep merge settings to ensure all default properties are preserved
+            const savedState = result.data;
+            const state: AppState = {
+              ...defaultState,
+              ...savedState,
+              settings: {
+                ...DEFAULT_SETTINGS,
+                ...savedState.settings
+              }
+            };
             
             if (state.lastActiveDate !== getTodayDateString()) {
               state.currentSession = null;
               state.lastActiveDate = getTodayDateString();
             }
             
+            console.log('Loaded app state with quick presets:', state.settings.quickPresets);
             resolve(state);
           } else {
+            console.log('No saved state found, using defaults');
             resolve(defaultState);
           }
         };
@@ -106,13 +117,21 @@ class FocusStorageService {
       await this.initialize();
     }
 
+    console.log('Saving app state with quick presets:', state.settings?.quickPresets);
+
     const transaction = this.db!.transaction(['appState'], 'readwrite');
     const store = transaction.objectStore('appState');
     
     await new Promise<void>((resolve, reject) => {
       const request = store.put({ key: 'current', data: state, updatedAt: new Date() });
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        console.log('App state saved successfully');
+        resolve();
+      };
+      request.onerror = () => {
+        console.error('Failed to save app state:', request.error);
+        reject(request.error);
+      };
     });
   }
 

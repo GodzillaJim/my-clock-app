@@ -55,9 +55,13 @@ export const useSessions = (storageKey = 'pomodoro-sessions') => {
     createNewSessions,
     getCurrentSession,
     updateSession: (sessionId: string, updates: Partial<SessionItem>) => {
-      setSessions(prev => prev.map(session => 
-        session.id === sessionId ? { ...session, ...updates } : session
-      ));
+        setSessions(prev => prev.map((session, idx) => {
+          const isCurrent = idx === currentSessionIndex;
+          if (session.id === sessionId) {
+            return { ...session, ...updates, isCurrent };
+          }
+          return { ...session, isCurrent };
+        }));
     }
   };
 };
