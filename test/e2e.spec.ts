@@ -23,18 +23,34 @@ if (process.platform === 'linux') {
   test(() => expect(true).true)
 } else {
   beforeAll(async () => {
-    electronApp = await electron.launch({
-      args: ['.', '--no-sandbox'],
-      cwd: root,
-      env: { ...process.env, NODE_ENV: 'development' },
-    })
-    page = await electronApp.firstWindow()
+    const mainEntry = path.join(root, 'dist-electron', 'main', 'index.js');
+    
+    console.log(`[E2E] Launching Electron with entry: ${mainEntry}`);
 
-    const mainWin: JSHandle<BrowserWindow> = await electronApp.browserWindow(page)
+    electronApp = await electron.launch({
+      args: [mainEntry, '--no-sandbox'],
+      cwd: root,
+      env: { ...process.env, NODE_ENV: 'test' }, // Use 'test' env
+    });
+
+    // Add a delay to ensure the app has time to initialize
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    page = await electronApp.firstWindow();
+    
+    // Add a check to ensure page is valid
+    if (!page) {
+      throw new Error("Playwright failed to get the first window. The app may have crashed on startup.");
+    }
+
+    await page.waitForLoadState('domcontentloaded');
+
+    const mainWin: JSHandle<BrowserWindow> = await electronApp.browserWindow(page);
     await mainWin.evaluate(async (win) => {
-      win.webContents.executeJavaScript('console.log("Execute JavaScript with e2e testing.")')
-    })
-  }, 30000)
+      win.webContents.openDevTools();
+      win.webContents.executeJavaScript('console.log("Execute JavaScript with e2e testing.")');
+    });
+  }, 60000); // Increased timeout for slower CI environments
 
   afterAll(async () => {
     if (page) {

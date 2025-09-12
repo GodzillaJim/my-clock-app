@@ -22,13 +22,15 @@
     "dist:win": "tsc && vite build && electron-builder --win --publish=never",
     "preview": "vite preview",
     "pretest": "vite build --mode=test",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "vitest run --config ./vitest.config.e2e.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^6.3.0",
     "@mui/material": "^6.5.0",
+    "@testing-library/dom": "^10.4.1",
     "@types/uuid": "^10.0.0",
     "dayjs": "^1.11.13",
     "electron-updater": "^6.3.9",

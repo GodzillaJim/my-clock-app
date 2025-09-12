@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Box, 
   Typography, 
@@ -8,13 +8,13 @@ import {
   Stack,
   Chip,
   IconButton,
-  Tooltip
+  Tooltip,
+  TextField
 } from '@mui/material';
 import { 
   PlayArrow, 
   Pause, 
   Stop, 
-  SkipNext, 
   Settings,
   History as HistoryIcon,
   Remove,
@@ -22,44 +22,47 @@ import {
   Timer as TimerIcon,
   Feedback,
   History,
-  FastForward
+  FastForward,
+  Coffee,
+  Work
 } from '@mui/icons-material';
+import { CompletionScreen } from './CompletionScreen';
 import { 
-  TimerState, 
   SessionType, 
-  TimerSession, 
-  CompletionStatus,
-  AppSettings,
-  formatTime,
-  TimeDisplay,
-  DEFAULT_SETTINGS
+  AppSettings
 } from '@/features/timer/types';
-import { focusStorage } from '@/services/focusStorage';
 import { notificationService } from '@/services/notificationService';
-import { v4 as uuidv4 } from 'uuid';
 
-export const generateSessionPlan = (totalMinutes: number, currentSessionIndex: number = 0, settings: AppSettings) => {
-  const plan: Array<{type: SessionType, duration: number, completed: boolean, current: boolean}> = [];
-  
-  // Single continuous focus session for the entire duration
-  plan.push({
-    type: SessionType.FOCUS,
-    duration: totalMinutes,
-    completed: currentSessionIndex > 0,
-    current: currentSessionIndex === 0
-  });
+// Simple session generation following SessionTimer approach
+const FOCUS_DURATION = 25 * 60; // 25 minutes in seconds  
+const BREAK_DURATION = 5 * 60;  // 5 minutes in seconds
 
-  // Log the simplified plan
-  console.log(`Generated session plan: Single ${totalMinutes}min focus session`);
-  console.log('Sessions:', plan.map((s, i) => ({ 
-    index: i, 
-    type: s.type, 
-    duration: s.duration,
-    completed: s.completed, 
-    current: s.current 
-  })));
+interface SimpleSession {
+  type: 'focus' | 'break';
+  duration: number; // in seconds
+}
 
-  return plan;
+const generateSessions = (totalMinutes: number): SimpleSession[] => {
+  const totalSeconds = totalMinutes * 60;
+  const sessions: SimpleSession[] = [];
+  let remainingTime = totalSeconds;
+
+  while (remainingTime > 0) {
+    if (sessions.length % 2 === 0) {
+      // Focus session
+      const focusDuration = Math.min(FOCUS_DURATION, remainingTime);
+      sessions.push({ type: 'focus', duration: focusDuration });
+      remainingTime -= focusDuration;
+    } else {
+      // Break session
+      const breakDuration = Math.min(BREAK_DURATION, remainingTime);
+      sessions.push({ type: 'break', duration: breakDuration });
+      remainingTime -= breakDuration;
+    }
+  }
+
+  console.log(`Generated simple session plan for ${totalMinutes}min total:`, sessions);
+  return sessions;
 };
 
 interface FocusTimerProps {
@@ -79,200 +82,70 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   if (!settings) {
     return <Box>Loading...</Box>;
   }
-  const [timerState, setTimerState] = useState<TimerState>(TimerState.IDLE);
-  const [currentSession, setCurrentSession] = useState<TimerSession | null>(null);
-  const [timeDisplay, setTimeDisplay] = useState<TimeDisplay>({
-    current: '',
-    sessionStart: '',
-    expectedEnd: '',
-    remainingTime: '',
-    progress: 0
-  });
-  const [sessionCount, setSessionCount] = useState(0);
-  // Removed nextSessionType since we only have continuous focus sessions
-  const [quickDuration, setQuickDuration] = useState<number>(25); // Quick duration input
-  const [sessionPlan, setSessionPlan] = useState<Array<{type: SessionType, duration: number, completed: boolean, current: boolean}>>([]);
-  const [totalPlannedDuration, setTotalPlannedDuration] = useState<number>(0);
-  const [currentSessionIndex, setCurrentSessionIndex] = useState<number>(0);
-  
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastTickRef = useRef<number>(Date.now());
-  const startTimeRef = useRef<number | null>(null);
-  const isActiveRef = useRef(false);
+  // Simple state management following SessionTimer approach
+  const [sessions, setSessions] = useState<SimpleSession[]>([]);
+  const [currentSessionIndex, setCurrentSessionIndex] = useState(0);
+  const [remainingTime, setRemainingTime] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
+  const [quickDuration, setQuickDuration] = useState<number>(25);
+  const [isComplete, setIsComplete] = useState(false);
+  const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
 
+  // Initialize sessions when component mounts or quickDuration changes
   useEffect(() => {
-    notificationService.setSettings(settings);
-    initializeApp();
-    
-    // Handle visibility change to prevent timer from pausing when app loses focus
-    const handleVisibilityChange = () => {
-      if (isActiveRef.current) {
-        syncTimer();
-      }
-    };
-    
-    const handleFocus = () => {
-      if (isActiveRef.current) {
-        syncTimer();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-    
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, []);
-
-  useEffect(() => {
-    updateTimeDisplay();
-  }, [currentSession, timerState, settings?.timeFormat]);
-
-  useEffect(() => {
-    // Update quick duration when settings change
-    setQuickDuration(settings?.focusDuration || DEFAULT_SETTINGS.focusDuration);
-  }, [settings?.focusDuration]);
-
-  // Generate session plan whenever quickDuration changes (when idle)
-  useEffect(() => {
-    if (timerState === TimerState.IDLE && quickDuration > 0) {
-      setTotalPlannedDuration(quickDuration);
+    if (quickDuration > 0) {
+      setSessions(generateSessions(quickDuration));
       setCurrentSessionIndex(0);
-      setSessionPlan(generateSessionPlan(quickDuration, 0, settings));
+      setRemainingTime(0);
     }
-  }, [quickDuration, timerState, settings]);
+  }, [quickDuration]);
 
-  // Sync timer with actual elapsed time to fix accuracy issues
-  const syncTimer = useCallback(() => {
-    if (!currentSession || !startTimeRef.current || timerState !== TimerState.RUNNING) {
-      return;
-    }
-
-    const now = Date.now();
-    const actualElapsedMs = now - startTimeRef.current - currentSession.totalPausedTime;
-    const actualElapsedSeconds = Math.floor(actualElapsedMs / 1000);
-    const totalPlannedSeconds = currentSession.plannedDuration * 60;
-    const newRemainingTime = Math.max(0, totalPlannedSeconds - actualElapsedSeconds);
-
-    if (newRemainingTime !== currentSession.remainingTime) {
-      setCurrentSession(prev => {
-        if (!prev) return prev;
-        return { ...prev, remainingTime: newRemainingTime };
-      });
-    }
-
-    lastTickRef.current = now;
-  }, [currentSession, timerState]);
-
-  const initializeApp = async () => {
-    try {
-      await focusStorage.initialize();
-      const appState = await focusStorage.getAppState();
-      
-      if (appState.currentSession) {
-        const session = appState.currentSession;
-        
-        // Check if session should have completed by now
-        if (session.state === TimerState.RUNNING) {
-          const now = Date.now();
-          const sessionStartTime = new Date(session.startTime).getTime();
-          const totalElapsedMs = now - sessionStartTime - session.totalPausedTime;
-          const totalPlannedMs = session.plannedDuration * 60 * 1000;
-          
-          if (totalElapsedMs >= totalPlannedMs) {
-            // Session should be completed
-            await saveCompletedSession(session, CompletionStatus.COMPLETED);
-            setCurrentSession(null);
-            setTimerState(TimerState.IDLE);
-            
-            // Show notification for completed session
-            await notificationService.showNotification({
-              type: 'session_complete',
-              title: 'Session Completed!',
-              body: 'Your focus session finished while the app was inactive.',
-              sound: 'complete',
-              timestamp: new Date()
-            });
-          } else {
-            // Resume the session with correct remaining time
-            const remainingSeconds = Math.max(0, Math.floor((totalPlannedMs - totalElapsedMs) / 1000));
-            const updatedSession = { ...session, remainingTime: remainingSeconds };
-            
-            setCurrentSession(updatedSession);
-            setTimerState(TimerState.RUNNING);
-            startTimeRef.current = sessionStartTime;
-            startTimer();
+  // Timer effect - runs every second when active
+  useEffect(() => {
+    if (isRunning && remainingTime > 0) {
+      const interval = setInterval(() => {
+        setRemainingTime(time => {
+          if (time <= 1) {
+            // Session completed
+            handleSessionComplete();
+            return 0;
           }
-        } else {
-          setCurrentSession(session);
-          setTimerState(session.state);
-          
-          // Update tray for paused sessions
-          if (window.electronAPI && session.state === TimerState.PAUSED) {
-            await window.electronAPI.updateTrayStatus('Focus Session Paused');
-          }
-        }
-      } else {
-        // No active session, set tray to ready
-        if (window.electronAPI) {
-          await window.electronAPI.updateTrayStatus('Ready');
-        }
-      }
+          return time - 1;
+        });
+      }, 1000);
       
-      const todayHistory = await focusStorage.getTodayHistory();
-      setSessionCount(todayHistory.sessions.filter(s => s.type === SessionType.FOCUS).length);
-      
-      focusStorage.scheduleAutomaticReset();
-    } catch (error) {
-      console.error('Failed to initialize app:', error);
+      setIntervalId(interval);
+      return () => clearInterval(interval);
+    } else if (intervalId) {
+      clearInterval(intervalId);
+      setIntervalId(null);
+    }
+  }, [isRunning, remainingTime]);
+
+  const handleSessionComplete = () => {
+    if (currentSessionIndex < sessions.length - 1) {
+      // Move to next session
+      setCurrentSessionIndex(prev => prev + 1);
+      setRemainingTime(sessions[currentSessionIndex + 1].duration);
+    } else {
+      // All sessions complete
+      setIsRunning(false);
+      setIsComplete(true);
     }
   };
 
-  const updateTimeDisplay = useCallback(() => {
-    const now = new Date();
-    
-    setTimeDisplay({
-      current: formatTime(now, settings?.timeFormat || DEFAULT_SETTINGS.timeFormat),
-      sessionStart: currentSession ? formatTime(currentSession.startTime, settings?.timeFormat || DEFAULT_SETTINGS.timeFormat) : '',
-      expectedEnd: currentSession ? calculateExpectedEndTime() : '',
-      remainingTime: currentSession ? formatRemainingTime(currentSession.remainingTime) : '',
-      progress: currentSession ? calculateProgress() : 0
-    });
-  }, [currentSession, settings?.timeFormat]);
-
-  const calculateExpectedEndTime = (): string => {
-    if (!currentSession) return '';
-    
-    const now = new Date();
-    const remainingMs = currentSession.remainingTime * 1000;
-    const expectedEnd = new Date(now.getTime() + remainingMs);
-    
-    return formatTime(expectedEnd, settings?.timeFormat || DEFAULT_SETTINGS.timeFormat);
-  };
-
-  const formatRemainingTime = (seconds: number): string => {
+  // Simple helper functions following SessionTimer approach
+  const formatTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const calculateProgress = (): number => {
-    if (!currentSession) return 0;
-    const totalSeconds = currentSession.plannedDuration * 60;
-    const elapsed = totalSeconds - currentSession.remainingTime;
+    if (!sessions[currentSessionIndex]) return 0;
+    const totalSeconds = sessions[currentSessionIndex].duration;
+    const elapsed = totalSeconds - remainingTime;
     return Math.max(0, Math.min(100, (elapsed / totalSeconds) * 100));
-  };
-
-  // Removed determineNextSessionType since we only have continuous focus sessions
-
-  const getSessionDuration = (type: SessionType): number => {
-    // Always use the quick duration for continuous sessions
-    return quickDuration;
   };
 
   const handleQuickDurationChange = (value: number) => {
@@ -280,310 +153,48 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     setQuickDuration(clampedValue);
   };
 
-  const startSession = async (customDuration?: number) => {
-    try {
-      const duration = customDuration || quickDuration;
-      const now = new Date();
-      const newSession: TimerSession = {
-        id: uuidv4(),
-        type: SessionType.FOCUS,
-        sessionNumber: sessionCount + 1,
-        plannedDuration: duration,
-        remainingTime: duration * 60,
-        startTime: now,
-        pausedAt: null,
-        totalPausedTime: 0,
-        state: TimerState.RUNNING
-      };
-
-      setCurrentSession(newSession);
-      setTimerState(TimerState.RUNNING);
-      startTimeRef.current = now.getTime();
-      isActiveRef.current = true;
-      
-      setSessionCount(prev => prev + 1);
-      
-      // Initialize session plan with the requested duration
-      setTotalPlannedDuration(duration);
-      setCurrentSessionIndex(0);
-      setSessionPlan(generateSessionPlan(duration, 0, settings));
-
-      const appState = await focusStorage.getAppState();
-      appState.currentSession = newSession;
-      await focusStorage.saveAppState(appState);
-
-      // Update system tray and window title
-      if (window.electronAPI) {
-        await window.electronAPI.updateTrayStatus('Focus Session Running');
-      }
-
-      startTimer();
-    } catch (error) {
-      console.error('Failed to start session:', error);
-    }
-  };
-
-  const startTimer = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-
-    lastTickRef.current = Date.now();
-    
-    // Use a more frequent interval for better accuracy
-    intervalRef.current = setInterval(() => {
-      const now = Date.now();
-      
-      // Always sync with actual elapsed time for accuracy
-      syncTimer();
-      
-      setCurrentSession(prev => {
-        if (!prev || prev.state !== TimerState.RUNNING || !startTimeRef.current) {
-          return prev;
-        }
-
-        // Calculate actual remaining time based on elapsed time
-        const actualElapsedMs = now - startTimeRef.current - prev.totalPausedTime;
-        const actualElapsedSeconds = Math.floor(actualElapsedMs / 1000);
-        const totalPlannedSeconds = prev.plannedDuration * 60;
-        const actualRemainingTime = Math.max(0, totalPlannedSeconds - actualElapsedSeconds);
-
-        // Play tick sound in last 10 seconds
-        if ((settings?.enableTickSound || DEFAULT_SETTINGS.enableTickSound) && actualRemainingTime <= 10 && actualRemainingTime > 0) {
-          notificationService.playTickSound();
-        }
-
-        // Check if session is complete
-        if (actualRemainingTime === 0 && prev.state !== TimerState.COMPLETED) {
-          console.log('Timer reached 0 - calling completeSession for focus session');
-          completeSession(prev);
-          return { ...prev, remainingTime: 0, state: TimerState.COMPLETED };
-        }
-
-        const updatedSession = { ...prev, remainingTime: actualRemainingTime };
-        
-        // Save state periodically (every 30 seconds instead of every minute for better recovery)
-        const timeSinceLastSave = now - lastTickRef.current;
-        if (timeSinceLastSave >= 30000) {
-          saveSessionState(updatedSession);
-          lastTickRef.current = now;
-        }
-
-        // Update window title with remaining time every 10 seconds
-        if (timeSinceLastSave >= 10000 && window.electronAPI) {
-          const remainingMinutes = Math.floor(actualRemainingTime / 60);
-          const remainingSeconds = actualRemainingTime % 60;
-          const timeStr = `${remainingMinutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-          window.electronAPI.updateTrayStatus(`Focus Session - ${timeStr} remaining`);
-        }
-
-        return updatedSession;
-      });
-    }, 500); // Check twice per second for better responsiveness
-  };
-
-  const pauseTimer = async () => {
-    if (!currentSession || timerState !== TimerState.RUNNING) return;
-
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-
-    isActiveRef.current = false;
-    const now = new Date();
-    const pausedSession = {
-      ...currentSession,
-      state: TimerState.PAUSED,
-      pausedAt: now
-    };
-
-    setCurrentSession(pausedSession);
-    setTimerState(TimerState.PAUSED);
-
-    const appState = await focusStorage.getAppState();
-    appState.currentSession = pausedSession;
-    await focusStorage.saveAppState(appState);
-
-    // Update system tray
-    if (window.electronAPI) {
-      await window.electronAPI.updateTrayStatus('Focus Session Paused');
-    }
-  };
-
-  const resumeTimer = async () => {
-    if (!currentSession || timerState !== TimerState.PAUSED) return;
-
-    const now = new Date();
-    const pausedDuration = currentSession.pausedAt ? 
-      now.getTime() - currentSession.pausedAt.getTime() : 0;
-
-    const resumedSession = {
-      ...currentSession,
-      state: TimerState.RUNNING,
-      pausedAt: null,
-      totalPausedTime: currentSession.totalPausedTime + pausedDuration
-    };
-
-    setCurrentSession(resumedSession);
-    setTimerState(TimerState.RUNNING);
-    isActiveRef.current = true;
-
-    const appState = await focusStorage.getAppState();
-    appState.currentSession = resumedSession;
-    await focusStorage.saveAppState(appState);
-
-    // Update system tray
-    if (window.electronAPI) {
-      await window.electronAPI.updateTrayStatus('Focus Session Running');
-    }
-
-    startTimer();
-  };
-
-  const fastForwardSession = (seconds: number) => {
-    if (!startTimeRef.current) return;
-
-    // To fast-forward, we pretend the session started earlier.
-    startTimeRef.current -= seconds * 1000;
-
-    setCurrentSession(prev => {
-      if (!prev) return prev;
-
-      const newRemainingTime = Math.max(0, prev.remainingTime - seconds);
-      
-      const updatedSession = { ...prev, remainingTime: newRemainingTime };
-
-      if (newRemainingTime === 0 && prev.state !== TimerState.COMPLETED) {
-        completeSession(updatedSession);
-        return { ...updatedSession, state: TimerState.COMPLETED };
-      }
-      
-      return updatedSession;
-    });
-  };
-
-  const stopSession = async () => {
-    if (!currentSession) return;
-
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-
-    isActiveRef.current = false;
-    await saveCompletedSession(currentSession, CompletionStatus.INTERRUPTED);
-    resetTimer();
-  };
-
-  const skipSession = async () => {
-    if (!currentSession) return;
-
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-
-    isActiveRef.current = false;
-    await saveCompletedSession(currentSession, CompletionStatus.SKIPPED);
-    
-    // Since we only have single sessions, skipping means ending the session
-    setTimerState(TimerState.COMPLETED);
-    if (window.electronAPI) {
-      await window.electronAPI.sessionNotification({
-        title: 'Session Skipped',
-        body: `Session was skipped after ${Math.floor((currentSession.plannedDuration * 60 - currentSession.remainingTime) / 60)} minutes.`
-      });
-    }
-    
-    setTimeout(() => resetTimer(), 2000);
-  };
-
-  const completeSession = async (session: TimerSession) => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-    isActiveRef.current = false;
-    await saveCompletedSession(session, CompletionStatus.COMPLETED);
-    
-    const notificationTitle = 'Session Complete!';
-    const notificationBody = `Great job! You completed a ${session.plannedDuration}-minute session.`;
-
-    await notificationService.showNotification({
-      type: 'session_complete',
-      title: notificationTitle,
-      body: notificationBody,
-      sound: 'complete',
-      timestamp: new Date()
-    });
-
-    if (window.electronAPI) {
-      await window.electronAPI.sessionNotification({ title: notificationTitle, body: notificationBody });
-      await window.electronAPI.updateTrayStatus('Session Complete');
-    }
-
-    // Session completed
-    setTimerState(TimerState.COMPLETED);
-    
-    if (window.electronAPI) {
-      window.electronAPI.sessionNotification({
-        title: 'Session Complete!',
-        body: `Great work! You've completed your ${session.plannedDuration} minute focus session.`
-      });
-    }
-    
-    // Reset after a short delay
-    setTimeout(resetTimer, 3000);
-  };
-
-  const saveCompletedSession = async (session: TimerSession, status: CompletionStatus) => {
-    try {
-      const endTime = new Date();
-      const actualDurationMs = endTime.getTime() - session.startTime.getTime() - session.totalPausedTime;
-      const actualDurationMinutes = Math.max(0, Math.round(actualDurationMs / (1000 * 60)));
-
-      await focusStorage.addSession({
-        id: session.id,
-        type: session.type,
-        sessionNumber: session.sessionNumber,
-        plannedDuration: session.plannedDuration,
-        actualDuration: actualDurationMinutes,
-        startTime: session.startTime,
-        endTime,
-        pausedTime: session.totalPausedTime,
-        completionStatus: status,
-        remainingTime: session.remainingTime
-      });
-
-      const appState = await focusStorage.getAppState();
-      appState.currentSession = null;
-      await focusStorage.saveAppState(appState);
-    } catch (error) {
-      console.error('Failed to save completed session:', error);
-    }
-  };
-
-  const saveSessionState = async (session: TimerSession) => {
-    try {
-      const appState = await focusStorage.getAppState();
-      appState.currentSession = session;
-      await focusStorage.saveAppState(appState);
-    } catch (error) {
-      console.error('Failed to save session state:', error);
-    }
-  };
-
-  const resetTimer = async () => {
-    setCurrentSession(null);
-    setTimerState(TimerState.IDLE);
-    setSessionCount(0);
-    setSessionPlan([]);
-    setTotalPlannedDuration(0);
+  // Simple start/stop functions following SessionTimer approach
+  const startSession = (customDuration?: number) => {
+    const duration = customDuration || quickDuration;
+    setSessions(generateSessions(duration));
     setCurrentSessionIndex(0);
-    isActiveRef.current = false;
-    startTimeRef.current = null;
-    
-    // Update system tray
-    if (window.electronAPI) {
-      await window.electronAPI.updateTrayStatus('Ready');
-    }
+    setRemainingTime(sessions.length > 0 ? sessions[0].duration : generateSessions(duration)[0].duration);
+    setIsRunning(true);
+    setIsComplete(false);
+  };
+
+  const pauseSession = () => {
+    setIsRunning(false);
+  };
+
+  const resumeSession = () => {
+    setIsRunning(true);
+  };
+
+  const stopSession = () => {
+    setIsRunning(false);
+    setCurrentSessionIndex(0);
+    setRemainingTime(0);
+  };
+
+  // Remove complex pause/resume logic - SessionTimer approach
+  const fastForwardSession = (seconds: number) => {
+    setRemainingTime(prev => Math.max(0, prev - seconds));
+  };
+
+  const skipSession = () => {
+    setIsRunning(false);
+    setCurrentSessionIndex(0);
+    setRemainingTime(0);
+  };
+
+  // Removed - handled in handleSessionComplete
+
+  const resetTimer = () => {
+    setIsRunning(false);
+    setCurrentSessionIndex(0);
+    setRemainingTime(0);
+    setSessions([]);
   };
 
   const getSessionTypeLabel = (type: SessionType): string => {
@@ -613,20 +224,19 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   };
 
   const renderTimerDisplay = () => {
-    // Format display time based on current session or quick duration
-    const displayTime = timeDisplay.remainingTime || 
-      `${Math.floor(quickDuration / 60).toString().padStart(2, '0')}:${(quickDuration % 60).toString().padStart(2, '0')}`;
-    
-    // Show different styling when idle vs active
-    const isIdle = timerState === TimerState.IDLE;
+    // Simple display logic following SessionTimer approach
+    const currentSession = sessions[currentSessionIndex];
+    const displayTime = remainingTime > 0 ? formatTime(remainingTime) : formatTime(quickDuration * 60);
+    const sessionType = currentSession?.type || 'focus';
+    const isActive = isRunning && remainingTime > 0;
     
     return (
       <Box sx={{ textAlign: 'center', width: '100%' }}>
         {/* Session Type Indicator */}
-        {currentSession ? (
+        {isActive ? (
           <Chip 
-            label={getSessionTypeLabel(currentSession.type)}
-            color={getSessionTypeColor(currentSession.type)}
+            label={sessionType === 'focus' ? 'Focus Session' : 'Break'}
+            color={sessionType === 'focus' ? 'primary' : 'secondary'}
             size="small"
             sx={{ mb: 3 }}
           />
@@ -656,7 +266,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
             fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace',
             lineHeight: 1,
             mb: 2,
-            color: isIdle ? 'text.secondary' : 'primary.main',
+            color: isActive ? 'primary.main' : 'text.secondary',
             transition: 'color 0.3s ease',
             fontVariantNumeric: 'tabular-nums',
             WebkitFontFeatureSettings: '"tnum"',
@@ -667,7 +277,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         </Typography>
         
         {/* Session Status */}
-        {currentSession && (
+        {isActive && (
           <Typography 
             variant="caption" 
             sx={{ 
@@ -676,17 +286,15 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
               mb: 3
             }}
           >
-            {timerState === TimerState.RUNNING && `${Math.round(timeDisplay.progress)}% complete`}
-            {timerState === TimerState.PAUSED && 'Paused'}
-            {timerState === TimerState.COMPLETED && 'Session complete!'}
+            {Math.round(calculateProgress())}% complete
           </Typography>
         )}
 
-        {currentSession && (
+        {isActive && (
           <Box sx={{ width: '100%', mb: 4 }}>
             <LinearProgress 
               variant="determinate" 
-              value={timeDisplay.progress}
+              value={calculateProgress()}
               sx={{ 
                 height: 4, 
                 borderRadius: 2,
@@ -701,46 +309,41 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         )}
 
         {/* Session Plan Visualization */}
-        {sessionPlan.length > 0 && (
+        {sessions.length > 0 && (
           <Box sx={{ mb: 3 }}>
             <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
-              Session Breakdown
+              Session {currentSessionIndex + 1} of {sessions.length}
             </Typography>
             <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center', flexWrap: 'wrap', mb: 2 }}>
-              {sessionPlan.map((session, index) => (
+              {sessions.map((session, index) => (
                 <Box
                   key={index}
                   sx={{
                     width: 24,
                     height: 24,
                     borderRadius: '50%',
-                    backgroundColor: session.completed ? 
-                      (session.type === SessionType.FOCUS ? 'success.main' : 'info.main') :
-                      session.current ?
-                      (session.type === SessionType.FOCUS ? 'primary.main' : 'warning.main') :
-                      'grey.300',
-                    border: session.current ? '2px solid' : 'none',
-                    borderColor: session.current ? 'primary.dark' : 'transparent',
+                    backgroundColor: index < currentSessionIndex ? 'success.main' :
+                      index === currentSessionIndex ? 'primary.main' : 'grey.300',
+                    border: index === currentSessionIndex ? '2px solid' : 'none',
+                    borderColor: 'primary.dark',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '10px',
-                    color: session.completed || session.current ? 'white' : 'grey.600',
+                    color: index <= currentSessionIndex ? 'white' : 'grey.600',
                     fontWeight: 'bold'
                   }}
-                  title={`${getSessionTypeLabel(session.type)} - ${session.duration}min`}
+                  title={`${session.type === 'focus' ? 'Focus' : 'Break'} - ${Math.floor(session.duration / 60)}min`}
                 >
-                  {session.type === SessionType.FOCUS ? 'F' : 
-                   session.type === SessionType.SHORT_BREAK ? 'S' : 'L'}
+                  {session.type === 'focus' ? 'F' : 'B'}
                 </Box>
               ))}
             </Box>
             
             {/* Next Session Preview */}
-            {sessionPlan.length > currentSessionIndex + 1 && (
+            {sessions.length > currentSessionIndex + 1 && (
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Next: {getSessionTypeLabel(sessionPlan[currentSessionIndex + 1].type)} 
-                ({sessionPlan[currentSessionIndex + 1].duration}min)
+                Next: {sessions[currentSessionIndex + 1].type === 'focus' ? 'Focus Session' : 'Break'}
               </Typography>
             )}
           </Box>
@@ -750,9 +353,9 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   };
 
   const renderQuickDurationInput = () => {
-    if (timerState !== TimerState.IDLE) return null;
+    if (isRunning) return null;
     
-    const commonDurations = settings?.quickPresets || DEFAULT_SETTINGS.quickPresets;
+    const commonDurations = [15, 25, 45, 90];
     
     return (
       <Box sx={{ textAlign: 'center', mb: 4, width: '100%' }}>
@@ -802,30 +405,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     );
   };
 
-  const renderTimeInfo = () => (
-    <Box sx={{ mb: 4 }}>
-      <Stack direction="row" justifyContent="space-between" spacing={2}>
-        <Box sx={{ textAlign: 'left' }}>
-          <Typography variant="body2" color="text.secondary">Current Time</Typography>
-          <Typography variant="h6">{timeDisplay.current}</Typography>
-        </Box>
-        
-        {currentSession && (settings?.showSessionStartTime || DEFAULT_SETTINGS.showSessionStartTime) && (
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">Started</Typography>
-            <Typography variant="h6">{timeDisplay.sessionStart}</Typography>
-          </Box>
-        )}
-        
-        {currentSession && (settings?.showSessionEndTime || DEFAULT_SETTINGS.showSessionEndTime) && (
-          <Box sx={{ textAlign: 'right' }}>
-            <Typography variant="body2" color="text.secondary">Ends at</Typography>
-            <Typography variant="h6">{timeDisplay.expectedEnd}</Typography>
-          </Box>
-        )}
-      </Stack>
-    </Box>
-  );
+  // Removed complex time info - SessionTimer approach is simpler
 
   const renderControls = () => (
     <Stack 
@@ -835,7 +415,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       alignItems="center"
       sx={{ width: '100%' }}
     >
-      {timerState === TimerState.IDLE && (
+      {!isRunning && (
         <Button
           variant="contained"
           size="large"
@@ -850,13 +430,13 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         </Button>
       )}
 
-      {timerState === TimerState.RUNNING && (
+      {isRunning && (
         <>
           <Button
             variant="outlined"
             size="large"
             startIcon={<Pause />}
-            onClick={pauseTimer}
+            onClick={pauseSession}
             sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
           >
             Pause
@@ -874,7 +454,6 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
           <Button
             variant="text"
             size="large"
-            startIcon={<SkipNext />}
             onClick={skipSession}
             sx={{ 
               minWidth: { xs: '100%', sm: 'auto' },
@@ -886,49 +465,25 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         </>
       )}
 
-      {timerState === TimerState.PAUSED && (
-        <>
-          <Button
-            variant="contained"
-            size="large"
-            startIcon={<PlayArrow />}
-            onClick={resumeTimer}
-            color="success"
-            sx={{ minWidth: { xs: '100%', sm: 160 } }}
-          >
-            Resume
-          </Button>
-          <Button
-            variant="outlined"
-            size="large"
-            startIcon={<Stop />}
-            onClick={stopSession}
-            color="error"
-            sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
-          >
-            Stop
-          </Button>
-        </>
+      {!isRunning && remainingTime > 0 && (
+        <Button
+          variant="contained"
+          size="large"
+          startIcon={<PlayArrow />}
+          onClick={resumeSession}
+          color="success"
+          sx={{ minWidth: { xs: '100%', sm: 160 } }}
+        >
+          Resume
+        </Button>
       )}
 
-      {(timerState === TimerState.RUNNING || timerState === TimerState.PAUSED) && (
+      {isRunning && (
         <Tooltip title="Fast Forward 60s (for testing)">
           <IconButton onClick={() => fastForwardSession(60)} color="secondary">
             <FastForward />
           </IconButton>
         </Tooltip>
-      )}
-
-      {timerState === TimerState.COMPLETED && (
-        <Button
-          variant="contained"
-          size="large"
-          startIcon={<PlayArrow />}
-          onClick={() => startSession()}
-          sx={{ minWidth: { xs: '100%', sm: 200 } }}
-        >
-          Start Next Session
-        </Button>
       )}
     </Stack>
   );
@@ -953,9 +508,12 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     </Stack>
   );
 
+  if (isComplete) {
+    return <CompletionScreen onClose={() => setIsComplete(false)} />;
+  }
+
   return (
     <Box sx={{ width: '100%', textAlign: 'center' }}>
-      {renderTimeInfo()}
       {renderTimerDisplay()}
       {renderQuickDurationInput()}
       {renderControls()}
