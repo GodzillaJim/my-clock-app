@@ -9,16 +9,12 @@ import {
   Chip,
   IconButton,
   Tooltip,
-  Slider,
 } from "@mui/material";
 import {
   PlayArrow,
   Pause,
   Stop,
   Settings,
-  History as HistoryIcon,
-  Remove,
-  Add,
   Timer as TimerIcon,
   Feedback,
   History,
@@ -30,7 +26,7 @@ import { useTimer } from "react-timer-hook";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import { CompletionScreen } from "./CompletionScreen";
-import { SessionType, AppSettings } from "@/features/timer/types";
+import { AppSettings } from "@/features/timer/types";
 import { notificationService } from "@/services/notificationService";
 
 dayjs.extend(duration);
@@ -40,7 +36,7 @@ interface SimpleSession {
   duration: number; // in seconds
 }
 
-// The component now uses settings for session durations.
+  // The component now uses settings for session durations.
 const generateSessions = (
   totalMinutes: number,
   settings: AppSettings
@@ -64,15 +60,8 @@ const generateSessions = (
       remainingTime -= currentBreakDuration;
     }
   }
-
-  console.log(
-    `Generated simple session plan for ${totalMinutes}min total:`,
-    sessions
-  );
   return sessions;
-};
-
-interface FocusTimerProps {
+};interface FocusTimerProps {
   onOpenSettings: () => void;
   onOpenHistory: () => void;
   onOpenFeedback: () => void;
@@ -221,37 +210,6 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
 
   const skipSession = () => {
     handleSessionComplete();
-  };
-
-  // Removed - handled in handleSessionComplete
-
-  const resetTimer = () => {
-    stopSession();
-    setSessions([]);
-  };
-
-  const getSessionTypeLabel = (type: SessionType): string => {
-    switch (type) {
-      case SessionType.FOCUS:
-        return "Focus Session";
-      case SessionType.SHORT_BREAK:
-        return "Short Break";
-      default:
-        return "Session";
-    }
-  };
-
-  const getSessionTypeColor = (
-    type: SessionType
-  ): "primary" | "secondary" | "success" => {
-    switch (type) {
-      case SessionType.FOCUS:
-        return "primary";
-      case SessionType.SHORT_BREAK:
-        return "secondary";
-      default:
-        return "primary";
-    }
   };
 
   const isPaused = !isRunning && calculateProgress() > 0;
