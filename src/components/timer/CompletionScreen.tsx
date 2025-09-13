@@ -3,10 +3,10 @@ import { Box, Typography, Button } from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 
 interface CompletionScreenProps {
-  onClose: () => void;
+  onStartNewSession: () => void;
 }
 
-export const CompletionScreen: React.FC<CompletionScreenProps> = ({ onClose }) => {
+export const CompletionScreen: React.FC<CompletionScreenProps> = ({ onStartNewSession }) => {
   return (
     <Box
       sx={{
@@ -26,7 +26,7 @@ export const CompletionScreen: React.FC<CompletionScreenProps> = ({ onClose }) =
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
         Great job! You've successfully completed your focus session.
       </Typography>
-      <Button variant="contained" onClick={onClose}>
+      <Button variant="contained" onClick={onStartNewSession}>
         Start New Session
       </Button>
     </Box>

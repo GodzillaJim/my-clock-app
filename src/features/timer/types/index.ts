@@ -2,7 +2,6 @@
 export enum SessionType {
   FOCUS = 'focus',
   SHORT_BREAK = 'shortBreak',
-  LONG_BREAK = 'longBreak'
 }
 
 export enum TimerState {
@@ -52,8 +51,6 @@ export interface AppSettings {
   // Timer Configuration
   focusDuration: number; // minutes (1-240)
   shortBreakDuration: number; // minutes
-  longBreakDuration: number; // minutes
-  sessionsBeforeLongBreak: number;
   quickPresets: number[]; // Quick duration presets in minutes
   
   // Display Settings
@@ -169,8 +166,6 @@ export interface KeyboardShortcut {
 export const DEFAULT_SETTINGS: AppSettings = {
   focusDuration: 25,
   shortBreakDuration: 5,
-  longBreakDuration: 15,
-  sessionsBeforeLongBreak: 4,
   quickPresets: [15, 25, 30, 45, 60],
   timeFormat: '12h',
   showSessionStartTime: true,
@@ -195,7 +190,7 @@ export const isFocusSession = (session: SessionRecord): boolean =>
   session.type === SessionType.FOCUS;
 
 export const isBreakSession = (session: SessionRecord): boolean =>
-  session.type === SessionType.SHORT_BREAK || session.type === SessionType.LONG_BREAK;
+  session.type === SessionType.SHORT_BREAK;
 
 export const isActiveSession = (state: TimerState): boolean =>
   state === TimerState.RUNNING || state === TimerState.PAUSED;

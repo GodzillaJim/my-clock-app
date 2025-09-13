@@ -1,20 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Button, 
-  LinearProgress, 
-  Paper, 
+import React, { useState, useEffect } from "react";
+import {
+  Box,
+  Typography,
+  Button,
+  LinearProgress,
+  Paper,
   Stack,
   Chip,
   IconButton,
   Tooltip,
-  TextField
-} from '@mui/material';
-import { 
-  PlayArrow, 
-  Pause, 
-  Stop, 
+  Slider,
+} from "@mui/material";
+import {
+  PlayArrow,
+  Pause,
+  Stop,
   Settings,
   History as HistoryIcon,
   Remove,
@@ -24,44 +24,51 @@ import {
   History,
   FastForward,
   Coffee,
-  Work
-} from '@mui/icons-material';
-import { CompletionScreen } from './CompletionScreen';
-import { 
-  SessionType, 
-  AppSettings
-} from '@/features/timer/types';
-import { notificationService } from '@/services/notificationService';
+  Work,
+} from "@mui/icons-material";
+import { useTimer } from "react-timer-hook";
+import dayjs from "dayjs";
+import duration from "dayjs/plugin/duration";
+import { CompletionScreen } from "./CompletionScreen";
+import { SessionType, AppSettings } from "@/features/timer/types";
+import { notificationService } from "@/services/notificationService";
 
-// Simple session generation following SessionTimer approach
-const FOCUS_DURATION = 25 * 60; // 25 minutes in seconds  
-const BREAK_DURATION = 5 * 60;  // 5 minutes in seconds
+dayjs.extend(duration);
 
 interface SimpleSession {
-  type: 'focus' | 'break';
+  type: "focus" | "break";
   duration: number; // in seconds
 }
 
-const generateSessions = (totalMinutes: number): SimpleSession[] => {
+// The component now uses settings for session durations.
+const generateSessions = (
+  totalMinutes: number,
+  settings: AppSettings
+): SimpleSession[] => {
   const totalSeconds = totalMinutes * 60;
   const sessions: SimpleSession[] = [];
   let remainingTime = totalSeconds;
+  const focusDuration = settings.focusDuration * 60;
+  const breakDuration = settings.shortBreakDuration * 60;
 
   while (remainingTime > 0) {
     if (sessions.length % 2 === 0) {
       // Focus session
-      const focusDuration = Math.min(FOCUS_DURATION, remainingTime);
-      sessions.push({ type: 'focus', duration: focusDuration });
-      remainingTime -= focusDuration;
+      const currentFocusDuration = Math.min(focusDuration, remainingTime);
+      sessions.push({ type: "focus", duration: currentFocusDuration });
+      remainingTime -= currentFocusDuration;
     } else {
       // Break session
-      const breakDuration = Math.min(BREAK_DURATION, remainingTime);
-      sessions.push({ type: 'break', duration: breakDuration });
-      remainingTime -= breakDuration;
+      const currentBreakDuration = Math.min(breakDuration, remainingTime);
+      sessions.push({ type: "break", duration: currentBreakDuration });
+      remainingTime -= currentBreakDuration;
     }
   }
 
-  console.log(`Generated simple session plan for ${totalMinutes}min total:`, sessions);
+  console.log(
+    `Generated simple session plan for ${totalMinutes}min total:`,
+    sessions
+  );
   return sessions;
 };
 
@@ -72,11 +79,11 @@ interface FocusTimerProps {
   settings: AppSettings;
 }
 
-export const FocusTimer: React.FC<FocusTimerProps> = ({ 
-  onOpenSettings, 
-  onOpenHistory, 
+export const FocusTimer: React.FC<FocusTimerProps> = ({
+  onOpenSettings,
+  onOpenHistory,
   onOpenFeedback,
-  settings 
+  settings,
 }) => {
   // Defensive check to prevent rendering with undefined settings
   if (!settings) {
@@ -85,48 +92,31 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   // Simple state management following SessionTimer approach
   const [sessions, setSessions] = useState<SimpleSession[]>([]);
   const [currentSessionIndex, setCurrentSessionIndex] = useState(0);
-  const [remainingTime, setRemainingTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-  const [quickDuration, setQuickDuration] = useState<number>(25);
+  const [totalDuration, setTotalDuration] = useState(25);
   const [isComplete, setIsComplete] = useState(false);
-  const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
-
-  // Initialize sessions when component mounts or quickDuration changes
-  useEffect(() => {
-    if (quickDuration > 0) {
-      setSessions(generateSessions(quickDuration));
-      setCurrentSessionIndex(0);
-      setRemainingTime(0);
-    }
-  }, [quickDuration]);
-
-  // Timer effect - runs every second when active
-  useEffect(() => {
-    if (isRunning && remainingTime > 0) {
-      const interval = setInterval(() => {
-        setRemainingTime(time => {
-          if (time <= 1) {
-            // Session completed
-            handleSessionComplete();
-            return 0;
-          }
-          return time - 1;
-        });
-      }, 1000);
-      
-      setIntervalId(interval);
-      return () => clearInterval(interval);
-    } else if (intervalId) {
-      clearInterval(intervalId);
-      setIntervalId(null);
-    }
-  }, [isRunning, remainingTime]);
 
   const handleSessionComplete = () => {
+    const currentSession = sessions[currentSessionIndex];
+    if (currentSession) {
+      notificationService.showNotification({
+        type:
+          currentSession.type === "focus"
+            ? "session_complete"
+            : "break_complete",
+        title:
+          currentSession.type === "focus" ? "Focus Complete" : "Break Over",
+        body:
+          currentSession.type === "focus"
+            ? "Time for a break!"
+            : "Back to focus!",
+        timestamp: new Date(),
+      });
+    }
+
     if (currentSessionIndex < sessions.length - 1) {
       // Move to next session
-      setCurrentSessionIndex(prev => prev + 1);
-      setRemainingTime(sessions[currentSessionIndex + 1].duration);
+      setCurrentSessionIndex((prev) => prev + 1);
     } else {
       // All sessions complete
       setIsRunning(false);
@@ -134,156 +124,222 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     }
   };
 
+  const { seconds, minutes, hours, start, pause, resume, restart } = useTimer({
+    expiryTimestamp: new Date(),
+    autoStart: false,
+    onExpire: handleSessionComplete,
+  });
+
+  // Initialize and update sessions
+  useEffect(() => {
+    const newSessions = generateSessions(totalDuration, settings);
+    setSessions(newSessions);
+    if (!isRunning) {
+      const newExpiryTimestamp = dayjs()
+        .add(newSessions[0]?.duration || 0, "second")
+        .toDate();
+      restart(newExpiryTimestamp, false);
+    }
+  }, [totalDuration, settings]);
+
+  // Effect to restart timer when session changes
+  useEffect(() => {
+    if (sessions.length > 0) {
+      const currentSession = sessions[currentSessionIndex];
+      if (currentSession) {
+        const newExpiryTimestamp = dayjs()
+          .add(currentSession.duration, "second")
+          .toDate();
+        restart(newExpiryTimestamp, isRunning); // `isRunning` will be false for the initial load, and true for subsequent auto-started sessions
+      }
+    }
+  }, [currentSessionIndex]);
+
   // Simple helper functions following SessionTimer approach
-  const formatTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const formatTime = (h: number, m: number, s: number): string => {
+    const totalSeconds = h * 3600 + m * 60 + s;
+    if (totalSeconds <= 0 && !isRunning) {
+      return dayjs.duration(totalDuration, "minutes").format("mm:ss");
+    }
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
   const calculateProgress = (): number => {
     if (!sessions[currentSessionIndex]) return 0;
     const totalSeconds = sessions[currentSessionIndex].duration;
-    const elapsed = totalSeconds - remainingTime;
+    const elapsed = totalSeconds - (hours * 3600 + minutes * 60 + seconds);
     return Math.max(0, Math.min(100, (elapsed / totalSeconds) * 100));
   };
 
-  const handleQuickDurationChange = (value: number) => {
-    const clampedValue = Math.max(1, Math.min(240, value));
-    setQuickDuration(clampedValue);
+  const handleTotalDurationChange = (value: number) => {
+    const clampedValue = Math.max(1, Math.min(480, value));
+    setTotalDuration(clampedValue);
   };
 
   // Simple start/stop functions following SessionTimer approach
-  const startSession = (customDuration?: number) => {
-    const duration = customDuration || quickDuration;
-    setSessions(generateSessions(duration));
+  const startSession = () => {
+    const newSessions = generateSessions(totalDuration, settings);
+    setSessions(newSessions);
     setCurrentSessionIndex(0);
-    setRemainingTime(sessions.length > 0 ? sessions[0].duration : generateSessions(duration)[0].duration);
+
+    const firstSessionDuration = newSessions[0]?.duration || 0;
+    const newExpiryTimestamp = dayjs()
+      .add(firstSessionDuration, "second")
+      .toDate();
+    restart(newExpiryTimestamp, true);
+
     setIsRunning(true);
     setIsComplete(false);
   };
 
   const pauseSession = () => {
+    pause();
     setIsRunning(false);
   };
 
   const resumeSession = () => {
+    resume();
     setIsRunning(true);
   };
 
   const stopSession = () => {
+    const newExpiryTimestamp = dayjs()
+      .add(sessions[0]?.duration || 0, "second")
+      .toDate();
+    restart(newExpiryTimestamp, false);
     setIsRunning(false);
     setCurrentSessionIndex(0);
-    setRemainingTime(0);
   };
 
   // Remove complex pause/resume logic - SessionTimer approach
-  const fastForwardSession = (seconds: number) => {
-    setRemainingTime(prev => Math.max(0, prev - seconds));
+  const fastForwardSession = (secondsToSkip: number) => {
+    const remainingSeconds = hours * 3600 + minutes * 60 + seconds;
+    const newRemaining = Math.max(0, remainingSeconds - secondsToSkip);
+    const newExpiry = dayjs().add(newRemaining, "second").toDate();
+    restart(newExpiry, true);
   };
 
   const skipSession = () => {
-    setIsRunning(false);
-    setCurrentSessionIndex(0);
-    setRemainingTime(0);
+    handleSessionComplete();
   };
 
   // Removed - handled in handleSessionComplete
 
   const resetTimer = () => {
-    setIsRunning(false);
-    setCurrentSessionIndex(0);
-    setRemainingTime(0);
+    stopSession();
     setSessions([]);
   };
 
   const getSessionTypeLabel = (type: SessionType): string => {
     switch (type) {
       case SessionType.FOCUS:
-        return 'Focus Session';
+        return "Focus Session";
       case SessionType.SHORT_BREAK:
-        return 'Short Break';
-      case SessionType.LONG_BREAK:
-        return 'Long Break';
+        return "Short Break";
       default:
-        return 'Session';
+        return "Session";
     }
   };
 
-  const getSessionTypeColor = (type: SessionType): 'primary' | 'secondary' | 'success' => {
+  const getSessionTypeColor = (
+    type: SessionType
+  ): "primary" | "secondary" | "success" => {
     switch (type) {
       case SessionType.FOCUS:
-        return 'primary';
+        return "primary";
       case SessionType.SHORT_BREAK:
-        return 'secondary';
-      case SessionType.LONG_BREAK:
-        return 'success';
+        return "secondary";
       default:
-        return 'primary';
+        return "primary";
     }
   };
+
+  const isPaused = !isRunning && calculateProgress() > 0;
 
   const renderTimerDisplay = () => {
     // Simple display logic following SessionTimer approach
     const currentSession = sessions[currentSessionIndex];
-    const displayTime = remainingTime > 0 ? formatTime(remainingTime) : formatTime(quickDuration * 60);
-    const sessionType = currentSession?.type || 'focus';
-    const isActive = isRunning && remainingTime > 0;
-    
+    const displayTime = formatTime(hours, minutes, seconds);
+    const sessionType = currentSession?.type || "focus";
+    const isActive = isRunning;
+
+    const getExpectedEndTime = () => {
+      if (isActive || isPaused) {
+        // When running or paused, show end time for the current session
+        return dayjs().add(hours, 'hour').add(minutes, 'minute').add(seconds, 'second');
+      }
+      // When idle, show end time for the entire plan
+      const totalPlanSeconds = sessions.reduce((total, session) => total + session.duration, 0);
+      return dayjs().add(totalPlanSeconds, 'second');
+    };
+
     return (
-      <Box sx={{ textAlign: 'center', width: '100%' }}>
+      <Box sx={{ textAlign: "center", width: "100%" }}>
         {/* Session Type Indicator */}
         {isActive ? (
-          <Chip 
-            label={sessionType === 'focus' ? 'Focus Session' : 'Break'}
-            color={sessionType === 'focus' ? 'primary' : 'secondary'}
+          <Chip
+            label={sessionType === "focus" ? "Focus Session" : "Break"}
+            color={sessionType === "focus" ? "primary" : "secondary"}
             size="small"
             sx={{ mb: 3 }}
           />
         ) : (
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              color: 'text.secondary',
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
               mb: 3,
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              fontSize: '0.75rem',
-              fontWeight: 500
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              fontSize: "0.75rem",
+              fontWeight: 500,
             }}
           >
             Ready to Focus
           </Typography>
         )}
-        
+
         {/* Clean Timer Display */}
-        <Typography 
-          variant="h1" 
+        <Typography
+          variant="h1"
           component="div"
-          sx={{ 
-            fontSize: { xs: '4rem', sm: '5rem', md: '6rem' },
+          sx={{
+            fontSize: { xs: "4rem", sm: "5rem", md: "6rem" },
             fontWeight: 300,
-            fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace',
+            fontFamily:
+              'ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace',
             lineHeight: 1,
             mb: 2,
-            color: isActive ? 'primary.main' : 'text.secondary',
-            transition: 'color 0.3s ease',
-            fontVariantNumeric: 'tabular-nums',
+            color: isActive ? "primary.main" : "text.secondary",
+            transition: "color 0.3s ease",
+            fontVariantNumeric: "tabular-nums",
             WebkitFontFeatureSettings: '"tnum"',
-            fontFeatureSettings: '"tnum"'
+            fontFeatureSettings: '"tnum"',
           }}
         >
           {displayTime}
         </Typography>
-        
+
+        {/* Expected End Time */}
+        {(isActive || isPaused || sessions.length > 0) && (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, color: 'text.secondary', mb: 3 }}>
+            <TimerIcon fontSize="small" />
+            <Typography
+              variant="body1"
+            >
+              {getExpectedEndTime().format('h:mm A')}
+            </Typography>
+          </Box>
+        )}
+
         {/* Session Status */}
         {isActive && (
-          <Typography 
-            variant="caption" 
-            sx={{ 
-              color: 'text.secondary',
-              display: 'block',
-              mb: 3
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              display: "block",
+              mb: 3,
             }}
           >
             {Math.round(calculateProgress())}% complete
@@ -291,18 +347,18 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         )}
 
         {isActive && (
-          <Box sx={{ width: '100%', mb: 4 }}>
-            <LinearProgress 
-              variant="determinate" 
+          <Box sx={{ width: "100%", mb: 4 }}>
+            <LinearProgress
+              variant="determinate"
               value={calculateProgress()}
-              sx={{ 
-                height: 4, 
+              sx={{
+                height: 4,
                 borderRadius: 2,
-                backgroundColor: 'divider',
-                '& .MuiLinearProgress-bar': {
+                backgroundColor: "divider",
+                "& .MuiLinearProgress-bar": {
                   borderRadius: 2,
-                  backgroundColor: 'primary.main'
-                }
+                  backgroundColor: "primary.main",
+                },
               }}
             />
           </Box>
@@ -311,39 +367,80 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         {/* Session Plan Visualization */}
         {sessions.length > 0 && (
           <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+            <Typography
+              variant="subtitle2"
+              sx={{ mb: 1, color: "text.secondary" }}
+            >
               Session {currentSessionIndex + 1} of {sessions.length}
             </Typography>
-            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center', flexWrap: 'wrap', mb: 2 }}>
-              {sessions.map((session, index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
-                    backgroundColor: index < currentSessionIndex ? 'success.main' :
-                      index === currentSessionIndex ? 'primary.main' : 'grey.300',
-                    border: index === currentSessionIndex ? '2px solid' : 'none',
-                    borderColor: 'primary.dark',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '10px',
-                    color: index <= currentSessionIndex ? 'white' : 'grey.600',
-                    fontWeight: 'bold'
-                  }}
-                  title={`${session.type === 'focus' ? 'Focus' : 'Break'} - ${Math.floor(session.duration / 60)}min`}
-                >
-                  {session.type === 'focus' ? 'F' : 'B'}
-                </Box>
-              ))}
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                justifyContent: "center",
+                flexWrap: "wrap",
+                mb: 2,
+              }}
+            >
+              {sessions.map((session, index) => {
+                const isCompleted = index < currentSessionIndex;
+                const isActive = index === currentSessionIndex;
+                const isFuture = index > currentSessionIndex;
+
+                return (
+                  <Tooltip
+                    key={index}
+                    title={`${
+                      session.type === "focus" ? "Focus" : "Break"
+                    } - ${Math.floor(session.duration / 60)}min`}
+                  >
+                    <Box
+                      sx={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: isCompleted
+                          ? "success.light"
+                          : isActive
+                          ? "primary.main"
+                          : "grey.200",
+                        border: "none",
+                        borderColor: "primary.dark",
+                        transition: "all 0.2s ease-in-out",
+                        transform: isActive ? "scale(1.1)" : "scale(1)",
+                      }}
+                    >
+                      {session.type === "focus" ? (
+                        <Work
+                          sx={{
+                            fontSize: 16,
+                            color: isFuture ? "grey.600" : "white",
+                          }}
+                        />
+                      ) : (
+                        <Coffee
+                          sx={{
+                            fontSize: 16,
+                            color: isFuture ? "grey.600" : "white",
+                          }}
+                        />
+                      )}
+                    </Box>
+                  </Tooltip>
+                );
+              })}
             </Box>
-            
+
             {/* Next Session Preview */}
             {sessions.length > currentSessionIndex + 1 && (
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Next: {sessions[currentSessionIndex + 1].type === 'focus' ? 'Focus Session' : 'Break'}
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                Next:{" "}
+                {sessions[currentSessionIndex + 1].type === "focus"
+                  ? "Focus Session"
+                  : "Break"}
               </Typography>
             )}
           </Box>
@@ -352,81 +449,41 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     );
   };
 
-  const renderQuickDurationInput = () => {
-    if (isRunning) return null;
-    
-    const commonDurations = [15, 25, 45, 90];
-    
-    return (
-      <Box sx={{ textAlign: 'center', mb: 4, width: '100%' }}>
-        {/* Duration selector */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
-          <IconButton
-            onClick={() => handleQuickDurationChange(quickDuration - 5)}
-            disabled={quickDuration <= 5}
-            size="small"
-          >
-            <Remove fontSize="small" />
-          </IconButton>
-          
-          <Box sx={{ mx: 3, textAlign: 'center', minWidth: 100 }}>
-            <Typography variant="h5" sx={{ fontWeight: 500, mb: 0.5 }}>
-              {quickDuration}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              minutes
-            </Typography>
-          </Box>
-          
-          <IconButton
-            onClick={() => handleQuickDurationChange(quickDuration + 5)}
-            disabled={quickDuration >= 240}
-            size="small"
-          >
-            <Add fontSize="small" />
-          </IconButton>
-        </Box>
-
-        {/* Quick presets */}
-        <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
-          {commonDurations.map((duration) => (
-            <Chip
-              key={duration}
-              label={`${duration}m`}
-              variant={quickDuration === duration ? 'filled' : 'outlined'}
-              color={quickDuration === duration ? 'primary' : 'default'}
-              onClick={() => setQuickDuration(duration)}
-              size="small"
-              sx={{ cursor: 'pointer' }}
-            />
-          ))}
-        </Stack>
-      </Box>
-    );
-  };
-
-  // Removed complex time info - SessionTimer approach is simpler
-
   const renderControls = () => (
-    <Stack 
-      direction={{ xs: 'column', sm: 'row' }} 
-      spacing={2} 
-      justifyContent="center" 
+    <Stack
+      direction={{ xs: "column", sm: "row" }}
+      spacing={2}
+      justifyContent="center"
       alignItems="center"
-      sx={{ width: '100%' }}
+      sx={{ width: "100%" }}
     >
-      {!isRunning && (
+      {!isRunning && !isPaused && (
         <Button
           variant="contained"
           size="large"
           startIcon={<PlayArrow />}
-          onClick={() => startSession()}
-          sx={{ 
-            minWidth: { xs: '100%', sm: 200 },
-            py: 1.5
+          onClick={startSession}
+          sx={{
+            minWidth: { xs: "100%", sm: 200 },
+            py: 1.5,
           }}
         >
-          Start {quickDuration}min Focus
+          Start {totalDuration}min Focus
+        </Button>
+      )}
+
+      {isPaused && (
+        <Button
+          variant="contained"
+          size="large"
+          startIcon={<PlayArrow />}
+          onClick={resumeSession}
+          sx={{
+            minWidth: { xs: "100%", sm: 200 },
+            py: 1.5,
+          }}
+        >
+          Resume
         </Button>
       )}
 
@@ -437,7 +494,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
             size="large"
             startIcon={<Pause />}
             onClick={pauseSession}
-            sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
+            sx={{ minWidth: { xs: "100%", sm: "auto" } }}
           >
             Pause
           </Button>
@@ -447,7 +504,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
             startIcon={<Stop />}
             onClick={stopSession}
             color="error"
-            sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
+            sx={{ minWidth: { xs: "100%", sm: "auto" } }}
           >
             Stop
           </Button>
@@ -455,9 +512,9 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
             variant="text"
             size="large"
             onClick={skipSession}
-            sx={{ 
-              minWidth: { xs: '100%', sm: 'auto' },
-              color: 'text.secondary' 
+            sx={{
+              minWidth: { xs: "100%", sm: "auto" },
+              color: "text.secondary",
             }}
           >
             Skip
@@ -465,16 +522,16 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         </>
       )}
 
-      {!isRunning && remainingTime > 0 && (
+      {isPaused && (
         <Button
-          variant="contained"
+          variant="outlined"
           size="large"
-          startIcon={<PlayArrow />}
-          onClick={resumeSession}
-          color="success"
-          sx={{ minWidth: { xs: '100%', sm: 160 } }}
+          startIcon={<Stop />}
+          onClick={stopSession}
+          color="error"
+          sx={{ minWidth: { xs: "100%", sm: 160 } }}
         >
-          Resume
+          Stop
         </Button>
       )}
 
@@ -500,7 +557,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
           <History fontSize="small" />
         </IconButton>
       </Tooltip>
-      <Tooltip title="Send Feedback">
+      <Tooltip title="Submit Feedback">
         <IconButton onClick={onOpenFeedback} size="small">
           <Feedback fontSize="small" />
         </IconButton>
@@ -509,17 +566,55 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   );
 
   if (isComplete) {
-    return <CompletionScreen onClose={() => setIsComplete(false)} />;
+    return (
+      <CompletionScreen
+        onStartNewSession={() => {
+          setIsComplete(false);
+          startSession();
+        }}
+      />
+    );
   }
 
   return (
-    <Box sx={{ width: '100%', textAlign: 'center' }}>
-      {renderTimerDisplay()}
-      {renderQuickDurationInput()}
-      {renderControls()}
-      <Box sx={{ mt: 4 }}>
-        {renderActionButtons()}
+    <Paper
+      elevation={3}
+      sx={{
+        p: { xs: 2, sm: 4 },
+        borderRadius: 4,
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 4,
+      }}
+    >
+      <Box
+        sx={{ textAlign: "center", mb: 4, width: "100%", px: { xs: 0, sm: 2 } }}
+      >
+        {/* Quick presets */}
+        <Stack
+          direction="row"
+          spacing={1}
+          justifyContent="center"
+          flexWrap="wrap"
+        >
+          {(settings.quickPresets || [15, 25, 45, 90]).map((duration) => (
+            <Chip
+              key={duration}
+              label={`${duration}m`}
+              variant={totalDuration === duration ? "filled" : "outlined"}
+              color={totalDuration === duration ? "primary" : "default"}
+              onClick={() => handleTotalDurationChange(duration)}
+              size="small"
+              sx={{ cursor: "pointer" }}
+            />
+          ))}
+        </Stack>
       </Box>
-    </Box>
+      {renderTimerDisplay()}
+      {renderControls()}
+      {renderActionButtons()}
+    </Paper>
   );
 };

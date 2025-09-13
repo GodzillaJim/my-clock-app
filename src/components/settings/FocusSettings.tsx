@@ -248,61 +248,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
             </CardContent>
           </Card>
         </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="subtitle2" gutterBottom>
-                Long Break
-              </Typography>
-              <Slider
-                value={localSettings.longBreakDuration}
-                onChange={(_, value) => handleSettingChange('longBreakDuration', value as number)}
-                min={5}
-                max={60}
-                step={1}
-                marks={[
-                  { value: 15, label: '15m' },
-                  { value: 30, label: '30m' }
-                ]}
-                valueLabelDisplay="auto"
-                valueLabelFormat={(value) => `${value}m`}
-              />
-              <TextField
-                size="small"
-                type="number"
-                value={localSettings.longBreakDuration}
-                onChange={(e) => handleSettingChange('longBreakDuration', parseInt(e.target.value) || 15)}
-                inputProps={{ min: 5, max: 60 }}
-                sx={{ mt: 1 }}
-                fullWidth
-                helperText="5-60 minutes"
-              />
-            </CardContent>
-          </Card>
-        </Grid>
       </Grid>
-
-      <Box sx={{ mt: 3 }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Sessions before Long Break
-        </Typography>
-        <Slider
-          value={localSettings.sessionsBeforeLongBreak}
-          onChange={(_, value) => handleSettingChange('sessionsBeforeLongBreak', value as number)}
-          min={2}
-          max={8}
-          step={1}
-          marks={[
-            { value: 2, label: '2' },
-            { value: 4, label: '4' },
-            { value: 6, label: '6' },
-            { value: 8, label: '8' }
-          ]}
-          valueLabelDisplay="auto"
-          sx={{ maxWidth: 400 }}
-        />
-      </Box>
 
       <Box sx={{ mt: 3 }}>
         <Typography variant="subtitle2" gutterBottom>
