@@ -7,6 +7,7 @@ import {
   notificationService,
   NotificationService,
 } from "@/services/notification";
+import { SessionItem } from "../types";
 
 type TimerContextType = ReturnType<typeof useTasks> &
   ReturnType<typeof useSessions> & {
@@ -22,58 +23,32 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
   const sessions = useSessions();
   const storage = useMemo(() => createStorageService("pomodoro"), []);
   const notification = useMemo(() => notificationService, []);
-
   const timerRef = React.useRef<ReturnType<typeof useTimer> | null>(null);
 
-  // Assign timer to ref after creation
-  const timer = useTimer(
-    sessions.sessions,
-    sessions.currentSessionIndex,
-    sessions.updateSession,
-    handleSessionComplete
-    const storage = useMemo(() => createStorageService("pomodoro"), []);
-    const notification = useMemo(() => notificationService, []);
-    const timerRef = React.useRef<ReturnType<typeof useTimer> | null>(null);
-    const [shouldAutoStart, setShouldAutoStart] = React.useState(false);
+  const handleSessionComplete = useCallback(() => {
+    const completedSession = sessions.getCurrentSession();
+    if (!completedSession) return;
 
-    // Assign timer to ref after creation
-    const timer = useTimer(
-      sessions.sessions,
-      sessions.currentSessionIndex,
-      sessions.updateSession,
-      () => {
-        // This callback will be replaced by handleSessionComplete below
-      }
-    );
-    timerRef.current = timer;
+    const updatedTasks = [...tasks.tasks];
+    const currentTask = updatedTasks[tasks.currentTaskIndex];
 
-    // Auto-start effect
-    React.useEffect(() => {
-      if (shouldAutoStart) {
-        timerRef.current?.startTimer();
-        setShouldAutoStart(false);
-      }
-    }, [shouldAutoStart]);
+    if (currentTask) {
       currentTask.sessions = [
         ...(currentTask.sessions || []),
-        completedSession,
+        completedSession as SessionItem,
       ];
       tasks.setTasks(updatedTasks);
     }
 
-    // Move to next session if available
     if (sessions.currentSessionIndex < sessions.sessions.length - 1) {
       sessions.setCurrentSessionIndex((prev) => prev + 1);
-      // Auto-start the next session
       setTimeout(() => {
         timerRef.current?.startTimer();
-      }, 300); // Small delay to allow state update
+      }, 300);
     } else {
-      // All sessions complete - stop the timer
       notification.show("All Sessions Complete!", {
         body: "Great job finishing all sessions!",
       });
-      // Don't automatically move to next task - let user decide
     }
   }, [tasks, sessions, notification]);
 
@@ -82,20 +57,15 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
     sessions.currentSessionIndex,
     sessions.updateSession,
     handleSessionComplete
-    // Patch timer's onSessionEnd to use the correct callback
-    React.useEffect(() => {
-      if (timerRef.current) {
-        timerRef.current.onSessionEnd = handleSessionComplete;
-      }
-    }, [handleSessionComplete]);
   );
+  timerRef.current = timer;
 
   useEffect(() => {
     if (tasks.tasks.length) {
         const currentTask = tasks.tasks[tasks.currentTaskIndex] || tasks.tasks[0];
         sessions.createNewSessions(currentTask.durationInMinutes);
     }
-  }, [tasks])
+  }, [tasks.tasks, tasks.currentTaskIndex]);
 
   const value = useMemo(
     () => ({
