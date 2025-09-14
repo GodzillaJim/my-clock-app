@@ -43,6 +43,16 @@ class NotificationService {
 
   private async showSystemNotification(notification: SessionNotification): Promise<void> {
     try {
+      // Use Electron API if available (in production)
+      if (window.electronAPI && typeof window.electronAPI.sessionNotification === 'function') {
+        await window.electronAPI.sessionNotification({
+          title: notification.title,
+          body: notification.body
+        });
+        return;
+      }
+
+      // Fallback to browser Notification API (in development or web)
       if (Notification.permission === 'granted') {
         new Notification(notification.title, {
           body: notification.body,

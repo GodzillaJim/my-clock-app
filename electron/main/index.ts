@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage, globalShortcut } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage, globalShortcut, Notification } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -332,17 +332,13 @@ ipcMain.handle('update-tray-status', (_, status: string) => {
 })
 
 ipcMain.handle('session-notification', (_, { title, body }: { title: string, body: string }) => {
-  if (process.platform === 'win32' || process.platform === 'darwin') {
-    // For native notifications, we can enhance the tray experience
-    if (tray) {
-      tray.displayBalloon({
-        title,
-        content: body,
-        icon: path.join(process.env.VITE_PUBLIC, 'favicon.ico')
-      })
-    }
-  }
-})
+  const notification = new Notification({
+    title,
+    body,
+    icon: path.join(process.env.VITE_PUBLIC, '..', 'build', 'icon.png')
+  });
+  notification.show();
+});
 
 ipcMain.handle('get-user-data-path', () => {
   return app.getPath('userData');
