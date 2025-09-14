@@ -15,11 +15,14 @@ export const useTasks = (storageKey = 'pomodoro-tasks') => {
 
   // Load initial tasks
   useEffect(() => {
-    const savedTasks = storage.load();
-    if (savedTasks) {
-      setTasks(savedTasks);
-      setCurrentTaskIndex(validateTaskIndex(savedTasks, 0));
-    }
+    const loadTasks = async () => {
+      const savedTasks = await storage.load();
+      if (savedTasks) {
+        setTasks(savedTasks);
+        setCurrentTaskIndex(validateTaskIndex(savedTasks, 0));
+      }
+    };
+    loadTasks();
   }, [storage]);
 
   // Persist tasks on change

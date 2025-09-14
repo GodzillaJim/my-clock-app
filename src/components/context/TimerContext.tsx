@@ -277,13 +277,16 @@ export const TimerContextProvider = ({
   }, [tasks, sessions, currentTaskIndex, currentSessionIndex]);
 
   useEffect(() => {
-    const savedData = storageService.load();
-    if (savedData) {
-      setTasks(savedData.tasks || []);
-      setSessions(savedData.sessions || []);
-      setCurrentTaskIndex(savedData.currentTaskIndex || 0);
-      setCurrentSessionIndex(savedData.currentSessionIndex || 0);
-    }
+    const loadData = async () => {
+      const savedData = await storageService.load();
+      if (savedData) {
+        setTasks(savedData.tasks || []);
+        setSessions(savedData.sessions || []);
+        setCurrentTaskIndex(savedData.currentTaskIndex || 0);
+        setCurrentSessionIndex(savedData.currentSessionIndex || 0);
+      }
+    };
+    loadData();
   }, []);
 
   useEffect(() => {

@@ -21,13 +21,16 @@ export const useSessions = (storageKey = 'pomodoro-sessions') => {
 
   // Load initial sessions
   useEffect(() => {
-    const savedSessions = storage.load();
-    if (savedSessions) {
-      setSessions(savedSessions);
-      setCurrentSessionIndex(prev => 
-        Math.min(prev, savedSessions.length - 1)
-      );
-    }
+    const loadSessions = async () => {
+      const savedSessions = await storage.load();
+      if (savedSessions) {
+        setSessions(savedSessions);
+        setCurrentSessionIndex(prev => 
+          Math.min(prev, savedSessions.length - 1)
+        );
+      }
+    };
+    loadSessions();
   }, [storage]);
 
   // Persist sessions on change
