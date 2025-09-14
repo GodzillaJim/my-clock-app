@@ -5,6 +5,9 @@ interface ElectronAPI {
   updateTrayStatus: (status: string) => Promise<void>;
   sessionNotification: (notification: { title: string; body: string }) => Promise<void>;
   
+  // Storage
+  getUserDataPath: () => Promise<string>;
+
   // Event listeners for tray actions
   onTrayStartSession: (callback: () => void) => void;
   onTrayOpenSettings: (callback: () => void) => void;

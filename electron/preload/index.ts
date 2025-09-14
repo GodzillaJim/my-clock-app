@@ -32,6 +32,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sessionNotification: (notification: { title: string; body: string }) => 
     ipcRenderer.invoke('session-notification', notification),
   
+  // Storage
+  getUserDataPath: () => ipcRenderer.invoke('get-user-data-path'),
+
   // Event listeners for tray actions
   onTrayStartSession: (callback: () => void) => {
     ipcRenderer.on('tray-start-session', callback)

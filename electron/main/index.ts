@@ -344,6 +344,10 @@ ipcMain.handle('session-notification', (_, { title, body }: { title: string, bod
   }
 })
 
+ipcMain.handle('get-user-data-path', () => {
+  return app.getPath('userData');
+});
+
 // New window example arg: new windows url
 ipcMain.handle('open-win', (_, arg) => {
   const childWindow = new BrowserWindow({
