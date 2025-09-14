@@ -192,6 +192,8 @@ const App: React.FC = () => {
   };
 
   const handleSettingsChange = (newSettings: AppSettings) => {
+    console.log('App: handleSettingsChange called with:', newSettings);
+    console.log('App: Current quickPresets:', settings.quickPresets, '-> New quickPresets:', newSettings.quickPresets);
     setSettings(newSettings);
     notificationService.setSettings(newSettings);
   };

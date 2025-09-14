@@ -7,6 +7,12 @@ interface ElectronAPI {
   
   // Storage
   getUserDataPath: () => Promise<string>;
+  
+  // File storage operations
+  storageRead: (filePath: string) => Promise<string | null>;
+  storageWrite: (filePath: string, data: string) => Promise<void>;
+  storageDelete: (filePath: string) => Promise<void>;
+  getStoragePath: (key: string) => Promise<string>;
 
   // Event listeners for tray actions
   onTrayStartSession: (callback: () => void) => void;

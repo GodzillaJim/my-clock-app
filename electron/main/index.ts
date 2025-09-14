@@ -344,6 +344,53 @@ ipcMain.handle('get-user-data-path', () => {
   return app.getPath('userData');
 });
 
+// File storage operations
+ipcMain.handle('storage-read', async (_, filePath: string) => {
+  const fs = require('fs/promises');
+  try {
+    const data = await fs.readFile(filePath, 'utf-8');
+    return data;
+  } catch (error: any) {
+    if (error.code === 'ENOENT') {
+      return null; // File not found is a normal condition
+    }
+    throw error;
+  }
+});
+
+ipcMain.handle('storage-write', async (_, filePath: string, data: string) => {
+  const fs = require('fs/promises');
+  const path = require('path');
+  
+  // Ensure directory exists
+  const dir = path.dirname(filePath);
+  try {
+    await fs.mkdir(dir, { recursive: true });
+  } catch (error) {
+    console.error('Failed to create storage directory:', error);
+  }
+  
+  await fs.writeFile(filePath, data);
+});
+
+ipcMain.handle('storage-delete', async (_, filePath: string) => {
+  const fs = require('fs/promises');
+  try {
+    await fs.unlink(filePath);
+  } catch (error: any) {
+    if (error.code !== 'ENOENT') { // It's not an error if the file doesn't exist
+      throw error;
+    }
+  }
+});
+
+ipcMain.handle('get-storage-path', async (_, key: string) => {
+  const path = require('path');
+  const userDataPath = app.getPath('userData');
+  const storageDir = path.join(userDataPath, 'data');
+  return path.join(storageDir, `${key}.json`);
+});
+
 // New window example arg: new windows url
 ipcMain.handle('open-win', (_, arg) => {
   const childWindow = new BrowserWindow({

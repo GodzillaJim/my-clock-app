@@ -12,50 +12,17 @@ import {
   formatDuration 
 } from '@/features/timer/types';
 import { FeedbackItem } from '@/types/feedback';
+import { createStorageService } from './storage';
 
 class FocusStorageService {
-  private readonly STORAGE_KEY = 'focus_sessions_app_state';
-  private readonly DB_NAME = 'FocusSessionsDB';
-  private readonly DB_VERSION = 2;
-  private db: IDBDatabase | null = null;
+  private appStateStorage = createStorageService<AppState>('focus_sessions_app_state');
+  private sessionsStorage = createStorageService<SessionRecord[]>('focus_sessions_sessions');
+  private dailyHistoryStorage = createStorageService<DailyHistory[]>('focus_sessions_daily_history');
+  private feedbackStorage = createStorageService<FeedbackItem[]>('focus_sessions_feedback');
 
   async initialize(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
-      
-      request.onerror = () => reject(request.error);
-      
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve();
-      };
-      
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        
-        if (!db.objectStoreNames.contains('sessions')) {
-          const sessionStore = db.createObjectStore('sessions', { keyPath: 'id' });
-          sessionStore.createIndex('date', 'date', { unique: false });
-          sessionStore.createIndex('type', 'type', { unique: false });
-        }
-        
-        if (!db.objectStoreNames.contains('dailyHistory')) {
-          db.createObjectStore('dailyHistory', { keyPath: 'date' });
-        }
-        
-        if (!db.objectStoreNames.contains('appState')) {
-          db.createObjectStore('appState', { keyPath: 'key' });
-        }
-        
-        if (!db.objectStoreNames.contains('feedback')) {
-          const feedbackStore = db.createObjectStore('feedback', { keyPath: 'id' });
-          feedbackStore.createIndex('timestamp', 'timestamp', { unique: false });
-          feedbackStore.createIndex('type', 'type', { unique: false });
-          feedbackStore.createIndex('status', 'status', { unique: false });
-          feedbackStore.createIndex('severity', 'severity', { unique: false });
-        }
-      };
-    });
+    // No initialization needed for file-based storage
+    console.log('FocusStorageService initialized with file-based storage');
   }
 
   async getAppState(): Promise<AppState> {
@@ -67,45 +34,30 @@ class FocusStorageService {
       lastActiveDate: getTodayDateString()
     };
 
-    if (!this.db) {
-      await this.initialize();
-    }
-
     try {
-      const transaction = this.db!.transaction(['appState'], 'readonly');
-      const store = transaction.objectStore('appState');
-      const request = store.get('current');
-      
-      return new Promise((resolve) => {
-        request.onsuccess = () => {
-          const result = request.result;
-          if (result && result.data) {
-            // Deep merge settings to ensure all default properties are preserved
-            const savedState = result.data;
-            const state: AppState = {
-              ...defaultState,
-              ...savedState,
-              settings: {
-                ...DEFAULT_SETTINGS,
-                ...savedState.settings
-              }
-            };
-            
-            if (state.lastActiveDate !== getTodayDateString()) {
-              state.currentSession = null;
-              state.lastActiveDate = getTodayDateString();
-            }
-            
-            console.log('Loaded app state with quick presets:', state.settings.quickPresets);
-            resolve(state);
-          } else {
-            console.log('No saved state found, using defaults');
-            resolve(defaultState);
+      const loadedState = await this.appStateStorage.load();
+      if (loadedState) {
+        // Deep merge settings to ensure all default properties are preserved
+        const state: AppState = {
+          ...defaultState,
+          ...loadedState,
+          settings: {
+            ...DEFAULT_SETTINGS,
+            ...loadedState.settings
           }
         };
         
-        request.onerror = () => resolve(defaultState);
-      });
+        if (state.lastActiveDate !== getTodayDateString()) {
+          state.currentSession = null;
+          state.lastActiveDate = getTodayDateString();
+        }
+        
+        console.log('Loaded app state with quick presets:', state.settings.quickPresets);
+        return state;
+      } else {
+        console.log('No saved state found, using defaults');
+        return defaultState;
+      }
     } catch (error) {
       console.error('Failed to get app state:', error);
       return defaultState;
@@ -113,226 +65,20 @@ class FocusStorageService {
   }
 
   async saveAppState(state: AppState): Promise<void> {
-    if (!this.db) {
-      await this.initialize();
-    }
-
     console.log('Saving app state with quick presets:', state.settings?.quickPresets);
-
-    const transaction = this.db!.transaction(['appState'], 'readwrite');
-    const store = transaction.objectStore('appState');
     
-    await new Promise<void>((resolve, reject) => {
-      const request = store.put({ key: 'current', data: state, updatedAt: new Date() });
-      request.onsuccess = () => {
-        console.log('App state saved successfully');
-        resolve();
-      };
-      request.onerror = () => {
-        console.error('Failed to save app state:', request.error);
-        reject(request.error);
-      };
-    });
+    try {
+      await this.appStateStorage.save(state);
+      console.log('App state saved successfully');
+    } catch (error) {
+      console.error('Failed to save app state:', error);
+      throw error;
+    }
   }
 
   async getTodayHistory(): Promise<DailyHistory> {
     const today = getTodayDateString();
-    
-    if (!this.db) {
-      await this.initialize();
-    }
-
-    const transaction = this.db!.transaction(['dailyHistory'], 'readonly');
-    const store = transaction.objectStore('dailyHistory');
-    const request = store.get(today);
-    
-    return new Promise((resolve) => {
-      request.onsuccess = () => {
-        if (request.result) {
-          resolve(request.result);
-        } else {
-          const newHistory: DailyHistory = {
-            date: today,
-            sessions: [],
-            totalFocusTime: 0,
-            totalBreakTime: 0,
-            completedSessions: 0,
-            interruptedSessions: 0,
-            skippedSessions: 0,
-            averageSessionLength: 0,
-            longestStreak: 0,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          };
-          resolve(newHistory);
-        }
-      };
-      
-      request.onerror = () => {
-        const newHistory: DailyHistory = {
-          date: today,
-          sessions: [],
-          totalFocusTime: 0,
-          totalBreakTime: 0,
-          completedSessions: 0,
-          interruptedSessions: 0,
-          skippedSessions: 0,
-          averageSessionLength: 0,
-          longestStreak: 0,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        resolve(newHistory);
-      };
-    });
-  }
-
-  async saveTodayHistory(history: DailyHistory): Promise<void> {
-    if (!this.db) {
-      await this.initialize();
-    }
-
-    const updatedHistory = {
-      ...history,
-      updatedAt: new Date()
-    };
-
-    const transaction = this.db!.transaction(['dailyHistory'], 'readwrite');
-    const store = transaction.objectStore('dailyHistory');
-    
-    await new Promise<void>((resolve, reject) => {
-      const request = store.put(updatedHistory);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  async addSession(session: SessionRecord): Promise<void> {
-    if (!this.db) {
-      await this.initialize();
-    }
-
-    const sessionWithDate = {
-      ...session,
-      date: getTodayDateString()
-    };
-
-    const transaction = this.db!.transaction(['sessions'], 'readwrite');
-    const store = transaction.objectStore('sessions');
-    
-    await new Promise<void>((resolve, reject) => {
-      const request = store.put(sessionWithDate);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-
-    await this.updateDailyHistoryWithSession(session);
-  }
-
-  private async updateDailyHistoryWithSession(session: SessionRecord): Promise<void> {
-    const history = await this.getTodayHistory();
-    
-    const existingSessionIndex = history.sessions.findIndex(s => s.id === session.id);
-    if (existingSessionIndex >= 0) {
-      history.sessions[existingSessionIndex] = session;
-    } else {
-      history.sessions.push(session);
-    }
-
-    this.recalculateHistoryStats(history);
-    await this.saveTodayHistory(history);
-  }
-
-  private recalculateHistoryStats(history: DailyHistory): void {
-    const focusSessions = history.sessions.filter(s => s.type === SessionType.FOCUS);
-    const breakSessions = history.sessions.filter(s => s.type !== SessionType.FOCUS);
-    
-    history.totalFocusTime = focusSessions.reduce((total, session) => 
-      total + session.actualDuration, 0);
-    
-    history.totalBreakTime = breakSessions.reduce((total, session) => 
-      total + session.actualDuration, 0);
-
-    history.completedSessions = history.sessions.filter(s => 
-      s.completionStatus === CompletionStatus.COMPLETED).length;
-    
-    history.interruptedSessions = history.sessions.filter(s => 
-      s.completionStatus === CompletionStatus.INTERRUPTED).length;
-    
-    history.skippedSessions = history.sessions.filter(s => 
-      s.completionStatus === CompletionStatus.SKIPPED).length;
-
-    const completedFocusSessions = focusSessions.filter(s => 
-      s.completionStatus === CompletionStatus.COMPLETED);
-    
-    if (completedFocusSessions.length > 0) {
-      history.averageSessionLength = Math.round(
-        completedFocusSessions.reduce((total, session) => 
-          total + session.actualDuration, 0) / completedFocusSessions.length
-      );
-    } else {
-      history.averageSessionLength = 0;
-    }
-
-    history.longestStreak = this.calculateLongestStreak(history.sessions);
-  }
-
-  private calculateLongestStreak(sessions: SessionRecord[]): number {
-    let maxStreak = 0;
-    let currentStreak = 0;
-    
-    const focusSessions = sessions
-      .filter(s => s.type === SessionType.FOCUS)
-      .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-    
-    for (const session of focusSessions) {
-      if (session.completionStatus === CompletionStatus.COMPLETED) {
-        currentStreak++;
-        maxStreak = Math.max(maxStreak, currentStreak);
-      } else {
-        currentStreak = 0;
-      }
-    }
-    
-    return maxStreak;
-  }
-
-  async getSessionStats(): Promise<SessionStats> {
-    const history = await this.getTodayHistory();
-    const focusSessions = history.sessions.filter(s => s.type === SessionType.FOCUS);
-    
-    let currentStreak = 0;
-    const reversedFocusSessions = [...focusSessions].reverse();
-    
-    for (const session of reversedFocusSessions) {
-      if (session.completionStatus === CompletionStatus.COMPLETED) {
-        currentStreak++;
-      } else {
-        break;
-      }
-    }
-
-    const totalMinutes = Math.round(history.totalFocusTime);
-    const targetMinutes = focusSessions.length * 25; // Assuming 25min default
-    const progress = targetMinutes > 0 ? Math.round((totalMinutes / targetMinutes) * 100) : 0;
-
-    return {
-      totalFocusTime: formatDuration(totalMinutes),
-      completedSessions: history.completedSessions,
-      currentStreak,
-      todayProgress: Math.min(progress, 100),
-      averageSessionTime: formatDuration(history.averageSessionLength)
-    };
-  }
-
-  async clearTodayHistory(): Promise<void> {
-    const today = getTodayDateString();
-    
-    if (!this.db) {
-      await this.initialize();
-    }
-
-    const newHistory: DailyHistory = {
+    const defaultHistory: DailyHistory = {
       date: today,
       sessions: [],
       totalFocusTime: 0,
@@ -346,273 +92,323 @@ class FocusStorageService {
       updatedAt: new Date()
     };
 
-    await this.saveTodayHistory(newHistory);
-    
-    const transaction = this.db!.transaction(['sessions'], 'readwrite');
-    const store = transaction.objectStore('sessions');
-    const index = store.index('date');
-    const request = index.openCursor(IDBKeyRange.only(today));
-    
-    request.onsuccess = () => {
-      const cursor = request.result;
-      if (cursor) {
-        cursor.delete();
-        cursor.continue();
+    try {
+      const histories = await this.dailyHistoryStorage.load() || [];
+      return histories.find(h => h.date === today) || defaultHistory;
+    } catch (error) {
+      console.error('Failed to get today history:', error);
+      return defaultHistory;
+    }
+  }
+
+  async saveDailyHistory(history: DailyHistory): Promise<void> {
+    try {
+      const histories = await this.dailyHistoryStorage.load() || [];
+      const existingIndex = histories.findIndex(h => h.date === history.date);
+      
+      if (existingIndex >= 0) {
+        histories[existingIndex] = history;
+      } else {
+        histories.push(history);
       }
+      
+      // Keep only last 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const filteredHistories = histories.filter(h => new Date(h.date) >= thirtyDaysAgo);
+      
+      await this.dailyHistoryStorage.save(filteredHistories);
+    } catch (error) {
+      console.error('Failed to save daily history:', error);
+      throw error;
+    }
+  }
+
+  async saveSession(session: SessionRecord): Promise<void> {
+    try {
+      const sessions = await this.sessionsStorage.load() || [];
+      sessions.push(session);
+      
+      // Keep only last 1000 sessions to prevent storage bloat
+      const recentSessions = sessions.slice(-1000);
+      await this.sessionsStorage.save(recentSessions);
+    } catch (error) {
+      console.error('Failed to save session:', error);
+      throw error;
+    }
+  }
+
+  async getSessionHistory(limit: number = 50): Promise<SessionRecord[]> {
+    try {
+      const sessions = await this.sessionsStorage.load() || [];
+      return sessions
+        .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+        .slice(0, limit);
+    } catch (error) {
+      console.error('Failed to get session history:', error);
+      return [];
+    }
+  }
+
+  private calculateStats(sessions: SessionRecord[]): SessionStats {
+    const totalSessions = sessions.length;
+    const completedSessions = sessions.filter(s => s.completionStatus === 'completed');
+    const totalFocusTime = sessions
+      .filter(s => s.type === 'focus')
+      .reduce((sum, s) => sum + s.actualDuration, 0);
+    const totalBreakTime = 0; // SessionType doesn't have 'break', so this is 0
+
+    const completedPomodoros = completedSessions.filter(s => s.type === 'focus').length;
+
+    // Calculate current streak
+    let currentStreak = 0;
+    for (let i = sessions.length - 1; i >= 0; i--) {
+      if (sessions[i].completionStatus === 'completed' && sessions[i].type === 'focus') {
+        currentStreak++;
+      } else {
+        break;
+      }
+    }
+
+    // Calculate longest streak
+    let longestStreak = 0;
+    let tempStreak = 0;
+    for (const session of sessions) {
+      if (session.completionStatus === 'completed' && session.type === 'focus') {
+        tempStreak++;
+        longestStreak = Math.max(longestStreak, tempStreak);
+      } else {
+        tempStreak = 0;
+      }
+    }
+
+    const averageSessionLength = totalSessions > 0 ? 
+      (totalFocusTime + totalBreakTime) / totalSessions : 0;
+
+    // Productivity score (0-100) based on completion rate and focus time
+    const completionRate = totalSessions > 0 ? completedSessions.length / totalSessions : 0;
+    const productivityScore = Math.round(completionRate * 100);
+
+    return {
+      totalFocusTime: formatDuration(totalFocusTime * 60), // Convert minutes to seconds for formatDuration
+      completedSessions: completedSessions.length,
+      currentStreak,
+      todayProgress: productivityScore,
+      averageSessionTime: formatDuration(averageSessionLength * 60) // Convert minutes to seconds
     };
   }
 
-  async shouldResetDaily(): Promise<boolean> {
-    const state = await this.getAppState();
-    const today = getTodayDateString();
-    
-    return state.settings.autoResetDaily && state.lastActiveDate !== today;
-  }
-
-  async exportHistory(startDate: string, endDate: string, format: 'csv' | 'json'): Promise<string> {
-    if (!this.db) {
-      await this.initialize();
-    }
-
-    const sessions: SessionRecord[] = [];
-    const transaction = this.db!.transaction(['sessions'], 'readonly');
-    const store = transaction.objectStore('sessions');
-    const index = store.index('date');
-    
-    return new Promise((resolve) => {
-      const range = IDBKeyRange.bound(startDate, endDate);
-      const request = index.openCursor(range);
+  async updateDailyStats(date: string): Promise<void> {
+    try {
+      const sessions = await this.sessionsStorage.load() || [];
+      const dayStartTime = new Date(`${date}T00:00:00.000Z`).getTime();
+      const dayEndTime = new Date(`${date}T23:59:59.999Z`).getTime();
       
-      request.onsuccess = () => {
-        const cursor = request.result;
-        if (cursor) {
-          sessions.push(cursor.value);
-          cursor.continue();
-        } else {
-          if (format === 'csv') {
-            resolve(this.generateCSV(sessions));
-          } else {
-            resolve(JSON.stringify(sessions, null, 2));
-          }
-        }
+      const daySessions = sessions.filter(session => {
+        const sessionTime = new Date(session.startTime).getTime();
+        return sessionTime >= dayStartTime && sessionTime <= dayEndTime;
+      });
+
+      const completedSessions = daySessions.filter(s => s.completionStatus === 'completed');
+      const totalFocusTime = daySessions
+        .filter(s => s.type === 'focus')
+        .reduce((sum, s) => sum + s.actualDuration, 0);
+      
+      const history: DailyHistory = {
+        date,
+        sessions: daySessions,
+        totalFocusTime,
+        totalBreakTime: 0,
+        completedSessions: completedSessions.length,
+        interruptedSessions: daySessions.filter(s => s.completionStatus === 'interrupted').length,
+        skippedSessions: daySessions.filter(s => s.completionStatus === 'skipped').length,
+        averageSessionLength: daySessions.length > 0 ? totalFocusTime / daySessions.length : 0,
+        longestStreak: 0, // Would need more complex calculation
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
-    });
-  }
 
-  private generateCSV(sessions: SessionRecord[]): string {
-    const headers = ['Date', 'Session #', 'Type', 'Planned Duration (min)', 'Actual Duration (min)', 'Start Time', 'End Time', 'Status'];
-    const rows = sessions.map(session => [
-      getTodayDateString(),
-      session.sessionNumber.toString(),
-      session.type,
-      session.plannedDuration.toString(),
-      session.actualDuration.toString(),
-      session.startTime.toLocaleString(),
-      session.endTime ? session.endTime.toLocaleString() : 'N/A',
-      session.completionStatus
-    ]);
-    
-    return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
-  }
-
-  async scheduleAutomaticReset(): Promise<void> {
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-    
-    const millisecondsUntilMidnight = tomorrow.getTime() - now.getTime();
-    
-    setTimeout(async () => {
-      if (await this.shouldResetDaily()) {
-        await this.clearTodayHistory();
-        const state = await this.getAppState();
-        state.lastActiveDate = getTodayDateString();
-        state.currentSession = null;
-        await this.saveAppState(state);
-      }
-      
-      this.scheduleAutomaticReset();
-    }, millisecondsUntilMidnight);
-  }
-
-  // Feedback Management Methods
-  async addFeedback(feedback: Omit<FeedbackItem, 'id' | 'timestamp' | 'status'>): Promise<string> {
-    if (!this.db) {
-      await this.initialize();
+      await this.saveDailyHistory(history);
+    } catch (error) {
+      console.error('Failed to update daily stats:', error);
+      throw error;
     }
+  }
 
-    const feedbackItem: FeedbackItem = {
-      ...feedback,
-      id: `feedback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: new Date(),
-      status: 'open'
-    };
+  async deleteSession(sessionId: string): Promise<void> {
+    try {
+      const sessions = await this.sessionsStorage.load() || [];
+      const updatedSessions = sessions.filter(s => s.id !== sessionId);
+      await this.sessionsStorage.save(updatedSessions);
+    } catch (error) {
+      console.error('Failed to delete session:', error);
+      throw error;
+    }
+  }
 
-    const transaction = this.db!.transaction(['feedback'], 'readwrite');
-    const store = transaction.objectStore('feedback');
-    
-    await new Promise<void>((resolve, reject) => {
-      const request = store.add(feedbackItem);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-
-    return feedbackItem.id;
+  async addFeedback(feedback: Omit<FeedbackItem, 'id' | 'timestamp' | 'status'>): Promise<void> {
+    try {
+      const feedbacks = await this.feedbackStorage.load() || [];
+      const newFeedback: FeedbackItem = {
+        ...feedback,
+        id: crypto.randomUUID(),
+        timestamp: new Date(),
+        status: 'open'
+      };
+      feedbacks.push(newFeedback);
+      await this.feedbackStorage.save(feedbacks);
+    } catch (error) {
+      console.error('Failed to add feedback:', error);
+      throw error;
+    }
   }
 
   async getFeedback(filters?: {
-    status?: FeedbackItem['status'];
-    type?: FeedbackItem['type'];
-    severity?: FeedbackItem['severity'];
-    startDate?: Date;
-    endDate?: Date;
+    type?: string;
+    status?: string;
+    severity?: 'low' | 'medium' | 'high';
+    limit?: number;
   }): Promise<FeedbackItem[]> {
-    if (!this.db) {
-      await this.initialize();
+    try {
+      const feedbacks = await this.feedbackStorage.load() || [];
+      let filtered = [...feedbacks];
+
+      if (filters?.type) {
+        filtered = filtered.filter(f => f.type === filters.type);
+      }
+      if (filters?.status) {
+        filtered = filtered.filter(f => f.status === filters.status);
+      }
+      if (filters?.severity) {
+        filtered = filtered.filter(f => f.severity === filters.severity);
+      }
+
+      // Sort by timestamp (newest first)
+      filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      if (filters?.limit) {
+        filtered = filtered.slice(0, filters.limit);
+      }
+
+      return filtered;
+    } catch (error) {
+      console.error('Failed to get feedback:', error);
+      return [];
     }
-
-    const transaction = this.db!.transaction(['feedback'], 'readonly');
-    const store = transaction.objectStore('feedback');
-    
-    return new Promise((resolve) => {
-      const feedback: FeedbackItem[] = [];
-      const request = store.openCursor();
-      
-      request.onsuccess = () => {
-        const cursor = request.result;
-        if (cursor) {
-          const item = cursor.value as FeedbackItem;
-          let includeItem = true;
-
-          if (filters) {
-            if (filters.status && item.status !== filters.status) includeItem = false;
-            if (filters.type && item.type !== filters.type) includeItem = false;
-            if (filters.severity && item.severity !== filters.severity) includeItem = false;
-            if (filters.startDate && item.timestamp < filters.startDate) includeItem = false;
-            if (filters.endDate && item.timestamp > filters.endDate) includeItem = false;
-          }
-
-          if (includeItem) {
-            feedback.push(item);
-          }
-
-          cursor.continue();
-        } else {
-          // Sort by timestamp (newest first)
-          feedback.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-          resolve(feedback);
-        }
-      };
-      
-      request.onerror = () => resolve([]);
-    });
   }
 
-  async updateFeedbackStatus(id: string, status: FeedbackItem['status']): Promise<void> {
-    if (!this.db) {
-      await this.initialize();
-    }
-
-    const transaction = this.db!.transaction(['feedback'], 'readwrite');
-    const store = transaction.objectStore('feedback');
-    
-    const getRequest = store.get(id);
-    
-    return new Promise((resolve, reject) => {
-      getRequest.onsuccess = () => {
-        const feedback = getRequest.result;
-        if (feedback) {
-          feedback.status = status;
-          const updateRequest = store.put(feedback);
-          updateRequest.onsuccess = () => resolve();
-          updateRequest.onerror = () => reject(updateRequest.error);
-        } else {
-          reject(new Error('Feedback item not found'));
-        }
-      };
+  async updateFeedback(id: string, updates: Partial<Pick<FeedbackItem, 'status'>>): Promise<void> {
+    try {
+      const feedbacks = await this.feedbackStorage.load() || [];
+      const index = feedbacks.findIndex(f => f.id === id);
       
-      getRequest.onerror = () => reject(getRequest.error);
-    });
+      if (index >= 0) {
+        feedbacks[index] = { ...feedbacks[index], ...updates };
+        await this.feedbackStorage.save(feedbacks);
+      }
+    } catch (error) {
+      console.error('Failed to update feedback:', error);
+      throw error;
+    }
   }
 
   async deleteFeedback(id: string): Promise<void> {
-    if (!this.db) {
-      await this.initialize();
+    try {
+      const feedbacks = await this.feedbackStorage.load() || [];
+      const updatedFeedbacks = feedbacks.filter(f => f.id !== id);
+      await this.feedbackStorage.save(updatedFeedbacks);
+    } catch (error) {
+      console.error('Failed to delete feedback:', error);
+      throw error;
     }
-
-    const transaction = this.db!.transaction(['feedback'], 'readwrite');
-    const store = transaction.objectStore('feedback');
-    
-    return new Promise((resolve, reject) => {
-      const request = store.delete(id);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
   }
 
-  async getFeedbackStats(): Promise<{
-    total: number;
-    open: number;
-    resolved: number;
-    byType: Record<FeedbackItem['type'], number>;
-    bySeverity: Record<FeedbackItem['severity'], number>;
-  }> {
-    const allFeedback = await this.getFeedback();
-    
-    const stats = {
-      total: allFeedback.length,
-      open: allFeedback.filter(f => f.status === 'open').length,
-      resolved: allFeedback.filter(f => f.status === 'resolved').length,
-      byType: {
-        'bug': 0,
-        'feature-request': 0,
-        'issue': 0,
-        'general': 0
-      } as Record<FeedbackItem['type'], number>,
-      bySeverity: {
-        'low': 0,
-        'medium': 0,
-        'high': 0,
-        'critical': 0
-      } as Record<FeedbackItem['severity'], number>
+  async getHistoryForPeriod(startDate: string, endDate: string): Promise<DailyHistory[]> {
+    try {
+      const histories = await this.dailyHistoryStorage.load() || [];
+      return histories.filter(h => h.date >= startDate && h.date <= endDate);
+    } catch (error) {
+      console.error('Failed to get history for period:', error);
+      return [];
+    }
+  }
+
+  async migrateFromIndexedDB(): Promise<void> {
+    // This method could be used to migrate data from the old IndexedDB storage
+    // to the new file-based storage if needed
+    console.log('Migration from IndexedDB not implemented - starting fresh with file-based storage');
+  }
+
+  // Additional methods for compatibility
+  async addSession(session: SessionRecord): Promise<void> {
+    return this.saveSession(session);
+  }
+
+  async getFeedbackStats(): Promise<any> {
+    const feedbacks = await this.feedbackStorage.load() || [];
+    return {
+      total: feedbacks.length,
+      open: feedbacks.filter(f => f.status === 'open').length,
+      resolved: feedbacks.filter(f => f.status === 'resolved').length,
+      inProgress: feedbacks.filter(f => f.status === 'in-progress').length
     };
-
-    allFeedback.forEach(feedback => {
-      stats.byType[feedback.type]++;
-      stats.bySeverity[feedback.severity]++;
-    });
-
-    return stats;
   }
 
-  async exportFeedback(format: 'csv' | 'json' = 'csv'): Promise<string> {
-    const allFeedback = await this.getFeedback();
-    
+  async updateFeedbackStatus(id: string, status: 'open' | 'in-progress' | 'resolved' | 'dismissed'): Promise<void> {
+    return this.updateFeedback(id, { status });
+  }
+
+  async exportFeedback(format: 'csv' | 'json'): Promise<string> {
+    const feedbacks = await this.feedbackStorage.load() || [];
     if (format === 'json') {
-      return JSON.stringify(allFeedback, null, 2);
+      return JSON.stringify(feedbacks, null, 2);
+    } else {
+      // CSV export
+      const headers = ['id', 'type', 'title', 'description', 'severity', 'category', 'timestamp', 'status'];
+      const rows = feedbacks.map(f => [
+        f.id, f.type, f.title, f.description, f.severity, f.category,
+        f.timestamp.toISOString(), f.status
+      ]);
+      return [headers, ...rows].map(row => row.join(',')).join('\n');
     }
+  }
+
+  async getSessionStats(): Promise<SessionStats> {
+    const sessions = await this.sessionsStorage.load() || [];
+    return this.calculateStats(sessions);
+  }
+
+  async clearTodayHistory(): Promise<void> {
+    const today = getTodayDateString();
+    const histories = await this.dailyHistoryStorage.load() || [];
+    const filtered = histories.filter(h => h.date !== today);
+    await this.dailyHistoryStorage.save(filtered);
     
-    // CSV format
-    const headers = [
-      'ID', 'Type', 'Title', 'Description', 'Severity', 'Category', 
-      'Status', 'Timestamp', 'User Agent', 'App Version'
-    ];
+    // Also clear today's sessions
+    const sessions = await this.sessionsStorage.load() || [];
+    const dayStartTime = new Date(`${today}T00:00:00.000Z`).getTime();
+    const dayEndTime = new Date(`${today}T23:59:59.999Z`).getTime();
     
-    const rows = allFeedback.map(item => [
-      item.id,
-      item.type,
-      `"${item.title.replace(/"/g, '""')}"`, // Escape quotes
-      `"${item.description.replace(/"/g, '""')}"`,
-      item.severity,
-      item.category,
-      item.status,
-      item.timestamp.toISOString(),
-      item.userAgent || '',
-      item.appVersion || ''
-    ]);
+    const filteredSessions = sessions.filter(session => {
+      const sessionTime = new Date(session.startTime).getTime();
+      return !(sessionTime >= dayStartTime && sessionTime <= dayEndTime);
+    });
     
-    return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    await this.sessionsStorage.save(filteredSessions);
+  }
+
+  async exportHistory(startDate: string, endDate: string, format: 'csv' | 'json'): Promise<string> {
+    const histories = await this.getHistoryForPeriod(startDate, endDate);
+    if (format === 'json') {
+      return JSON.stringify(histories, null, 2);
+    } else {
+      // CSV export
+      const headers = ['date', 'totalFocusTime', 'totalBreakTime', 'completedSessions', 'interruptedSessions', 'skippedSessions'];
+      const rows = histories.map(h => [
+        h.date, h.totalFocusTime, h.totalBreakTime, h.completedSessions, h.interruptedSessions, h.skippedSessions
+      ]);
+      return [headers, ...rows].map(row => row.join(',')).join('\n');
+    }
   }
 }
 

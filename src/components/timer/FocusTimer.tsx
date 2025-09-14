@@ -83,6 +83,12 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   if (!settings) {
     return <Box>Loading...</Box>;
   }
+
+  // Debug logging to track settings changes
+  useEffect(() => {
+    console.log('FocusTimer: Received settings update:', settings);
+    console.log('FocusTimer: quickPresets:', settings.quickPresets);
+  }, [settings]);
   // Simple state management following SessionTimer approach
   const [sessions, setSessions] = useState<SimpleSession[]>([]);
   const [currentSessionIndex, setCurrentSessionIndex] = useState(0);
@@ -620,58 +626,63 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       <Box
         sx={{ textAlign: "center", mb: 4, width: "100%", px: { xs: 0, sm: 2 } }}
       >
-        {/* Custom Duration Input */}
-        <Stack
-          direction="row"
-          spacing={1}
-          justifyContent="center"
-          alignItems="center"
-          sx={{ mb: 2 }}
-        >
-          <IconButton onClick={decrementDuration} size="small">
-            <Remove />
-          </IconButton>
-          <TextField
-            variant="standard"
-            value={totalDuration}
-            onChange={(e) => handleTotalDurationChange(e.target.value)}
-            size="small"
-            sx={{
-              width: "100px",
-              "& .MuiInputBase-input": {
-                textAlign: "center",
-                fontWeight: "bold",
-              },
-            }}
-            InputProps={{
-              disableUnderline: true,
-              endAdornment: <InputAdornment position="end">min</InputAdornment>,
-            }}
-          />
-          <IconButton onClick={incrementDuration} size="small">
-            <Add />
-          </IconButton>
-        </Stack>
+        {/* Show duration controls only when timer is not running or paused */}
+        {!isRunning && !isPaused && (
+          <>
+            {/* Custom Duration Input */}
+            <Stack
+              direction="row"
+              spacing={1}
+              justifyContent="center"
+              alignItems="center"
+              sx={{ mb: 2 }}
+            >
+              <IconButton onClick={decrementDuration} size="small">
+                <Remove />
+              </IconButton>
+              <TextField
+                variant="standard"
+                value={totalDuration}
+                onChange={(e) => handleTotalDurationChange(e.target.value)}
+                size="small"
+                sx={{
+                  width: "100px",
+                  "& .MuiInputBase-input": {
+                    textAlign: "center",
+                    fontWeight: "bold",
+                  },
+                }}
+                InputProps={{
+                  disableUnderline: true,
+                  endAdornment: <InputAdornment position="end">min</InputAdornment>,
+                }}
+              />
+              <IconButton onClick={incrementDuration} size="small">
+                <Add />
+              </IconButton>
+            </Stack>
 
-        {/* Quick presets */}
-        <Stack
-          direction="row"
-          spacing={1}
-          justifyContent="center"
-          flexWrap="wrap"
-        >
-          {(settings.quickPresets || [15, 25, 45, 90]).map((duration) => (
-            <Chip
-              key={duration}
-              label={`${duration}m`}
-              variant={totalDuration === duration ? "filled" : "outlined"}
-              color={totalDuration === duration ? "primary" : "default"}
-              onClick={() => handleTotalDurationChange(duration)}
-              size="small"
-              sx={{ cursor: "pointer" }}
-            />
-          ))}
-        </Stack>
+            {/* Quick presets */}
+            <Stack
+              direction="row"
+              spacing={1}
+              justifyContent="center"
+              flexWrap="wrap"
+            >
+              {(settings.quickPresets || [15, 25, 30, 45, 60]).map((duration) => (
+                <Chip
+                  key={duration}
+                  label={`${duration}m`}
+                  variant={totalDuration === duration ? "filled" : "outlined"}
+                  color={totalDuration === duration ? "primary" : "default"}
+                  onClick={() => handleTotalDurationChange(duration)}
+                  size="small"
+                  sx={{ cursor: "pointer" }}
+                />
+              ))}
+            </Stack>
+          </>
+        )}
       </Box>
       {renderTimerDisplay()}
       {renderControls()}

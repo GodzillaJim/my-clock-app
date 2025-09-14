@@ -34,6 +34,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Storage
   getUserDataPath: () => ipcRenderer.invoke('get-user-data-path'),
+  
+  // File storage operations
+  storageRead: (filePath: string) => ipcRenderer.invoke('storage-read', filePath),
+  storageWrite: (filePath: string, data: string) => ipcRenderer.invoke('storage-write', filePath, data),
+  storageDelete: (filePath: string) => ipcRenderer.invoke('storage-delete', filePath),
+  getStoragePath: (key: string) => ipcRenderer.invoke('get-storage-path', key),
 
   // Event listeners for tray actions
   onTrayStartSession: (callback: () => void) => {

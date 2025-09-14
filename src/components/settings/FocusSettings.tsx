@@ -84,12 +84,16 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
   const [activeTab, setActiveTab] = useState(0);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       console.log('Settings dialog opened, resetting local settings to:', settings);
       setLocalSettings(settings);
       setIsDirty(false);
+      setIsSaving(false);
+      setSaveError(null);
       setNotificationPermission(notificationService.getPermissionStatus());
     }
   }, [open, settings]);
@@ -108,6 +112,11 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
   };
 
   const handleSave = async () => {
+    if (isSaving) return; // Prevent double-clicks
+    
+    setIsSaving(true);
+    setSaveError(null);
+    
     try {
       console.log('Saving settings with presets:', localSettings.quickPresets);
       const appState = await focusStorage.getAppState();
@@ -117,8 +126,16 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
       onSettingsChange(localSettings);
       setIsDirty(false);
       console.log('Settings saved successfully');
+      
+      // Show success state briefly before closing
+      setTimeout(() => {
+        onClose();
+      }, 800);
     } catch (error) {
       console.error('Failed to save settings:', error);
+      setSaveError(error instanceof Error ? error.message : 'Unknown error occurred');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -635,15 +652,20 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
           </Button>
         )}
         <Box sx={{ flex: 1 }} />
-        <Button onClick={handleCancel}>
+        {saveError && (
+          <Alert severity="error" sx={{ mr: 2 }}>
+            Failed to save: {saveError}
+          </Alert>
+        )}
+        <Button onClick={handleCancel} disabled={isSaving}>
           Cancel
         </Button>
         <Button 
           onClick={handleSave} 
           variant="contained"
-          disabled={!isDirty}
+          disabled={!isDirty || isSaving}
         >
-          Save Settings
+          {isSaving ? 'Saving...' : (!isDirty && !isSaving) ? 'Saved ✓' : 'Save Settings'}
         </Button>
       </DialogActions>
     </Dialog>
