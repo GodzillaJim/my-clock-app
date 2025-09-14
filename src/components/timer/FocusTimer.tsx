@@ -9,6 +9,8 @@ import {
   Chip,
   IconButton,
   Tooltip,
+  TextField,
+  InputAdornment,
 } from "@mui/material";
 import {
   PlayArrow,
@@ -21,6 +23,8 @@ import {
   FastForward,
   Coffee,
   Work,
+  Add,
+  Remove,
 } from "@mui/icons-material";
 import { useTimer } from "react-timer-hook";
 import dayjs from "dayjs";
@@ -86,6 +90,23 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   const [totalDuration, setTotalDuration] = useState(25);
   const [isComplete, setIsComplete] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+
+  const handleTotalDurationChange = (value: number | string) => {
+    const numericValue = typeof value === 'string' ? parseInt(value, 10) : value;
+    if (isNaN(numericValue)) {
+      return; // Or handle as an error, but for now, just ignore invalid input
+    }
+    const clampedValue = Math.max(1, Math.min(480, numericValue));
+    setTotalDuration(clampedValue);
+  };
+
+  const incrementDuration = () => {
+    handleTotalDurationChange(totalDuration + 5);
+  };
+
+  const decrementDuration = () => {
+    handleTotalDurationChange(totalDuration - 5);
+  };
 
   const recordSession = async (status: CompletionStatus) => {
     const currentSession = sessions[currentSessionIndex];
@@ -196,10 +217,14 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     return Math.max(0, Math.min(100, (elapsed / totalSeconds) * 100));
   };
 
+  // This function is now the single source of truth for duration changes.
+  // It is already defined above, so we remove this duplicate.
+  /*
   const handleTotalDurationChange = (value: number) => {
     const clampedValue = Math.max(1, Math.min(480, value));
     setTotalDuration(clampedValue);
   };
+  */
 
   // Simple start/stop functions following SessionTimer approach
   const startSession = () => {
@@ -595,6 +620,39 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       <Box
         sx={{ textAlign: "center", mb: 4, width: "100%", px: { xs: 0, sm: 2 } }}
       >
+        {/* Custom Duration Input */}
+        <Stack
+          direction="row"
+          spacing={1}
+          justifyContent="center"
+          alignItems="center"
+          sx={{ mb: 2 }}
+        >
+          <IconButton onClick={decrementDuration} size="small">
+            <Remove />
+          </IconButton>
+          <TextField
+            variant="standard"
+            value={totalDuration}
+            onChange={(e) => handleTotalDurationChange(e.target.value)}
+            size="small"
+            sx={{
+              width: "100px",
+              "& .MuiInputBase-input": {
+                textAlign: "center",
+                fontWeight: "bold",
+              },
+            }}
+            InputProps={{
+              disableUnderline: true,
+              endAdornment: <InputAdornment position="end">min</InputAdornment>,
+            }}
+          />
+          <IconButton onClick={incrementDuration} size="small">
+            <Add />
+          </IconButton>
+        </Stack>
+
         {/* Quick presets */}
         <Stack
           direction="row"
