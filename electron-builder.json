@@ -22,7 +22,7 @@
   ],
   "mac": {
     "category": "public.app-category.productivity",
-    "icon": "build/icon.icns",
+    "icon": "build/hour_glass.icns",
     "artifactName": "${productName}_${version}.${ext}",
     "target": [
       {
@@ -32,7 +32,7 @@
     ]
   },
   "win": {
-    "icon": "build/icon.ico",
+    "icon": "build/hour_glass.ico",
     "target": [
       {
         "target": "nsis",
@@ -44,7 +44,6 @@
       }
     ],
     "artifactName": "${productName}_${version}.${ext}",
-    "publisherName": "Focus Sessions App",
     "verifyUpdateCodeSignature": false
   },
   "nsis": {
@@ -56,16 +55,16 @@
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
     "shortcutName": "Focus Sessions",
-    "installerIcon": "build/icon.ico",
-    "uninstallerIcon": "build/icon.ico",
-    "installerHeaderIcon": "build/icon.ico",
+    "installerIcon": "build/hour_glass.ico",
+    "uninstallerIcon": "build/hour_glass.ico",
+    "installerHeaderIcon": "build/hour_glass.ico",
     "include": "build/installer.nsh"
   },
   "portable": {
     "artifactName": "${productName}_${version}_portable.${ext}"
   },
   "linux": {
-    "icon": "build/icons/",
+    "icon": "build/hour_glass.png",
     "target": [
       {
         "target": "AppImage",

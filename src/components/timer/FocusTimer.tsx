@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -26,8 +26,9 @@ import { useTimer } from "react-timer-hook";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import { CompletionScreen } from "./CompletionScreen";
-import { AppSettings } from "@/features/timer/types";
+import { AppSettings, SessionRecord, CompletionStatus, SessionType } from "@/features/timer/types";
 import { notificationService } from "@/services/notificationService";
+import { focusStorage as focusStorageService } from "@/services/focusStorage";
 
 dayjs.extend(duration);
 
@@ -36,7 +37,7 @@ interface SimpleSession {
   duration: number; // in seconds
 }
 
-  // The component now uses settings for session durations.
+// The component now uses settings for session durations.
 const generateSessions = (
   totalMinutes: number,
   settings: AppSettings
@@ -84,8 +85,37 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   const [isRunning, setIsRunning] = useState(false);
   const [totalDuration, setTotalDuration] = useState(25);
   const [isComplete, setIsComplete] = useState(false);
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+
+  const recordSession = async (status: CompletionStatus) => {
+    const currentSession = sessions[currentSessionIndex];
+    if (!currentSession || !sessionStartTime) return;
+
+    const now = new Date();
+    const actualDuration = (now.getTime() - sessionStartTime.getTime()) / 1000; // in seconds
+
+    const record: SessionRecord = {
+      id: `${sessionStartTime.getTime()}-${currentSessionIndex}`,
+      type: currentSession.type === 'focus' ? SessionType.FOCUS : SessionType.SHORT_BREAK,
+      sessionNumber: currentSessionIndex + 1,
+      plannedDuration: currentSession.duration / 60,
+      actualDuration: actualDuration / 60,
+      startTime: sessionStartTime,
+      endTime: now,
+      completionStatus: status,
+      pausedTime: 0, // This would require more complex tracking
+      remainingTime: 0,
+    };
+
+    try {
+      await focusStorageService.addSession(record);
+    } catch (error) {
+      console.error("Failed to save session record:", error);
+    }
+  };
 
   const handleSessionComplete = () => {
+    recordSession(CompletionStatus.COMPLETED);
     const currentSession = sessions[currentSessionIndex];
     if (currentSession) {
       notificationService.showNotification({
@@ -110,10 +140,16 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       // All sessions complete
       setIsRunning(false);
       setIsComplete(true);
+      notificationService.showNotification({
+        type: 'session_complete',
+        title: 'All Sessions Complete!',
+        body: 'Great job! You have completed all your sessions.',
+        timestamp: new Date(),
+      });
     }
   };
 
-  const { seconds, minutes, hours, start, pause, resume, restart } = useTimer({
+  const { seconds, minutes, hours, pause, resume, restart } = useTimer({
     expiryTimestamp: new Date(),
     autoStart: false,
     onExpire: handleSessionComplete,
@@ -179,6 +215,14 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
 
     setIsRunning(true);
     setIsComplete(false);
+    setSessionStartTime(new Date());
+
+    notificationService.showNotification({
+      type: 'session_start',
+      title: 'Session Started',
+      body: `Your ${totalDuration}-minute focus session has begun.`,
+      timestamp: new Date(),
+    });
   };
 
   const pauseSession = () => {
@@ -192,6 +236,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   };
 
   const stopSession = () => {
+    recordSession(CompletionStatus.INTERRUPTED);
     const newExpiryTimestamp = dayjs()
       .add(sessions[0]?.duration || 0, "second")
       .toDate();
@@ -209,6 +254,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   };
 
   const skipSession = () => {
+    recordSession(CompletionStatus.SKIPPED);
     handleSessionComplete();
   };
 
@@ -528,7 +574,6 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       <CompletionScreen
         onStartNewSession={() => {
           setIsComplete(false);
-          startSession();
         }}
       />
     );

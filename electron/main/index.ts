@@ -57,81 +57,17 @@ const preload = path.join(__dirname, '../preload/index.mjs')
 const indexHtml = path.join(RENDERER_DIST, 'index.html')
 
 function createTrayIcon(isActive: boolean = false): Electron.NativeImage {
-  // Use text/emoji based approach - most reliable across themes
-  return createTextBasedTrayIcon(isActive)
-}
-
-function createTextBasedTrayIcon(isActive: boolean): Electron.NativeImage {
-  const size = 16
-  
-  // Try different approaches based on platform
+  const iconPath = path.join(process.env.VITE_PUBLIC, '..', 'build', 'hour_glass.png');
+  const icon = nativeImage.createFromPath(iconPath);
   if (process.platform === 'darwin') {
-    // macOS - use simple black symbol that becomes template
-    const symbol = isActive ? '⏱' : '⏰'
-    return createEmojiIcon(symbol, size, 'black', true)
-  } else {
-    // Windows/Linux - use high contrast approach
-    const symbol = isActive ? 'F' : 'T'  // F for Focus active, T for Timer idle
-    return createTextIcon(symbol, size, isActive ? '#FF6B00' : '#666666')
+    icon.setTemplateImage(true);
   }
-}
-
-function createEmojiIcon(emoji: string, size: number, color: string, template: boolean): Electron.NativeImage {
-  const svg = `
-    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-      <text x="8" y="12" font-family="system-ui" font-size="12" 
-            text-anchor="middle" fill="${color}">${emoji}</text>
-    </svg>
-  `
-  
-  const image = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`)
-  if (template) image.setTemplateImage(true)
-  return image
-}
-
-function createTextIcon(letter: string, size: number, color: string): Electron.NativeImage {
-  // Create a simple high-contrast icon
-  const svg = `
-    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-      <!-- Background circle for contrast -->
-      <circle cx="8" cy="8" r="7" fill="white" stroke="#ccc" stroke-width="0.5"/>
-      <!-- Letter -->
-      <text x="8" y="11" font-family="Arial, sans-serif" font-size="10" font-weight="bold"
-            text-anchor="middle" fill="${color}">${letter}</text>
-    </svg>
-  `
-  
-  return nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`)
+  return icon;
 }
 
 function createAppIcon(): Electron.NativeImage {
-  // Use the same reliable icon system as tray, but larger for window
-  const size = 32
-  
-  if (process.platform === 'darwin') {
-    // macOS - use timer emoji, larger version
-    const svg = `
-      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-        <text x="16" y="24" font-family="system-ui" font-size="20" 
-              text-anchor="middle" fill="black">⏰</text>
-      </svg>
-    `
-    const image = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`)
-    // Don't set as template for window icon, we want it to stay visible
-    return image
-  } else {
-    // Windows/Linux - use high contrast design like tray
-    const svg = `
-      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-        <!-- Background circle for contrast -->
-        <circle cx="16" cy="16" r="15" fill="white" stroke="#ddd" stroke-width="1"/>
-        <!-- Letter T for Timer -->
-        <text x="16" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="bold"
-              text-anchor="middle" fill="#2196F3">T</text>
-      </svg>
-    `
-    return nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`)
-  }
+  const iconPath = path.join(process.env.VITE_PUBLIC, '..', 'build', 'hour_glass.png');
+  return nativeImage.createFromPath(iconPath);
 }
 
 function createSimpleTrayIcon(): Electron.NativeImage {

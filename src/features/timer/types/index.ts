@@ -114,7 +114,7 @@ export interface SessionStats {
 
 // Notification types
 export interface SessionNotification {
-  type: 'session_complete' | 'break_complete' | 'break_reminder';
+  type: 'session_start' | 'session_complete' | 'break_complete' | 'break_reminder';
   title: string;
   body: string;
   sound?: string;
