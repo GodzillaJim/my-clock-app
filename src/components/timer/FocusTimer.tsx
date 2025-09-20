@@ -33,36 +33,47 @@ import { CompletionScreen } from "./CompletionScreen";
 import { AppSettings, SessionRecord, CompletionStatus, SessionType } from "@/features/timer/types";
 import { notificationService } from "@/services/notificationService";
 import { focusStorage as focusStorageService } from "@/services/focusStorage";
+import { SessionPlan } from './SessionPlan';
 
 dayjs.extend(duration);
 
 interface SimpleSession {
   type: "focus" | "break";
   duration: number; // in seconds
+  startTime: Date;
+  endTime: Date;
 }
 
 // The component now uses settings for session durations.
 const generateSessions = (
   totalMinutes: number,
-  settings: AppSettings
+  settings: AppSettings,
+  planStartTime: Date = new Date()
 ): SimpleSession[] => {
   const totalSeconds = totalMinutes * 60;
   const sessions: SimpleSession[] = [];
   let remainingTime = totalSeconds;
   const focusDuration = settings.focusDuration * 60;
   const breakDuration = settings.shortBreakDuration * 60;
+  let currentTime = planStartTime.getTime();
 
   while (remainingTime > 0) {
     if (sessions.length % 2 === 0) {
       // Focus session
       const currentFocusDuration = Math.min(focusDuration, remainingTime);
-      sessions.push({ type: "focus", duration: currentFocusDuration });
+      const startTime = new Date(currentTime);
+      const endTime = new Date(currentTime + currentFocusDuration * 1000);
+      sessions.push({ type: "focus", duration: currentFocusDuration, startTime, endTime });
       remainingTime -= currentFocusDuration;
+      currentTime = endTime.getTime();
     } else {
       // Break session
       const currentBreakDuration = Math.min(breakDuration, remainingTime);
-      sessions.push({ type: "break", duration: currentBreakDuration });
+      const startTime = new Date(currentTime);
+      const endTime = new Date(currentTime + currentBreakDuration * 1000);
+      sessions.push({ type: "break", duration: currentBreakDuration, startTime, endTime });
       remainingTime -= currentBreakDuration;
+      currentTime = endTime.getTime();
     }
   }
   return sessions;
@@ -125,8 +136,8 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       id: `${sessionStartTime.getTime()}-${currentSessionIndex}`,
       type: currentSession.type === 'focus' ? SessionType.FOCUS : SessionType.SHORT_BREAK,
       sessionNumber: currentSessionIndex + 1,
-      plannedDuration: currentSession.duration / 60,
-      actualDuration: actualDuration / 60,
+      plannedDuration: currentSession.duration,
+      actualDuration: actualDuration,
       startTime: sessionStartTime,
       endTime: now,
       completionStatus: status,
@@ -203,6 +214,9 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
           .add(currentSession.duration, "second")
           .toDate();
         restart(newExpiryTimestamp, isRunning); // `isRunning` will be false for the initial load, and true for subsequent auto-started sessions
+        if (isRunning) {
+          setSessionStartTime(new Date());
+        }
       }
     }
   }, [currentSessionIndex]);
@@ -223,14 +237,6 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     return Math.max(0, Math.min(100, (elapsed / totalSeconds) * 100));
   };
 
-  // This function is now the single source of truth for duration changes.
-  // It is already defined above, so we remove this duplicate.
-  /*
-  const handleTotalDurationChange = (value: number) => {
-    const clampedValue = Math.max(1, Math.min(480, value));
-    setTotalDuration(clampedValue);
-  };
-  */
 
   // Simple start/stop functions following SessionTimer approach
   const startSession = () => {
@@ -274,6 +280,17 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     restart(newExpiryTimestamp, false);
     setIsRunning(false);
     setCurrentSessionIndex(0);
+  };
+
+  // Reset everything to initial idle state (used after completion when user starts fresh)
+  const resetToIdle = () => {
+    // Stop any running timer
+    pause();
+    setIsRunning(false);
+    setIsComplete(false);
+    setSessions([]); // remove old plan so input + presets show again
+    setCurrentSessionIndex(0);
+    setSessionStartTime(null);
   };
 
   // Remove complex pause/resume logic - SessionTimer approach
@@ -400,86 +417,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         )}
 
         {/* Session Plan Visualization */}
-        {sessions.length > 0 && (
-          <Box sx={{ mb: 3 }}>
-            <Typography
-              variant="subtitle2"
-              sx={{ mb: 1, color: "text.secondary" }}
-            >
-              Session {currentSessionIndex + 1} of {sessions.length}
-            </Typography>
-            <Box
-              sx={{
-                display: "flex",
-                gap: 1,
-                justifyContent: "center",
-                flexWrap: "wrap",
-                mb: 2,
-              }}
-            >
-              {sessions.map((session, index) => {
-                const isCompleted = index < currentSessionIndex;
-                const isActive = index === currentSessionIndex;
-                const isFuture = index > currentSessionIndex;
-
-                return (
-                  <Tooltip
-                    key={index}
-                    title={`${
-                      session.type === "focus" ? "Focus" : "Break"
-                    } - ${Math.floor(session.duration / 60)}min`}
-                  >
-                    <Box
-                      sx={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        backgroundColor: isCompleted
-                          ? "success.light"
-                          : isActive
-                          ? "primary.main"
-                          : "grey.200",
-                        border: "none",
-                        borderColor: "primary.dark",
-                        transition: "all 0.2s ease-in-out",
-                        transform: isActive ? "scale(1.1)" : "scale(1)",
-                      }}
-                    >
-                      {session.type === "focus" ? (
-                        <Work
-                          sx={{
-                            fontSize: 16,
-                            color: isFuture ? "grey.600" : "white",
-                          }}
-                        />
-                      ) : (
-                        <Coffee
-                          sx={{
-                            fontSize: 16,
-                            color: isFuture ? "grey.600" : "white",
-                          }}
-                        />
-                      )}
-                    </Box>
-                  </Tooltip>
-                );
-              })}
-            </Box>
-
-            {/* Next Session Preview */}
-            {sessions.length > currentSessionIndex + 1 && (
-              <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                Next:{" "}
-                {sessions[currentSessionIndex + 1].type === "focus"
-                  ? "Focus Session"
-                  : "Break"}
-              </Typography>
-            )}
-          </Box>
-        )}
+        <SessionPlan sessions={sessions} currentSessionIndex={currentSessionIndex} />
       </Box>
     );
   };
@@ -603,9 +541,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   if (isComplete) {
     return (
       <CompletionScreen
-        onStartNewSession={() => {
-          setIsComplete(false);
-        }}
+        onStartNewSession={resetToIdle}
       />
     );
   }

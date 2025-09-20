@@ -23,8 +23,8 @@ export interface SessionRecord {
   readonly id: string;
   type: SessionType;
   sessionNumber: number; // Daily session counter
-  plannedDuration: number; // in minutes
-  actualDuration: number; // in minutes
+  plannedDuration: number; // in seconds
+  actualDuration: number; // in seconds
   startTime: Date;
   endTime: Date | null;
   pausedTime: number; // total paused time in ms
@@ -36,12 +36,12 @@ export interface SessionRecord {
 export interface DailyHistory {
   date: string; // YYYY-MM-DD format
   sessions: SessionRecord[];
-  totalFocusTime: number; // in minutes
-  totalBreakTime: number; // in minutes
+  totalFocusTime: number; // in seconds
+  totalBreakTime: number; // in seconds
   completedSessions: number;
   interruptedSessions: number;
   skippedSessions: number;
-  averageSessionLength: number; // in minutes
+  averageSessionLength: number; // in seconds
   longestStreak: number; // consecutive completed sessions
   createdAt: Date;
   updatedAt: Date;
@@ -230,10 +230,29 @@ export const isCompletedSession = (session: SessionRecord): boolean =>
 
 // Utility Functions
 export const formatDuration = (minutes: number): string => {
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
+  if (minutes < 1) {
+    return '< 1m';
+  }
+  const roundedMinutes = Math.round(minutes);
+  if (roundedMinutes < 60) {
+    return `${roundedMinutes}m`;
+  }
+  const hours = Math.floor(roundedMinutes / 60);
+  const mins = roundedMinutes % 60;
+  if (mins === 0) {
+    return `${hours}h`;
+  }
   return `${hours}h ${mins}m`;
+};
+
+// New helper: format seconds directly (used by updated session records now in seconds)
+export const formatDurationFromSeconds = (seconds: number): string => {
+  if (seconds < 60) return '< 1m';
+  const totalMinutes = Math.round(seconds / 60);
+  if (totalMinutes < 60) return `${totalMinutes}m`;
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  return mins === 0 ? `${hours}h` : `${hours}h ${mins}m`;
 };
 
 export const formatTime = (date: Date, format: '12h' | '24h'): string => {

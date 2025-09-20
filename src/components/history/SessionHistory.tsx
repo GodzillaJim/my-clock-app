@@ -30,7 +30,8 @@ import {
   LocalCafe,
   Download,
   Delete,
-  Timeline
+  Timeline,
+  Refresh,
 } from '@mui/icons-material';
 import {
   SessionRecord,
@@ -39,7 +40,7 @@ import {
   SessionStats,
   DailyHistory,
   formatTime,
-  formatDuration,
+  formatDurationFromSeconds,
   AppSettings
 } from '@/features/timer/types';
 import { focusStorage } from '@/services/focusStorage';
@@ -59,6 +60,7 @@ export const SessionHistory: React.FC<SessionHistoryProps> = ({
   const [stats, setStats] = useState<SessionStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -89,6 +91,16 @@ export const SessionHistory: React.FC<SessionHistoryProps> = ({
       setClearDialogOpen(false);
     } catch (error) {
       console.error('Failed to clear history:', error);
+    }
+  };
+
+  const handleResetHistory = async () => {
+    try {
+      await focusStorage.resetAllHistory();
+      await loadHistory();
+      setResetDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to reset all history:', error);
     }
   };
 
@@ -270,10 +282,10 @@ export const SessionHistory: React.FC<SessionHistoryProps> = ({
                       }
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Duration: {formatDuration(session.actualDuration)} 
+                      Duration: {formatDurationFromSeconds(session.actualDuration)} 
                       {session.actualDuration !== session.plannedDuration && (
                         <span style={{ color: '#666' }}>
-                          {' '}(planned: {formatDuration(session.plannedDuration)})
+                          {' '}(planned: {formatDurationFromSeconds(session.plannedDuration)})
                         </span>
                       )}
                     </Typography>
@@ -308,6 +320,14 @@ export const SessionHistory: React.FC<SessionHistoryProps> = ({
             disabled={!history || history.sessions.length === 0}
           >
             <Delete />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Reset all history">
+          <IconButton 
+            onClick={() => setResetDialogOpen(true)} 
+            color="warning"
+          >
+            <Refresh />
           </IconButton>
         </Tooltip>
       </Box>
@@ -372,6 +392,27 @@ export const SessionHistory: React.FC<SessionHistoryProps> = ({
           </Button>
           <Button onClick={handleClearHistory} color="error">
             Clear History
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog 
+        open={resetDialogOpen}
+        onClose={() => setResetDialogOpen(false)}
+      >
+        <DialogTitle>Reset All History</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to reset all of your session history? 
+            This action will permanently delete all data and cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setResetDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleResetHistory} color="error">
+            Reset History
           </Button>
         </DialogActions>
       </Dialog>

@@ -9,7 +9,7 @@ import {
   CompletionStatus,
   getTodayDateString,
   SessionStats,
-  formatDuration 
+  formatDurationFromSeconds 
 } from '@/features/timer/types';
 import { FeedbackItem } from '@/types/feedback';
 import { createStorageService } from './storage';
@@ -128,10 +128,9 @@ class FocusStorageService {
     try {
       const sessions = await this.sessionsStorage.load() || [];
       sessions.push(session);
-      
-      // Keep only last 1000 sessions to prevent storage bloat
       const recentSessions = sessions.slice(-1000);
       await this.sessionsStorage.save(recentSessions);
+      await this.updateDailyStats(getTodayDateString());
     } catch (error) {
       console.error('Failed to save session:', error);
       throw error;
@@ -153,48 +152,32 @@ class FocusStorageService {
   private calculateStats(sessions: SessionRecord[]): SessionStats {
     const totalSessions = sessions.length;
     const completedSessions = sessions.filter(s => s.completionStatus === 'completed');
-    const totalFocusTime = sessions
-      .filter(s => s.type === 'focus')
-      .reduce((sum, s) => sum + s.actualDuration, 0);
-    const totalBreakTime = 0; // SessionType doesn't have 'break', so this is 0
+    const totalFocusSeconds = sessions.filter(s => s.type === 'focus').reduce((sum, s) => sum + s.actualDuration, 0);
+    const totalBreakSeconds = sessions.filter(s => s.type !== 'focus').reduce((sum, s) => sum + s.actualDuration, 0);
 
-    const completedPomodoros = completedSessions.filter(s => s.type === 'focus').length;
-
-    // Calculate current streak
+    // Current streak of completed focus sessions at end
     let currentStreak = 0;
     for (let i = sessions.length - 1; i >= 0; i--) {
-      if (sessions[i].completionStatus === 'completed' && sessions[i].type === 'focus') {
-        currentStreak++;
-      } else {
-        break;
-      }
+      const s = sessions[i];
+      if (s.completionStatus === 'completed' && s.type === 'focus') currentStreak++; else break;
     }
 
-    // Calculate longest streak
-    let longestStreak = 0;
-    let tempStreak = 0;
-    for (const session of sessions) {
-      if (session.completionStatus === 'completed' && session.type === 'focus') {
-        tempStreak++;
-        longestStreak = Math.max(longestStreak, tempStreak);
-      } else {
-        tempStreak = 0;
-      }
+    // Longest streak of completed focus sessions
+    let longestStreak = 0; let tmp = 0;
+    for (const s of sessions) {
+      if (s.completionStatus === 'completed' && s.type === 'focus') { tmp++; longestStreak = Math.max(longestStreak, tmp);} else tmp = 0;
     }
 
-    const averageSessionLength = totalSessions > 0 ? 
-      (totalFocusTime + totalBreakTime) / totalSessions : 0;
-
-    // Productivity score (0-100) based on completion rate and focus time
+    const avgSeconds = totalSessions > 0 ? (totalFocusSeconds + totalBreakSeconds) / totalSessions : 0;
     const completionRate = totalSessions > 0 ? completedSessions.length / totalSessions : 0;
     const productivityScore = Math.round(completionRate * 100);
 
     return {
-      totalFocusTime: formatDuration(totalFocusTime * 60), // Convert minutes to seconds for formatDuration
+      totalFocusTime: formatDurationFromSeconds(totalFocusSeconds),
       completedSessions: completedSessions.length,
       currentStreak,
       todayProgress: productivityScore,
-      averageSessionTime: formatDuration(averageSessionLength * 60) // Convert minutes to seconds
+      averageSessionTime: formatDurationFromSeconds(avgSeconds)
     };
   }
 
@@ -210,20 +193,19 @@ class FocusStorageService {
       });
 
       const completedSessions = daySessions.filter(s => s.completionStatus === 'completed');
-      const totalFocusTime = daySessions
-        .filter(s => s.type === 'focus')
-        .reduce((sum, s) => sum + s.actualDuration, 0);
-      
+      const totalFocusSeconds = daySessions.filter(s => s.type === 'focus').reduce((sum, s) => sum + s.actualDuration, 0);
+      const totalBreakSeconds = daySessions.filter(s => s.type !== 'focus').reduce((sum, s) => sum + s.actualDuration, 0);
+
       const history: DailyHistory = {
         date,
         sessions: daySessions,
-        totalFocusTime,
-        totalBreakTime: 0,
+        totalFocusTime: totalFocusSeconds,
+        totalBreakTime: totalBreakSeconds,
         completedSessions: completedSessions.length,
         interruptedSessions: daySessions.filter(s => s.completionStatus === 'interrupted').length,
         skippedSessions: daySessions.filter(s => s.completionStatus === 'skipped').length,
-        averageSessionLength: daySessions.length > 0 ? totalFocusTime / daySessions.length : 0,
-        longestStreak: 0, // Would need more complex calculation
+        averageSessionLength: daySessions.length > 0 ? totalFocusSeconds / daySessions.length : 0,
+        longestStreak: 0,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -408,6 +390,16 @@ class FocusStorageService {
         h.date, h.totalFocusTime, h.totalBreakTime, h.completedSessions, h.interruptedSessions, h.skippedSessions
       ]);
       return [headers, ...rows].map(row => row.join(',')).join('\n');
+    }
+  }
+
+  async resetAllHistory(): Promise<void> {
+    try {
+      await this.sessionsStorage.save([]);
+      await this.dailyHistoryStorage.save([]);
+    } catch (error) {
+      console.error('Failed to reset all history:', error);
+      throw error;
     }
   }
 }
