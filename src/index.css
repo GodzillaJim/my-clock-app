@@ -10,8 +10,8 @@ body {
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
-/* Improved focus styles */
-*:focus-visible {
+/* Improved focus styles - exclude MUI inputs which have their own focus styling */
+*:focus-visible:not(.MuiInputBase-root):not(.MuiInputBase-input):not(.MuiOutlinedInput-root):not(.MuiOutlinedInput-input):not(input):not(textarea) {
   outline: 2px solid #2563eb !important;
   outline-offset: 2px !important;
   border-radius: 6px !important;

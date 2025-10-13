@@ -185,6 +185,43 @@ const App: React.FC = () => {
             }
           }
         },
+        MuiTextField: {
+          styleOverrides: {
+            root: {
+              '& .MuiOutlinedInput-root': {
+                '&:focus-visible': {
+                  outline: 'none'
+                }
+              }
+            }
+          }
+        },
+        MuiOutlinedInput: {
+          styleOverrides: {
+            root: {
+              '&:focus-visible': {
+                outline: 'none'
+              },
+              '& input:focus-visible': {
+                outline: 'none'
+              }
+            }
+          }
+        },
+        MuiInputBase: {
+          styleOverrides: {
+            root: {
+              '&:focus-visible': {
+                outline: 'none'
+              }
+            },
+            input: {
+              '&:focus-visible': {
+                outline: 'none'
+              }
+            }
+          }
+        },
       },
     });
 

@@ -253,7 +253,11 @@ class FocusStorageService {
   }): Promise<FeedbackItem[]> {
     try {
       const feedbacks = await this.feedbackStorage.load() || [];
-      let filtered = [...feedbacks];
+      // Convert timestamp strings back to Date objects
+      let filtered = feedbacks.map(f => ({
+        ...f,
+        timestamp: new Date(f.timestamp)
+      }));
 
       if (filters?.type) {
         filtered = filtered.filter(f => f.type === filters.type);
@@ -332,7 +336,19 @@ class FocusStorageService {
       total: feedbacks.length,
       open: feedbacks.filter(f => f.status === 'open').length,
       resolved: feedbacks.filter(f => f.status === 'resolved').length,
-      inProgress: feedbacks.filter(f => f.status === 'in-progress').length
+      inProgress: feedbacks.filter(f => f.status === 'in-progress').length,
+      byType: {
+        bug: feedbacks.filter(f => f.type === 'bug').length,
+        'feature-request': feedbacks.filter(f => f.type === 'feature-request').length,
+        issue: feedbacks.filter(f => f.type === 'issue').length,
+        general: feedbacks.filter(f => f.type === 'general').length
+      },
+      bySeverity: {
+        low: feedbacks.filter(f => f.severity === 'low').length,
+        medium: feedbacks.filter(f => f.severity === 'medium').length,
+        high: feedbacks.filter(f => f.severity === 'high').length,
+        critical: feedbacks.filter(f => f.severity === 'critical').length
+      }
     };
   }
 
@@ -349,7 +365,7 @@ class FocusStorageService {
       const headers = ['id', 'type', 'title', 'description', 'severity', 'category', 'timestamp', 'status'];
       const rows = feedbacks.map(f => [
         f.id, f.type, f.title, f.description, f.severity, f.category,
-        f.timestamp.toISOString(), f.status
+        new Date(f.timestamp).toISOString(), f.status
       ]);
       return [headers, ...rows].map(row => row.join(',')).join('\n');
     }
