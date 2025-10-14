@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, CssBaseline, ThemeProvider } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
-import { FocusTimer } from './components/timer/FocusTimer';
+import { ToolSwitcher } from './components/timer/ToolSwitcher';
 import { SessionHistory } from './components/history/SessionHistory';
 import { FocusSettings } from './components/settings/FocusSettings';
 import { FeedbackForm } from './components/feedback/FeedbackForm';
@@ -17,6 +17,7 @@ const App: React.FC = () => {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackManagerOpen, setFeedbackManagerOpen] = useState(false);
+  const [currentTool, setCurrentTool] = useState(0);
   const [theme, setTheme] = useState(createTheme());
 
   useEffect(() => {
@@ -303,6 +304,24 @@ const App: React.FC = () => {
           setFeedbackOpen(true);
         }
         break;
+      case '1':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          setCurrentTool(0); // Focus Sessions
+        }
+        break;
+      case '2':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          setCurrentTool(1); // Timer
+        }
+        break;
+      case '3':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          setCurrentTool(2); // Stopwatch
+        }
+        break;
       default:
         break;
     }
@@ -333,11 +352,13 @@ const App: React.FC = () => {
             gap: 4
           }}
         >
-          <FocusTimer
+          <ToolSwitcher
             onOpenSettings={() => setSettingsOpen(true)}
             onOpenHistory={() => setHistoryOpen(true)}
             onOpenFeedback={() => setFeedbackOpen(true)}
             settings={settings}
+            initialTool={currentTool}
+            onToolChange={setCurrentTool}
           />
         </Box>
 

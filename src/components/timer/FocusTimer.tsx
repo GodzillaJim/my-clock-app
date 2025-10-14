@@ -82,6 +82,8 @@ const generateSessions = (
   onOpenHistory: () => void;
   onOpenFeedback: () => void;
   settings: AppSettings;
+  hideActionButtons?: boolean;
+  onRunningStateChange?: (isRunning: boolean) => void;
 }
 
 export const FocusTimer: React.FC<FocusTimerProps> = ({
@@ -89,6 +91,8 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   onOpenHistory,
   onOpenFeedback,
   settings,
+  hideActionButtons = false,
+  onRunningStateChange,
 }) => {
   // Defensive check to prevent rendering with undefined settings
   if (!settings) {
@@ -100,6 +104,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     console.log('FocusTimer: Received settings update:', settings);
     console.log('FocusTimer: quickPresets:', settings.quickPresets);
   }, [settings]);
+
   // Simple state management following SessionTimer approach
   const [sessions, setSessions] = useState<SimpleSession[]>([]);
   const [currentSessionIndex, setCurrentSessionIndex] = useState(0);
@@ -220,6 +225,11 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       }
     }
   }, [currentSessionIndex]);
+
+  // Notify parent when running state changes
+  useEffect(() => {
+    onRunningStateChange?.(isRunning);
+  }, [isRunning, onRunningStateChange]);
 
   // Simple helper functions following SessionTimer approach
   const formatTime = (h: number, m: number, s: number): string => {
@@ -546,19 +556,9 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     );
   }
 
-  return (
-    <Paper
-      elevation={3}
-      sx={{
-        p: { xs: 2, sm: 4 },
-        borderRadius: 4,
-        width: "100%",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 4,
-      }}
-    >
+  // Render content without Paper wrapper when used in ToolSwitcher
+  const content = (
+    <>
       <Box
         sx={{ textAlign: "center", mb: 4, width: "100%", px: { xs: 0, sm: 2 } }}
       >
@@ -601,9 +601,9 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
             {/* Quick presets */}
             <Stack
               direction="row"
-              spacing={1}
               justifyContent="center"
               flexWrap="wrap"
+              gap={1}
             >
               {(settings.quickPresets || [15, 25, 30, 45, 60]).map((duration) => (
                 <Chip
@@ -622,7 +622,29 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       </Box>
       {renderTimerDisplay()}
       {renderControls()}
-      {renderActionButtons()}
+      {!hideActionButtons && renderActionButtons()}
+    </>
+  );
+
+  // If hideActionButtons is true, return content without Paper wrapper
+  if (hideActionButtons) {
+    return content;
+  }
+
+  return (
+    <Paper
+      elevation={3}
+      sx={{
+        p: { xs: 2, sm: 4 },
+        borderRadius: 4,
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 4,
+      }}
+    >
+      {content}
     </Paper>
   );
 };
