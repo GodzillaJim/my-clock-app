@@ -269,6 +269,24 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
 
       <Box sx={{ mt: 3 }}>
         <Typography variant="subtitle2" gutterBottom>
+          Crash Recovery / Resume Strategy
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          How the timer behaves if the app is closed/crashes while running
+        </Typography>
+        <Select
+          value={localSettings.resumeStrategy || 'elapsed'}
+          onChange={(e) => handleSettingChange('resumeStrategy', e.target.value as 'elapsed' | 'pause')}
+          size="small"
+          sx={{ minWidth: 200 }}
+        >
+          <MenuItem value="elapsed">Account for downtime (Elapsed)</MenuItem>
+          <MenuItem value="pause">Treat downtime as pause (Pause)</MenuItem>
+        </Select>
+      </Box>
+
+      <Box sx={{ mt: 3 }}>
+        <Typography variant="subtitle2" gutterBottom>
           Quick Presets
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>

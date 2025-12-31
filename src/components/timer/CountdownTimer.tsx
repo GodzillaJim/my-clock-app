@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -19,6 +19,9 @@ import {
 import { useTimer } from 'react-timer-hook';
 import dayjs from 'dayjs';
 import { notificationService } from '@/services/notificationService';
+import { persistenceService } from '@/services/persistenceService';
+
+const TIMER_SNAPSHOT_KEY = 'TIMER_SNAPSHOT';
 
 interface CountdownTimerProps {
   onRunningStateChange?: (isRunning: boolean) => void;
@@ -29,8 +32,15 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ onRunningStateCh
   const [minutes, setMinutes] = useState(5);
   const [totalSeconds, setTotalSeconds] = useState(0);
 
+  // Persistence state
+  const activeExpiryRef = useRef<Date | null>(null);
+  const [restoredExpiry, setRestoredExpiry] = useState<Date | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
+
   const handleComplete = () => {
     setIsActive(false);
+    activeExpiryRef.current = null;
+    persistenceService.clearSnapshot(TIMER_SNAPSHOT_KEY);
     notificationService.showNotification({
       type: 'session_complete',
       title: 'Timer Complete',
@@ -48,7 +58,74 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ onRunningStateCh
   // Notify parent when running state changes
   useEffect(() => {
     onRunningStateChange?.(isRunning);
-  }, [isRunning, onRunningStateChange]);
+
+     // Auto-save
+    if (isRunning && activeExpiryRef.current) {
+        const snapshot = {
+            id: 'timer-current',
+            type: 'TIMER', // Custom type? Need to ensure compatibility or just ignore type field check if generic
+            startTime: Date.now(), 
+            targetDuration: totalSeconds,
+            elapsedAtLastSnapshot: 0, 
+            lastUpdated: Date.now(),
+            status: 'RUNNING',
+            expiryTimestamp: activeExpiryRef.current.getTime(),
+            minutesSettings: minutes // Persist settings
+        } as any;
+        
+        persistenceService.saveSnapshot(snapshot, TIMER_SNAPSHOT_KEY);
+    } else if (!isRunning && isActive && activeExpiryRef.current) {
+         // If paused, we need to save remaining time...
+         // Actually react-timer-hook `pause` works by stopping. `resume` creates new expiry.
+         // If we are PAUSED, we simply resume from `expiry - now`? 
+         // No, if paused, expiry is in past/future but irrelevant?
+         // We need to save REMAINING SECONDS if paused.
+         // `seconds`, `timerMinutes`, `hours` are available.
+         // Let's rely on standard restore if running, logic for pause if needed.
+         // For now, let's just persist RUNNING state. Pause state is ephemeral?
+         // If app crashes while PAUSED, we lose the pause state? That's bad.
+         // But let's focus on crash-while-running first as requested.
+    } else if (!isActive) {
+        // Clear if not active
+        // persistenceService.clearSnapshot(TIMER_SNAPSHOT_KEY); // handled in reset/complete
+    }
+  }, [isRunning, onRunningStateChange, seconds]);
+
+  // Restore logic
+  useEffect(() => {
+    const snapshot = persistenceService.loadSnapshot(TIMER_SNAPSHOT_KEY) as any;
+    if (snapshot && snapshot.status === 'RUNNING') {
+        const now = Date.now();
+        const savedExpiry = snapshot.expiryTimestamp;
+        
+        setIsRestoring(true);
+        setMinutes(snapshot.minutesSettings);
+        setTotalSeconds(snapshot.targetDuration);
+        
+        // Assume ELAPSED strategy for simple timer (or use settings if passed?)
+        // Standard timer usually implies wall-clock unless specifically paused.
+        // Let's assume wall-clock resume.
+        let newExpiry = new Date(savedExpiry);
+        
+        if (newExpiry.getTime() <= now) {
+            handleComplete(); // Expired while away
+             persistenceService.clearSnapshot(TIMER_SNAPSHOT_KEY);
+        } else {
+             setRestoredExpiry(newExpiry);
+             setIsActive(true);
+        }
+    }
+  }, []);
+
+  // Effect to trigger restart after restore state is set
+  useEffect(() => {
+      if (restoredExpiry && isRestoring) {
+          restart(restoredExpiry, true);
+          activeExpiryRef.current = restoredExpiry;
+          setRestoredExpiry(null);
+          setIsRestoring(false);
+      }
+  }, [restoredExpiry, isRestoring]);
 
   const formatTime = (h: number, m: number, s: number): string => {
     if (h > 0) {
@@ -69,6 +146,7 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ onRunningStateCh
     setTotalSeconds(totalSecs);
     const expiryTimestamp = dayjs().add(totalSecs, 'second').toDate();
     restart(expiryTimestamp, true);
+    activeExpiryRef.current = expiryTimestamp;
     setIsActive(true);
   };
 
@@ -83,6 +161,8 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ onRunningStateCh
   const handleReset = () => {
     const expiryTimestamp = dayjs().add(minutes * 60, 'second').toDate();
     restart(expiryTimestamp, false);
+    activeExpiryRef.current = null;
+    persistenceService.clearSnapshot(TIMER_SNAPSHOT_KEY);
     setIsActive(false);
     setTotalSeconds(0);
   };

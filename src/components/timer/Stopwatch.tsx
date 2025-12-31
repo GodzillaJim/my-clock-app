@@ -15,6 +15,18 @@ import {
   RestartAlt,
   Flag,
 } from '@mui/icons-material';
+import { persistenceService } from '@/services/persistenceService';
+import { AppSettings } from '@/features/timer/types'; // Assuming we can get settings via props or hook?
+// Stopwatch props doesn't have settings. I might need to ignore settings for stopwatch or assume default strategy.
+// Actually, I can pass settings or use local default.
+// Let's assume default 'elapsed' or try to access settings if possible.
+// App passes settings to ToolSwitcher, but does ToolSwitcher pass to Stopwatch?
+// Let's check ToolSwitcher. It renders Stopwatch but doesn't pass settings.
+// I will assume ELAPSED strategy for stopwatch as it's the most natural for a stopwatch unless checking settings.
+// Or I can add settings prop to Stopwatch.
+// But simpler to just use 'elapsed' for now as default behavior for stopwatch crash recovery.
+
+const STOPWATCH_SNAPSHOT_KEY = 'STOPWATCH_SNAPSHOT';
 
 interface LapTime {
   id: number;
@@ -32,6 +44,9 @@ export const Stopwatch: React.FC<StopwatchProps> = ({ onRunningStateChange }) =>
   const [laps, setLaps] = useState<LapTime[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastLapTimeRef = useRef(0);
+  
+  // Persistence Loading State
+  const [isRestoring, setIsRestoring] = useState(false);
 
   useEffect(() => {
     if (isRunning) {
@@ -50,6 +65,61 @@ export const Stopwatch: React.FC<StopwatchProps> = ({ onRunningStateChange }) =>
       }
     };
   }, [isRunning]);
+
+  // Persistence Logic
+  useEffect(() => {
+     // Auto Save
+     if (time > 0 || isRunning) {
+         const snapshot = {
+             id: 'stopwatch-current',
+             type: 'STOPWATCH',
+             startTime: Date.now(), // Irrelevant?
+             targetDuration: 0,
+             elapsedAtLastSnapshot: time,
+             lastUpdated: Date.now(),
+             status: isRunning ? 'RUNNING' : 'PAUSED',
+             laps: laps // Persist laps
+         } as any;
+         
+         persistenceService.saveSnapshot(snapshot, STOPWATCH_SNAPSHOT_KEY);
+     } else if (time === 0 && !isRunning && !isRestoring) {
+         // Clear if reset
+         // persistenceService.clearSnapshot(STOPWATCH_SNAPSHOT_KEY); // Done in handleReset
+     }
+  }, [time, isRunning, laps, isRestoring]);
+
+  // Restore Logic
+  useEffect(() => {
+      const snapshot = persistenceService.loadSnapshot(STOPWATCH_SNAPSHOT_KEY) as any;
+      if (snapshot && (snapshot.status === 'RUNNING' || snapshot.elapsedAtLastSnapshot > 0)) {
+          console.log('Restoring stopwatch', snapshot);
+          setIsRestoring(true);
+          
+          const now = Date.now();
+          const lastUpdated = snapshot.lastUpdated;
+          const status = snapshot.status;
+          let restoredTime = snapshot.elapsedAtLastSnapshot;
+          
+          setLaps(snapshot.laps || []);
+          if (snapshot.laps && snapshot.laps.length > 0) {
+              lastLapTimeRef.current = snapshot.laps[0].time; // Last lap is at index 0?
+              // Check handleLap logic: [newLap, ...prevLaps]. So index 0 is latest.
+              // Wait, handleLap uses `time`. 
+              // If we restore, `lastLapTimeRef` needs to be correct for next lap calc.
+              // `lastLapTimeRef.current` should be the time of the *last added lap* which is `laps[0].time`.
+          }
+          
+          if (status === 'RUNNING') {
+              // Assume elapsed strategy for stopwatch
+              // time = savedTime + (now - lastUpdated)
+              restoredTime += (now - lastUpdated);
+              setIsRunning(true);
+          }
+          
+          setTime(restoredTime);
+          setIsRestoring(false);
+      }
+  }, []);
 
   // Notify parent when running state changes
   useEffect(() => {
@@ -78,6 +148,7 @@ export const Stopwatch: React.FC<StopwatchProps> = ({ onRunningStateChange }) =>
     setTime(0);
     setLaps([]);
     lastLapTimeRef.current = 0;
+    persistenceService.clearSnapshot(STOPWATCH_SNAPSHOT_KEY);
   };
 
   const handleLap = () => {

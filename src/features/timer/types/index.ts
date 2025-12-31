@@ -52,6 +52,7 @@ export interface AppSettings {
   // Timer Configuration
   focusDuration: number; // minutes (1-240)
   shortBreakDuration: number; // minutes
+  resumeStrategy: 'elapsed' | 'pause'; // How to handle time when app was closed
   quickPresets: number[]; // Quick duration presets in minutes
   
   // Display Settings
@@ -167,6 +168,7 @@ export interface KeyboardShortcut {
 export const DEFAULT_SETTINGS: AppSettings = {
   focusDuration: 25,
   shortBreakDuration: 5,
+  resumeStrategy: 'elapsed',
   quickPresets: [15, 25, 30, 45, 60],
   timeFormat: '12h',
   showSessionStartTime: true,

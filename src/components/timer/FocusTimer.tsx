@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Box,
   Typography,
@@ -33,6 +33,7 @@ import { CompletionScreen } from "./CompletionScreen";
 import { AppSettings, SessionRecord, CompletionStatus, SessionType } from "@/features/timer/types";
 import { notificationService } from "@/services/notificationService";
 import { focusStorage as focusStorageService } from "@/services/focusStorage";
+import { persistenceService } from "@/services/persistenceService";
 import { SessionPlan } from './SessionPlan';
 
 dayjs.extend(duration);
@@ -112,6 +113,11 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   const [totalDuration, setTotalDuration] = useState(25);
   const [isComplete, setIsComplete] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  
+  // Persistence state
+  const activeExpiryRef = useRef<Date | null>(null);
+  const [restoredExpiry, setRestoredExpiry] = useState<Date | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const handleTotalDurationChange = (value: number | string) => {
     const numericValue = typeof value === 'string' ? parseInt(value, 10) : value;
@@ -200,6 +206,9 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
 
   // Initialize and update sessions
   useEffect(() => {
+    // If restoring, skip initial generation (or handle it carefully)
+    if (isRestoring || sessions.length > 0) return;
+
     const newSessions = generateSessions(totalDuration, settings);
     setSessions(newSessions);
     if (!isRunning) {
@@ -207,29 +216,124 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         .add(newSessions[0]?.duration || 0, "second")
         .toDate();
       restart(newExpiryTimestamp, false);
+      activeExpiryRef.current = newExpiryTimestamp;
     }
-  }, [totalDuration, settings]);
+  }, [totalDuration, settings, isRestoring]);
 
   // Effect to restart timer when session changes
   useEffect(() => {
     if (sessions.length > 0) {
       const currentSession = sessions[currentSessionIndex];
       if (currentSession) {
-        const newExpiryTimestamp = dayjs()
-          .add(currentSession.duration, "second")
-          .toDate();
-        restart(newExpiryTimestamp, isRunning); // `isRunning` will be false for the initial load, and true for subsequent auto-started sessions
-        if (isRunning) {
-          setSessionStartTime(new Date());
+        if (restoredExpiry) {
+           // Resume from restoration point
+           console.log('Restoring session with expiry:', restoredExpiry);
+           restart(restoredExpiry, true); // Auto-resume if restoring active session
+           activeExpiryRef.current = restoredExpiry;
+           setRestoredExpiry(null);
+           setSessionStartTime(new Date()); // Approximate start time for current session
+           setIsRunning(true);
+        } else {
+           // Normal session transition
+           const newExpiryTimestamp = dayjs()
+             .add(currentSession.duration, "second")
+             .toDate();
+           restart(newExpiryTimestamp, isRunning); 
+           activeExpiryRef.current = newExpiryTimestamp;
+           if (isRunning) {
+             setSessionStartTime(new Date());
+           }
         }
       }
     }
-  }, [currentSessionIndex]);
+  }, [currentSessionIndex, restoredExpiry]);
 
   // Notify parent when running state changes
   useEffect(() => {
     onRunningStateChange?.(isRunning);
-  }, [isRunning, onRunningStateChange]);
+    
+    // Auto-save logic
+    if (isRunning && activeExpiryRef.current) {
+        // Save snapshot
+        const snapshot = {
+            id: 'current',
+            type: sessions[currentSessionIndex]?.type === 'focus' ? 'FOCUS' : 'SHORT_BREAK',
+            startTime: sessionStartTime?.getTime() || Date.now(),
+            targetDuration: sessions[currentSessionIndex]?.duration || 0,
+            elapsedAtLastSnapshot: 0, // Not strictly used with expiry calculation but good for metadata
+            lastUpdated: Date.now(),
+            status: 'RUNNING',
+            expiryTimestamp: activeExpiryRef.current.getTime(),
+            currentSessionIndex,
+            totalDurationSettings: totalDuration,
+            sessions: sessions // We might want to persist the plan too? For now, regenerate or persist.
+            // Simplified: we rely on totalDuration to regenerate sessions. 
+            // Better: persist the sessions array if it's dynamic. 
+            // For now, let's assume regeneration from totalDuration is fine IF we persist totalDuration.
+        } as any; 
+        
+        // Extended snapshot for our specific needs (merging with defined type or extending it)
+        persistenceService.saveSnapshot({
+            ...snapshot,
+            sessions, // Save the actual sessions plan
+        });
+    } else if (!isRunning && sessions.length > 0) {
+       // Also save when paused?
+       // If paused, expiry time is not moving ??? 
+       // react-timer-hook pause() freezes the timer.
+       // On resume, it recalculates expiry? 
+       // Actually react-timer-hook `pause` works by stopping the interval. 
+       // `resume` sets a NEW expiry based on remaining time.
+       // So if PAUSED, we must save REMAINING time, not expiry.
+    }
+  }, [isRunning, onRunningStateChange, seconds]); // Trigger on seconds change (every second)
+
+  // Restore logic on mount
+  useEffect(() => {
+    const snapshot = persistenceService.loadSnapshot() as any;
+    if (snapshot && snapshot.status === 'RUNNING') {
+        // Check if we should resume based on settings
+        const strategy = settings.resumeStrategy || 'elapsed';
+        const now = Date.now();
+        const savedExpiry = snapshot.expiryTimestamp;
+        
+        console.log('Found snapshot:', snapshot);
+        setIsRestoring(true);
+        setTotalDuration(snapshot.totalDurationSettings);
+        setSessions(snapshot.sessions); // Restore exact plan
+        setCurrentSessionIndex(snapshot.currentSessionIndex);
+        
+        let newExpiry = new Date(savedExpiry);
+        
+        if (strategy === 'pause') {
+            // Treat downtime as pause
+            // Effectively, we "paused" at lastUpdated. 
+            // So we shift the expiry by (now - lastUpdated)
+            const downtime = now - snapshot.lastUpdated;
+            newExpiry = new Date(savedExpiry + downtime);
+        }
+        
+        // If elapsed strategy, newExpiry is just savedExpiry (absolute time target)
+        
+        // Check if expired
+        if (newExpiry.getTime() <= now) {
+            // Session finished while away
+            // Currently just reset or show complete?
+            // Let's reset for now or handle completion.
+            console.log('Session expired while away');
+            persistenceService.clearSnapshot();
+            setIsRestoring(false);
+            setSessions([]); 
+        } else {
+            console.log('Resuming session with strategy:', strategy);
+            setRestoredExpiry(newExpiry);
+            // setIsRestoring(false) will happen after effect? 
+            // No, we need to keep isRestoring true until the effect processes it?
+            // Actually, setting state triggers re-render.
+            // setRestoredExpiry -> triggers effect [restoredExpiry] -> calls restart -> clears restoredExpiry.
+        }
+    }
+  }, []); // Run once on mount
 
   // Simple helper functions following SessionTimer approach
   const formatTime = (h: number, m: number, s: number): string => {
@@ -259,6 +363,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       .add(firstSessionDuration, "second")
       .toDate();
     restart(newExpiryTimestamp, true);
+    activeExpiryRef.current = newExpiryTimestamp;
 
     setIsRunning(true);
     setIsComplete(false);
@@ -288,8 +393,10 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       .add(sessions[0]?.duration || 0, "second")
       .toDate();
     restart(newExpiryTimestamp, false);
+    activeExpiryRef.current = newExpiryTimestamp;
     setIsRunning(false);
     setCurrentSessionIndex(0);
+    persistenceService.clearSnapshot();
   };
 
   // Reset everything to initial idle state (used after completion when user starts fresh)
@@ -309,6 +416,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     const newRemaining = Math.max(0, remainingSeconds - secondsToSkip);
     const newExpiry = dayjs().add(newRemaining, "second").toDate();
     restart(newExpiry, true);
+    activeExpiryRef.current = newExpiry;
   };
 
   const skipSession = () => {
