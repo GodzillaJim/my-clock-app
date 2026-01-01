@@ -200,6 +200,7 @@ export const Stopwatch: React.FC<StopwatchProps> = ({ onRunningStateChange }) =>
       <Typography
         variant="h1"
         component="div"
+        className={isRunning ? 'neon-text' : ''}
         sx={{
           fontSize: { xs: '3.5rem', sm: '4.5rem', md: '5.5rem' },
           fontWeight: 300,
@@ -207,7 +208,7 @@ export const Stopwatch: React.FC<StopwatchProps> = ({ onRunningStateChange }) =>
           lineHeight: 1,
           mb: 4,
           color: isRunning ? 'primary.main' : 'text.primary',
-          transition: 'color 0.3s ease',
+          transition: 'all 0.3s ease',
           fontVariantNumeric: 'tabular-nums',
           WebkitFontFeatureSettings: '"tnum"',
           fontFeatureSettings: '"tnum"',

@@ -76,6 +76,8 @@ export interface AppSettings {
   
   // UI Settings
   theme: 'light' | 'dark' | 'system';
+  uiTheme: 'deepFocus' | 'aerogel'; // Visual style theme
+  layout: 'zen' | 'dashboard' | 'commandCenter'; // UI layout style
   
   // Data Settings
   autoResetDaily: boolean;
@@ -184,6 +186,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoStartNextSession: false,
   minimizeToSystemTray: true,
   theme: 'system',
+  uiTheme: 'deepFocus',
+  layout: 'zen',
   autoResetDaily: true,
   exportFormat: 'csv'
 };

@@ -545,18 +545,98 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
   const renderAppearanceSettings = () => (
     <Box>
       <Typography variant="h6" gutterBottom>
-        Theme
+        Visual Style
       </Typography>
-      
-      <FormControl sx={{ minWidth: 200 }}>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Choose between two distinct UI themes
+      </Typography>
+
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6}>
+          <Card
+            onClick={() => handleSettingChange('uiTheme', 'deepFocus')}
+            sx={{
+              cursor: 'pointer',
+              border: localSettings.uiTheme === 'deepFocus' ? '2px solid' : '1px solid',
+              borderColor: localSettings.uiTheme === 'deepFocus' ? 'primary.main' : 'divider',
+              transition: 'all 0.2s ease',
+              '&:hover': { borderColor: 'primary.main' }
+            }}
+          >
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Box sx={{ width: 16, height: 16, borderRadius: 1, background: 'linear-gradient(135deg, #60A5FA, #A78BFA)' }} />
+                <Typography variant="subtitle1" fontWeight={600}>Deep Focus</Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                Clean dark theme. OLED-optimized for reduced eye strain.
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <Card
+            onClick={() => handleSettingChange('uiTheme', 'aerogel')}
+            sx={{
+              cursor: 'pointer',
+              border: localSettings.uiTheme === 'aerogel' ? '2px solid' : '1px solid',
+              borderColor: localSettings.uiTheme === 'aerogel' ? 'primary.main' : 'divider',
+              transition: 'all 0.2s ease',
+              '&:hover': { borderColor: 'primary.main' }
+            }}
+          >
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Box sx={{ width: 16, height: 16, borderRadius: 1, background: 'linear-gradient(135deg, #6366F1, #EC4899)' }} />
+                <Typography variant="subtitle1" fontWeight={600}>Aerogel</Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                Light, airy theme with glassmorphism and soft pastel tones.
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {localSettings.uiTheme === 'aerogel' && (
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Color Mode
+          </Typography>
+          <FormControl sx={{ minWidth: 200 }}>
+            <Select
+              value={localSettings.theme}
+              onChange={(e) => handleSettingChange('theme', e.target.value as 'light' | 'dark' | 'system')}
+              size="small"
+            >
+              <MenuItem value="system">System Default</MenuItem>
+              <MenuItem value="light">Light</MenuItem>
+              <MenuItem value="dark">Dark</MenuItem>
+            </Select>
+          </FormControl>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+            Aerogel supports both light and dark modes
+          </Typography>
+        </Box>
+      )}
+
+      <Divider sx={{ my: 3 }} />
+
+      <Typography variant="h6" gutterBottom>
+        Layout
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        Choose how the app interface is organized
+      </Typography>
+      <FormControl sx={{ minWidth: 300 }}>
         <Select
-          value={localSettings.theme}
-          onChange={(e) => handleSettingChange('theme', e.target.value as 'light' | 'dark' | 'system')}
+          value={localSettings.layout || 'zen'}
+          onChange={(e) => handleSettingChange('layout', e.target.value as 'zen' | 'dashboard' | 'commandCenter')}
           size="small"
         >
-          <MenuItem value="system">System Default</MenuItem>
-          <MenuItem value="light">Light</MenuItem>
-          <MenuItem value="dark">Dark</MenuItem>
+          <MenuItem value="zen">Zen Minimal - Clean, centered timer</MenuItem>
+          <MenuItem value="dashboard">Dashboard - Sidebar with stats panel</MenuItem>
+          <MenuItem value="commandCenter">Command Center - All-in-one with timeline</MenuItem>
         </Select>
       </FormControl>
 
@@ -565,7 +645,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
       <Typography variant="h6" gutterBottom>
         System Integration
       </Typography>
-      
+
       <FormGroup>
         <FormControlLabel
           control={

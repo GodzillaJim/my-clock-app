@@ -473,6 +473,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         <Typography
           variant="h1"
           component="div"
+          className={isActive ? (sessionType === 'focus' ? 'neon-text' : 'neon-text-secondary') : ''}
           sx={{
             fontSize: { xs: "4rem", sm: "5rem", md: "6rem" },
             fontWeight: 300,
@@ -481,7 +482,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
             lineHeight: 1,
             mb: 2,
             color: isActive ? "primary.main" : "text.secondary",
-            transition: "color 0.3s ease",
+            transition: "all 0.3s ease",
             fontVariantNumeric: "tabular-nums",
             WebkitFontFeatureSettings: '"tnum"',
             fontFeatureSettings: '"tnum"',
