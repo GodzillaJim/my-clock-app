@@ -1,15 +1,13 @@
-import { 
-  AppState, 
-  DailyHistory, 
-  SessionRecord, 
-  TimerSession, 
-  AppSettings, 
+import {
+  AppState,
+  DailyHistory,
+  SessionRecord,
   DEFAULT_SETTINGS,
   SessionType,
   CompletionStatus,
   getTodayDateString,
   SessionStats,
-  formatDurationFromSeconds 
+  formatDurationFromSeconds
 } from '@/features/timer/types';
 import { FeedbackItem } from '@/types/feedback';
 import { createStorageService } from './storage';
@@ -151,25 +149,44 @@ class FocusStorageService {
 
   private calculateStats(sessions: SessionRecord[]): SessionStats {
     const totalSessions = sessions.length;
-    const completedSessions = sessions.filter(s => s.completionStatus === 'completed');
-    const totalFocusSeconds = sessions.filter(s => s.type === 'focus').reduce((sum, s) => sum + s.actualDuration, 0);
-    const totalBreakSeconds = sessions.filter(s => s.type !== 'focus').reduce((sum, s) => sum + s.actualDuration, 0);
+    const completedSessions = sessions.filter(s => s.completionStatus === CompletionStatus.COMPLETED);
+    const focusSessions = sessions.filter(s => s.type === SessionType.FOCUS);
+    const totalFocusSeconds = focusSessions.reduce((sum, s) => sum + s.actualDuration, 0);
+    const totalBreakSeconds = sessions.filter(s => s.type !== SessionType.FOCUS).reduce((sum, s) => sum + s.actualDuration, 0);
+
+    // Sort sessions by start time for accurate streak calculation
+    const sortedSessions = [...sessions].sort((a, b) =>
+      new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+    );
 
     // Current streak of completed focus sessions at end
     let currentStreak = 0;
-    for (let i = sessions.length - 1; i >= 0; i--) {
-      const s = sessions[i];
-      if (s.completionStatus === 'completed' && s.type === 'focus') currentStreak++; else break;
+    for (let i = sortedSessions.length - 1; i >= 0; i--) {
+      const s = sortedSessions[i];
+      if (s.type === SessionType.FOCUS && s.completionStatus === CompletionStatus.COMPLETED) {
+        currentStreak++;
+      } else if (s.type === SessionType.FOCUS) {
+        // Only break on failed focus sessions, not breaks
+        break;
+      }
     }
 
     // Longest streak of completed focus sessions
-    let longestStreak = 0; let tmp = 0;
-    for (const s of sessions) {
-      if (s.completionStatus === 'completed' && s.type === 'focus') { tmp++; longestStreak = Math.max(longestStreak, tmp);} else tmp = 0;
+    let longestStreak = 0;
+    let tempStreak = 0;
+    for (const s of sortedSessions) {
+      if (s.type === SessionType.FOCUS && s.completionStatus === CompletionStatus.COMPLETED) {
+        tempStreak++;
+        longestStreak = Math.max(longestStreak, tempStreak);
+      } else if (s.type === SessionType.FOCUS) {
+        tempStreak = 0;
+      }
     }
 
     const avgSeconds = totalSessions > 0 ? (totalFocusSeconds + totalBreakSeconds) / totalSessions : 0;
-    const completionRate = totalSessions > 0 ? completedSessions.length / totalSessions : 0;
+    const completionRate = focusSessions.length > 0
+      ? focusSessions.filter(s => s.completionStatus === CompletionStatus.COMPLETED).length / focusSessions.length
+      : 0;
     const productivityScore = Math.round(completionRate * 100);
 
     return {
@@ -192,9 +209,26 @@ class FocusStorageService {
         return sessionTime >= dayStartTime && sessionTime <= dayEndTime;
       });
 
-      const completedSessions = daySessions.filter(s => s.completionStatus === 'completed');
-      const totalFocusSeconds = daySessions.filter(s => s.type === 'focus').reduce((sum, s) => sum + s.actualDuration, 0);
-      const totalBreakSeconds = daySessions.filter(s => s.type !== 'focus').reduce((sum, s) => sum + s.actualDuration, 0);
+      const completedSessions = daySessions.filter(s => s.completionStatus === CompletionStatus.COMPLETED);
+      const totalFocusSeconds = daySessions.filter(s => s.type === SessionType.FOCUS).reduce((sum, s) => sum + s.actualDuration, 0);
+      const totalBreakSeconds = daySessions.filter(s => s.type !== SessionType.FOCUS).reduce((sum, s) => sum + s.actualDuration, 0);
+
+      // Calculate longest streak of consecutive completed focus sessions
+      let longestStreak = 0;
+      let currentStreak = 0;
+      // Sort sessions by start time to calculate streak correctly
+      const sortedSessions = [...daySessions].sort((a, b) =>
+        new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+      );
+      for (const session of sortedSessions) {
+        if (session.type === SessionType.FOCUS && session.completionStatus === CompletionStatus.COMPLETED) {
+          currentStreak++;
+          longestStreak = Math.max(longestStreak, currentStreak);
+        } else if (session.type === SessionType.FOCUS) {
+          // Only reset streak on failed focus sessions, not breaks
+          currentStreak = 0;
+        }
+      }
 
       const history: DailyHistory = {
         date,
@@ -202,10 +236,10 @@ class FocusStorageService {
         totalFocusTime: totalFocusSeconds,
         totalBreakTime: totalBreakSeconds,
         completedSessions: completedSessions.length,
-        interruptedSessions: daySessions.filter(s => s.completionStatus === 'interrupted').length,
-        skippedSessions: daySessions.filter(s => s.completionStatus === 'skipped').length,
+        interruptedSessions: daySessions.filter(s => s.completionStatus === CompletionStatus.INTERRUPTED).length,
+        skippedSessions: daySessions.filter(s => s.completionStatus === CompletionStatus.SKIPPED).length,
         averageSessionLength: daySessions.length > 0 ? totalFocusSeconds / daySessions.length : 0,
-        longestStreak: 0,
+        longestStreak,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -316,6 +350,28 @@ class FocusStorageService {
     } catch (error) {
       console.error('Failed to get history for period:', error);
       return [];
+    }
+  }
+
+  async getAllHistoryDates(): Promise<string[]> {
+    try {
+      const histories = await this.dailyHistoryStorage.load() || [];
+      return histories
+        .map(h => h.date)
+        .sort((a, b) => b.localeCompare(a)); // Sort newest first
+    } catch (error) {
+      console.error('Failed to get history dates:', error);
+      return [];
+    }
+  }
+
+  async getHistoryByDate(date: string): Promise<DailyHistory | null> {
+    try {
+      const histories = await this.dailyHistoryStorage.load() || [];
+      return histories.find(h => h.date === date) || null;
+    } catch (error) {
+      console.error('Failed to get history by date:', error);
+      return null;
     }
   }
 

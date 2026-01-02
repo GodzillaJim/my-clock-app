@@ -19,7 +19,7 @@ import { useTimer } from "react-timer-hook";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import { CircularTimerRing } from "./CircularTimerRing";
-import { AppSettings, CompletionStatus, SessionType } from "@/features/timer/types";
+import { AppSettings, CompletionStatus, SessionType, SessionRecord } from "@/features/timer/types";
 import { notificationService } from "@/services/notificationService";
 import { focusStorage as focusStorageService } from "@/services/focusStorage";
 import { persistenceService } from "@/services/persistenceService";
@@ -88,15 +88,45 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const activeExpiryRef = useRef<Date | null>(null);
 
+  const recordSession = async (status: CompletionStatus) => {
+    const currentSession = sessions[currentSessionIndex];
+    if (!currentSession || !sessionStartTime) return;
+
+    const now = new Date();
+    const actualDuration = Math.round((now.getTime() - sessionStartTime.getTime()) / 1000);
+
+    const record: SessionRecord = {
+      id: `${sessionStartTime.getTime()}-${currentSessionIndex}`,
+      type: currentSession.type === 'focus' ? SessionType.FOCUS : SessionType.SHORT_BREAK,
+      sessionNumber: currentSessionIndex + 1,
+      plannedDuration: currentSession.duration,
+      actualDuration: actualDuration,
+      startTime: sessionStartTime,
+      endTime: now,
+      completionStatus: status,
+      pausedTime: 0,
+      remainingTime: 0,
+    };
+
+    try {
+      await focusStorageService.addSession(record);
+    } catch (error) {
+      console.error("Failed to save session record:", error);
+    }
+  };
+
   const handleExpire = () => {
+    // Record the completed session
+    recordSession(CompletionStatus.COMPLETED);
     if (currentSessionIndex < sessions.length - 1) {
       const nextIndex = currentSessionIndex + 1;
       setCurrentSessionIndex(nextIndex);
+      setSessionStartTime(new Date()); // Track new session start
       const nextSession = sessions[nextIndex];
       const newExpiry = dayjs().add(nextSession.duration, "second").toDate();
       restart(newExpiry, true);
       activeExpiryRef.current = newExpiry;
-      
+
       notificationService.showNotification({
         type: nextSession.type === "focus" ? "session_start" : "break_complete",
         title: nextSession.type === "focus" ? "Focus Time!" : "Break Time!",
@@ -181,6 +211,10 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
   };
 
   const stopSession = () => {
+    // Record the interrupted session before stopping
+    if (sessions.length > 0 && sessionStartTime) {
+      recordSession(CompletionStatus.INTERRUPTED);
+    }
     const newExpiryTimestamp = dayjs().add(sessions[0]?.duration || 0, "second").toDate();
     restart(newExpiryTimestamp, false);
     activeExpiryRef.current = newExpiryTimestamp;
@@ -188,12 +222,28 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     setCurrentSessionIndex(0);
     setSessions([]);
     setShowControls(false);
+    setSessionStartTime(null);
     persistenceService.clearSnapshot();
   };
 
   const skipToNext = () => {
     if (currentSessionIndex < sessions.length - 1) {
-      handleExpire();
+      // Record current session as skipped
+      recordSession(CompletionStatus.SKIPPED);
+      const nextIndex = currentSessionIndex + 1;
+      setCurrentSessionIndex(nextIndex);
+      setSessionStartTime(new Date());
+      const nextSession = sessions[nextIndex];
+      const newExpiry = dayjs().add(nextSession.duration, "second").toDate();
+      restart(newExpiry, true);
+      activeExpiryRef.current = newExpiry;
+
+      notificationService.showNotification({
+        type: nextSession.type === "focus" ? "session_start" : "break_complete",
+        title: nextSession.type === "focus" ? "Focus Time!" : "Break Time!",
+        body: nextSession.type === "focus" ? "Time to focus." : "Take a short break.",
+        timestamp: new Date(),
+      });
     }
   };
 

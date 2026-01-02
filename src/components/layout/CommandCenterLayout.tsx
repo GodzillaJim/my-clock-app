@@ -18,7 +18,7 @@ import {
   SkipNext,
 } from '@mui/icons-material';
 import { CircularTimerRing } from '../timer/CircularTimerRing';
-import { AppSettings } from '@/features/timer/types';
+import { AppSettings, SessionRecord, SessionType, CompletionStatus } from '@/features/timer/types';
 import { focusStorage } from '@/services/focusStorage';
 import { useTimer } from 'react-timer-hook';
 import dayjs from 'dayjs';
@@ -77,19 +77,50 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
   const [sessions, setSessions] = useState<SimpleSession[]>([]);
   const [currentSessionIndex, setCurrentSessionIndex] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const [recentSessions, setRecentSessions] = useState<any[]>([]);
   const [todayStats, setTodayStats] = useState({ focusTime: 0, completed: 0 });
 
+  const recordSession = async (status: CompletionStatus) => {
+    const currentSession = sessions[currentSessionIndex];
+    if (!currentSession || !sessionStartTime) return;
+
+    const now = new Date();
+    const actualDuration = Math.round((now.getTime() - sessionStartTime.getTime()) / 1000);
+
+    const record: SessionRecord = {
+      id: `${sessionStartTime.getTime()}-${currentSessionIndex}`,
+      type: currentSession.type === 'focus' ? SessionType.FOCUS : SessionType.SHORT_BREAK,
+      sessionNumber: currentSessionIndex + 1,
+      plannedDuration: currentSession.duration,
+      actualDuration: actualDuration,
+      startTime: sessionStartTime,
+      endTime: now,
+      completionStatus: status,
+      pausedTime: 0,
+      remainingTime: 0,
+    };
+
+    try {
+      await focusStorage.addSession(record);
+    } catch (error) {
+      console.error("Failed to save session record:", error);
+    }
+  };
+
   const handleExpire = () => {
+    recordSession(CompletionStatus.COMPLETED);
     if (currentSessionIndex < sessions.length - 1) {
       const nextIndex = currentSessionIndex + 1;
       setCurrentSessionIndex(nextIndex);
+      setSessionStartTime(new Date());
       const nextSession = sessions[nextIndex];
       const newExpiry = dayjs().add(nextSession.duration, 'second').toDate();
       restart(newExpiry, true);
     } else {
       setIsRunning(false);
       setSessions([]);
+      setSessionStartTime(null);
       loadStats();
     }
   };
@@ -146,6 +177,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
     const newSessions = generateSessions(totalDuration, settings);
     setSessions(newSessions);
     setCurrentSessionIndex(0);
+    setSessionStartTime(new Date());
     const firstSessionDuration = newSessions[0]?.duration || 0;
     const newExpiryTimestamp = dayjs().add(firstSessionDuration, 'second').toDate();
     restart(newExpiryTimestamp, true);
@@ -163,9 +195,25 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
   };
 
   const stopSession = () => {
+    if (sessions.length > 0 && sessionStartTime) {
+      recordSession(CompletionStatus.INTERRUPTED);
+    }
     setIsRunning(false);
     setSessions([]);
     setCurrentSessionIndex(0);
+    setSessionStartTime(null);
+  };
+
+  const skipToNext = () => {
+    if (currentSessionIndex < sessions.length - 1) {
+      recordSession(CompletionStatus.SKIPPED);
+      const nextIndex = currentSessionIndex + 1;
+      setCurrentSessionIndex(nextIndex);
+      setSessionStartTime(new Date());
+      const nextSession = sessions[nextIndex];
+      const newExpiry = dayjs().add(nextSession.duration, 'second').toDate();
+      restart(newExpiry, true);
+    }
   };
 
   const isPaused = isActive && !isRunning;
@@ -427,7 +475,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
               <Pause />
             </IconButton>
             <Tooltip title="Skip">
-              <IconButton onClick={handleExpire} size="small">
+              <IconButton onClick={skipToNext} size="small">
                 <SkipNext />
               </IconButton>
             </Tooltip>
