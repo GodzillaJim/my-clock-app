@@ -273,6 +273,67 @@ export const getTodayDateString = (): string => {
   return new Date().toISOString().split('T')[0];
 };
 
+// ============================================
+// Challenge Types
+// ============================================
+
+export enum ChallengeStatus {
+  ACTIVE = 'active',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  PAUSED = 'paused'
+}
+
+export enum ChallengeDayStatus {
+  PENDING = 'pending',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  SKIPPED = 'skipped'
+}
+
+export interface ChallengeDay {
+  date: string;                    // YYYY-MM-DD format
+  status: ChallengeDayStatus;
+  note?: string;
+  markedAt?: Date;
+}
+
+export interface Challenge {
+  readonly id: string;
+  name: string;
+  description?: string;
+  startDate: string;               // YYYY-MM-DD format
+  endDate: string;                 // YYYY-MM-DD format
+  durationDays: number;
+  status: ChallengeStatus;
+  days: ChallengeDay[];
+  createdAt: Date;
+  updatedAt: Date;
+  completedDays: number;
+  failedDays: number;
+  currentStreak: number;
+  longestStreak: number;
+}
+
+export type ChallengeDurationPreset = 7 | 30 | 90 | 'custom';
+
+// Utility function to create default challenge days
+export const createChallengeDays = (startDate: string, endDate: string): ChallengeDay[] => {
+  const days: ChallengeDay[] = [];
+  const current = new Date(startDate);
+  const end = new Date(endDate);
+
+  while (current <= end) {
+    days.push({
+      date: current.toISOString().split('T')[0],
+      status: ChallengeDayStatus.PENDING
+    });
+    current.setDate(current.getDate() + 1);
+  }
+
+  return days;
+};
+
 // Export types for external use and backward compatibility
 export type {
   SessionRecord as Session,

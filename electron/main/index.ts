@@ -56,8 +56,20 @@ let isQuitting = false
 const preload = path.join(__dirname, '../preload/index.mjs')
 const indexHtml = path.join(RENDERER_DIST, 'index.html')
 
+function getIconPath(iconName: string): string {
+  if (app.isPackaged) {
+    // In production, icons are in extraResources/icons
+    return path.join(process.resourcesPath, 'icons', iconName);
+  } else {
+    // In development, icons are in the build folder
+    return path.join(process.env.APP_ROOT!, 'build', iconName);
+  }
+}
+
 function createTrayIcon(isActive: boolean = false): Electron.NativeImage {
-  const iconPath = path.join(process.env.VITE_PUBLIC, '..', 'build', 'hour_glass.png');
+  // Use .ico for Windows tray (better support), .png for others
+  const iconName = process.platform === 'win32' ? 'hour_glass.ico' : 'hour_glass.png';
+  const iconPath = getIconPath(iconName);
   const icon = nativeImage.createFromPath(iconPath);
   if (process.platform === 'darwin') {
     icon.setTemplateImage(true);
@@ -66,7 +78,7 @@ function createTrayIcon(isActive: boolean = false): Electron.NativeImage {
 }
 
 function createAppIcon(): Electron.NativeImage {
-  const iconPath = path.join(process.env.VITE_PUBLIC, '..', 'build', 'hour_glass.png');
+  const iconPath = getIconPath('hour_glass.png');
   return nativeImage.createFromPath(iconPath);
 }
 
@@ -335,7 +347,7 @@ ipcMain.handle('session-notification', (_, { title, body }: { title: string, bod
   const notification = new Notification({
     title,
     body,
-    icon: path.join(process.env.VITE_PUBLIC, '..', 'build', 'icon.png')
+    icon: getIconPath('hour_glass.png')
   });
   notification.show();
 });

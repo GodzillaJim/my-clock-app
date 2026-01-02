@@ -475,6 +475,12 @@ const App: React.FC = () => {
           setCurrentTool(2); // Stopwatch
         }
         break;
+      case '4':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          setCurrentTool(3); // Challenges
+        }
+        break;
       default:
         break;
     }

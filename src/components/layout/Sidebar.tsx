@@ -12,6 +12,7 @@ import {
   Settings,
   History,
   Feedback,
+  EmojiEvents,
 } from '@mui/icons-material';
 
 interface SidebarProps {
@@ -33,6 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { icon: <DateRange />, label: 'Focus', index: 0 },
     { icon: <TimerIcon />, label: 'Timer', index: 1 },
     { icon: <AccessAlarm />, label: 'Stopwatch', index: 2 },
+    { icon: <EmojiEvents />, label: 'Challenges', index: 3 },
   ];
 
   const actions = [

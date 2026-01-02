@@ -7,7 +7,10 @@ import {
   CompletionStatus,
   getTodayDateString,
   SessionStats,
-  formatDurationFromSeconds
+  formatDurationFromSeconds,
+  Challenge,
+  ChallengeStatus,
+  ChallengeDayStatus
 } from '@/features/timer/types';
 import { FeedbackItem } from '@/types/feedback';
 import { createStorageService } from './storage';
@@ -17,6 +20,7 @@ class FocusStorageService {
   private sessionsStorage = createStorageService<SessionRecord[]>('focus_sessions_sessions');
   private dailyHistoryStorage = createStorageService<DailyHistory[]>('focus_sessions_daily_history');
   private feedbackStorage = createStorageService<FeedbackItem[]>('focus_sessions_feedback');
+  private challengeStorage = createStorageService<Challenge[]>('focus_sessions_challenges');
 
   async initialize(): Promise<void> {
     // No initialization needed for file-based storage
@@ -473,6 +477,155 @@ class FocusStorageService {
       console.error('Failed to reset all history:', error);
       throw error;
     }
+  }
+
+  // ============================================
+  // Challenge Methods
+  // ============================================
+
+  async getChallenges(): Promise<Challenge[]> {
+    try {
+      const challenges = await this.challengeStorage.load() || [];
+      return challenges.map(c => ({
+        ...c,
+        createdAt: new Date(c.createdAt),
+        updatedAt: new Date(c.updatedAt),
+        days: c.days.map(d => ({
+          ...d,
+          markedAt: d.markedAt ? new Date(d.markedAt) : undefined
+        }))
+      }));
+    } catch (error) {
+      console.error('Failed to get challenges:', error);
+      return [];
+    }
+  }
+
+  async getActiveChallenges(): Promise<Challenge[]> {
+    const challenges = await this.getChallenges();
+    return challenges.filter(c => c.status === ChallengeStatus.ACTIVE);
+  }
+
+  async getChallengeById(id: string): Promise<Challenge | null> {
+    const challenges = await this.getChallenges();
+    return challenges.find(c => c.id === id) || null;
+  }
+
+  async createChallenge(challenge: Omit<Challenge, 'id' | 'createdAt' | 'updatedAt' | 'completedDays' | 'failedDays' | 'currentStreak' | 'longestStreak'>): Promise<Challenge> {
+    const newChallenge: Challenge = {
+      ...challenge,
+      id: crypto.randomUUID(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      completedDays: 0,
+      failedDays: 0,
+      currentStreak: 0,
+      longestStreak: 0
+    };
+
+    const challenges = await this.getChallenges();
+    challenges.push(newChallenge);
+    await this.challengeStorage.save(challenges);
+
+    return newChallenge;
+  }
+
+  async updateChallenge(id: string, updates: Partial<Challenge>): Promise<Challenge | null> {
+    const challenges = await this.getChallenges();
+    const index = challenges.findIndex(c => c.id === id);
+
+    if (index === -1) return null;
+
+    challenges[index] = {
+      ...challenges[index],
+      ...updates,
+      updatedAt: new Date()
+    };
+
+    this.recalculateChallengeStats(challenges[index]);
+
+    await this.challengeStorage.save(challenges);
+    return challenges[index];
+  }
+
+  async markChallengeDay(
+    challengeId: string,
+    date: string,
+    status: ChallengeDayStatus,
+    note?: string
+  ): Promise<Challenge | null> {
+    const challenges = await this.getChallenges();
+    const challenge = challenges.find(c => c.id === challengeId);
+
+    if (!challenge) return null;
+
+    const dayIndex = challenge.days.findIndex(d => d.date === date);
+    if (dayIndex === -1) return null;
+
+    challenge.days[dayIndex] = {
+      ...challenge.days[dayIndex],
+      status,
+      note,
+      markedAt: new Date()
+    };
+
+    challenge.updatedAt = new Date();
+    this.recalculateChallengeStats(challenge);
+
+    // Check if challenge is complete (all days past and marked)
+    const today = new Date().toISOString().split('T')[0];
+    if (challenge.endDate < today) {
+      const allMarked = challenge.days.every(d => d.status !== ChallengeDayStatus.PENDING);
+      if (allMarked) {
+        const successRate = challenge.completedDays / challenge.days.length;
+        challenge.status = successRate >= 0.8 ? ChallengeStatus.COMPLETED : ChallengeStatus.FAILED;
+      }
+    }
+
+    await this.challengeStorage.save(challenges);
+    return challenge;
+  }
+
+  async deleteChallenge(id: string): Promise<void> {
+    const challenges = await this.getChallenges();
+    const filtered = challenges.filter(c => c.id !== id);
+    await this.challengeStorage.save(filtered);
+  }
+
+  private recalculateChallengeStats(challenge: Challenge): void {
+    const completedDays = challenge.days.filter(d => d.status === ChallengeDayStatus.COMPLETED);
+    const failedDays = challenge.days.filter(d => d.status === ChallengeDayStatus.FAILED);
+
+    challenge.completedDays = completedDays.length;
+    challenge.failedDays = failedDays.length;
+
+    // Sort days by date for streak calculation
+    const sortedDays = [...challenge.days].sort((a, b) => a.date.localeCompare(b.date));
+
+    // Calculate longest streak
+    let longestStreak = 0;
+    let tempStreak = 0;
+    for (const day of sortedDays) {
+      if (day.status === ChallengeDayStatus.COMPLETED) {
+        tempStreak++;
+        longestStreak = Math.max(longestStreak, tempStreak);
+      } else if (day.status === ChallengeDayStatus.FAILED) {
+        tempStreak = 0;
+      }
+    }
+
+    // Calculate current streak from the end
+    let currentStreak = 0;
+    for (let i = sortedDays.length - 1; i >= 0; i--) {
+      if (sortedDays[i].status === ChallengeDayStatus.COMPLETED) {
+        currentStreak++;
+      } else if (sortedDays[i].status === ChallengeDayStatus.FAILED) {
+        break;
+      }
+    }
+
+    challenge.currentStreak = currentStreak;
+    challenge.longestStreak = longestStreak;
   }
 }
 

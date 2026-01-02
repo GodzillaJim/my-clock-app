@@ -18,6 +18,14 @@
       "from": "public/sounds",
       "to": "sounds",
       "filter": ["**/*"]
+    },
+    {
+      "from": "build/hour_glass.ico",
+      "to": "icons/hour_glass.ico"
+    },
+    {
+      "from": "build/hour_glass.png",
+      "to": "icons/hour_glass.png"
     }
   ],
   "mac": {

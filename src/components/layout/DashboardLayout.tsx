@@ -5,6 +5,7 @@ import { StatsPanel } from './StatsPanel';
 import { ZenFocusTimer } from '../timer/ZenFocusTimer';
 import { ZenCountdownTimer } from '../timer/ZenCountdownTimer';
 import { ZenStopwatch } from '../timer/ZenStopwatch';
+import { ChallengesView } from '../challenges';
 import { AppSettings } from '@/features/timer/types';
 
 interface DashboardLayoutProps {
@@ -85,6 +86,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           {currentTool === 2 && (
             <Box sx={{ width: '100%', maxWidth: 500 }}>
               <ZenStopwatch />
+            </Box>
+          )}
+          {currentTool === 3 && (
+            <Box sx={{ width: '100%', maxWidth: 600 }}>
+              <ChallengesView />
             </Box>
           )}
         </Box>
