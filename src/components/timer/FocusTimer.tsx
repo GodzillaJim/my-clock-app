@@ -113,11 +113,29 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   const [totalDuration, setTotalDuration] = useState(25);
   const [isComplete, setIsComplete] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
-  
+
   // Persistence state
   const activeExpiryRef = useRef<Date | null>(null);
   const [restoredExpiry, setRestoredExpiry] = useState<Date | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
+
+  // Refs to hold latest state values for the timer callback
+  const sessionsRef = useRef<SimpleSession[]>([]);
+  const currentSessionIndexRef = useRef(0);
+  const sessionStartTimeRef = useRef<Date | null>(null);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
+
+  useEffect(() => {
+    currentSessionIndexRef.current = currentSessionIndex;
+  }, [currentSessionIndex]);
+
+  useEffect(() => {
+    sessionStartTimeRef.current = sessionStartTime;
+  }, [sessionStartTime]);
 
   const handleTotalDurationChange = (value: number | string) => {
     const numericValue = typeof value === 'string' ? parseInt(value, 10) : value;
@@ -164,9 +182,34 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   };
 
   const handleSessionComplete = () => {
-    recordSession(CompletionStatus.COMPLETED);
-    const currentSession = sessions[currentSessionIndex];
-    if (currentSession) {
+    // Use refs to get current values
+    const currentSessions = sessionsRef.current;
+    const currentIndex = currentSessionIndexRef.current;
+    const startTime = sessionStartTimeRef.current;
+
+    // Record the completed session
+    const currentSession = currentSessions[currentIndex];
+    if (currentSession && startTime) {
+      const now = new Date();
+      const actualDuration = (now.getTime() - startTime.getTime()) / 1000;
+
+      const record: SessionRecord = {
+        id: `${startTime.getTime()}-${currentIndex}`,
+        type: currentSession.type === 'focus' ? SessionType.FOCUS : SessionType.SHORT_BREAK,
+        sessionNumber: currentIndex + 1,
+        plannedDuration: currentSession.duration,
+        actualDuration: actualDuration,
+        startTime: startTime,
+        endTime: now,
+        completionStatus: CompletionStatus.COMPLETED,
+        pausedTime: 0,
+        remainingTime: 0,
+      };
+
+      focusStorageService.addSession(record).catch((error) => {
+        console.error("Failed to save session record:", error);
+      });
+
       notificationService.showNotification({
         type:
           currentSession.type === "focus"
@@ -182,7 +225,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       });
     }
 
-    if (currentSessionIndex < sessions.length - 1) {
+    if (currentIndex < currentSessions.length - 1) {
       // Move to next session
       setCurrentSessionIndex((prev) => prev + 1);
     } else {

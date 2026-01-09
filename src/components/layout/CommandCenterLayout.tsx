@@ -16,6 +16,7 @@ import {
   Settings,
   History,
   SkipNext,
+  CheckCircleOutline,
 } from '@mui/icons-material';
 import { CircularTimerRing } from '../timer/CircularTimerRing';
 import { AppSettings, SessionRecord, SessionType, CompletionStatus } from '@/features/timer/types';
@@ -77,9 +78,28 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
   const [sessions, setSessions] = useState<SimpleSession[]>([]);
   const [currentSessionIndex, setCurrentSessionIndex] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const [recentSessions, setRecentSessions] = useState<any[]>([]);
   const [todayStats, setTodayStats] = useState({ focusTime: 0, completed: 0 });
+
+  // Refs to hold latest state values for the timer callback
+  const sessionsRef = React.useRef<SimpleSession[]>([]);
+  const currentSessionIndexRef = React.useRef(0);
+  const sessionStartTimeRef = React.useRef<Date | null>(null);
+
+  // Keep refs in sync with state
+  React.useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
+
+  React.useEffect(() => {
+    currentSessionIndexRef.current = currentSessionIndex;
+  }, [currentSessionIndex]);
+
+  React.useEffect(() => {
+    sessionStartTimeRef.current = sessionStartTime;
+  }, [sessionStartTime]);
 
   const recordSession = async (status: CompletionStatus) => {
     const currentSession = sessions[currentSessionIndex];
@@ -109,20 +129,56 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
   };
 
   const handleExpire = () => {
-    recordSession(CompletionStatus.COMPLETED);
-    if (currentSessionIndex < sessions.length - 1) {
-      const nextIndex = currentSessionIndex + 1;
+    // Use refs to get current values
+    const currentSessions = sessionsRef.current;
+    const currentIndex = currentSessionIndexRef.current;
+    const startTime = sessionStartTimeRef.current;
+
+    // Record the completed session
+    const currentSession = currentSessions[currentIndex];
+    if (currentSession && startTime) {
+      const now = new Date();
+      const actualDuration = Math.round((now.getTime() - startTime.getTime()) / 1000);
+
+      const record: SessionRecord = {
+        id: `${startTime.getTime()}-${currentIndex}`,
+        type: currentSession.type === 'focus' ? SessionType.FOCUS : SessionType.SHORT_BREAK,
+        sessionNumber: currentIndex + 1,
+        plannedDuration: currentSession.duration,
+        actualDuration: actualDuration,
+        startTime: startTime,
+        endTime: now,
+        completionStatus: CompletionStatus.COMPLETED,
+        pausedTime: 0,
+        remainingTime: 0,
+      };
+
+      focusStorage.addSession(record).catch((error) => {
+        console.error("Failed to save session record:", error);
+      });
+    }
+
+    // Check if there are more sessions
+    if (currentIndex < currentSessions.length - 1) {
+      const nextIndex = currentIndex + 1;
       setCurrentSessionIndex(nextIndex);
       setSessionStartTime(new Date());
-      const nextSession = sessions[nextIndex];
+      const nextSession = currentSessions[nextIndex];
       const newExpiry = dayjs().add(nextSession.duration, 'second').toDate();
       restart(newExpiry, true);
     } else {
       setIsRunning(false);
-      setSessions([]);
-      setSessionStartTime(null);
+      setIsComplete(true);
       loadStats();
     }
+  };
+
+  const resetToIdle = () => {
+    setIsComplete(false);
+    setIsRunning(false);
+    setSessions([]);
+    setCurrentSessionIndex(0);
+    setSessionStartTime(null);
   };
 
   const { seconds, minutes, hours, pause, resume, restart } = useTimer({
@@ -154,7 +210,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
   const currentSession = sessions[currentSessionIndex];
   const sessionType = currentSession?.type || 'focus';
   const isBreak = sessionType === 'break';
-  const isActive = sessions.length > 0;
+  const isActive = sessions.length > 0 && !isComplete;
 
   const calculateProgress = (): number => {
     if (!currentSession) return 0;
@@ -216,7 +272,64 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
     }
   };
 
-  const isPaused = isActive && !isRunning;
+  const isPaused = isActive && !isRunning && !isComplete;
+
+  // Show completion screen when all sessions are done
+  if (isComplete) {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          backgroundColor: 'background.default',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 3,
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+          }}
+        >
+          <CheckCircleOutline
+            sx={{
+              fontSize: 100,
+              color: 'success.main',
+              mb: 3,
+            }}
+          />
+          <Typography variant="h4" sx={{ fontWeight: 500, mb: 2 }}>
+            Session Complete!
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{ color: 'text.secondary', mb: 2, maxWidth: 400 }}
+          >
+            Great work! You've successfully completed your focus session.
+          </Typography>
+          <Typography
+            variant="h6"
+            sx={{ color: 'primary.main', mb: 4 }}
+          >
+            {todayStats.completed} sessions completed today
+          </Typography>
+          <Button
+            variant="contained"
+            size="large"
+            onClick={resetToIdle}
+            sx={{ px: 4, py: 1.5 }}
+          >
+            Start New Session
+          </Button>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box

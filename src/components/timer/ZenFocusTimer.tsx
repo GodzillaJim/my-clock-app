@@ -14,6 +14,7 @@ import {
   Settings,
   History,
   SkipNext,
+  CheckCircleOutline,
 } from "@mui/icons-material";
 import { useTimer } from "react-timer-hook";
 import dayjs from "dayjs";
@@ -84,9 +85,28 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
   const [sessions, setSessions] = useState<SimpleSession[]>([]);
   const [currentSessionIndex, setCurrentSessionIndex] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const activeExpiryRef = useRef<Date | null>(null);
+
+  // Refs to hold latest state values for the timer callback
+  const sessionsRef = useRef<SimpleSession[]>([]);
+  const currentSessionIndexRef = useRef(0);
+  const sessionStartTimeRef = useRef<Date | null>(null);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
+
+  useEffect(() => {
+    currentSessionIndexRef.current = currentSessionIndex;
+  }, [currentSessionIndex]);
+
+  useEffect(() => {
+    sessionStartTimeRef.current = sessionStartTime;
+  }, [sessionStartTime]);
 
   const recordSession = async (status: CompletionStatus) => {
     const currentSession = sessions[currentSessionIndex];
@@ -116,13 +136,41 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
   };
 
   const handleExpire = () => {
+    // Use refs to get current values
+    const currentSessions = sessionsRef.current;
+    const currentIndex = currentSessionIndexRef.current;
+    const startTime = sessionStartTimeRef.current;
+
     // Record the completed session
-    recordSession(CompletionStatus.COMPLETED);
-    if (currentSessionIndex < sessions.length - 1) {
-      const nextIndex = currentSessionIndex + 1;
+    const currentSession = currentSessions[currentIndex];
+    if (currentSession && startTime) {
+      const now = new Date();
+      const actualDuration = Math.round((now.getTime() - startTime.getTime()) / 1000);
+
+      const record: SessionRecord = {
+        id: `${startTime.getTime()}-${currentIndex}`,
+        type: currentSession.type === 'focus' ? SessionType.FOCUS : SessionType.SHORT_BREAK,
+        sessionNumber: currentIndex + 1,
+        plannedDuration: currentSession.duration,
+        actualDuration: actualDuration,
+        startTime: startTime,
+        endTime: now,
+        completionStatus: CompletionStatus.COMPLETED,
+        pausedTime: 0,
+        remainingTime: 0,
+      };
+
+      focusStorageService.addSession(record).catch((error) => {
+        console.error("Failed to save session record:", error);
+      });
+    }
+
+    // Check if there are more sessions
+    if (currentIndex < currentSessions.length - 1) {
+      const nextIndex = currentIndex + 1;
       setCurrentSessionIndex(nextIndex);
       setSessionStartTime(new Date()); // Track new session start
-      const nextSession = sessions[nextIndex];
+      const nextSession = currentSessions[nextIndex];
       const newExpiry = dayjs().add(nextSession.duration, "second").toDate();
       restart(newExpiry, true);
       activeExpiryRef.current = newExpiry;
@@ -135,6 +183,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       });
     } else {
       setIsRunning(false);
+      setIsComplete(true);
       notificationService.showNotification({
         type: "session_complete",
         title: "Session Complete!",
@@ -143,6 +192,15 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       });
       persistenceService.clearSnapshot();
     }
+  };
+
+  const resetToIdle = () => {
+    setIsComplete(false);
+    setIsRunning(false);
+    setSessions([]);
+    setCurrentSessionIndex(0);
+    setSessionStartTime(null);
+    setShowControls(false);
   };
 
   const { seconds, minutes, hours, pause, resume, restart } = useTimer({
@@ -247,7 +305,48 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     }
   };
 
-  const isPaused = sessions.length > 0 && !isRunning;
+  const isPaused = sessions.length > 0 && !isRunning && !isComplete;
+
+  // Show completion screen when all sessions are done
+  if (isComplete) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          py: 8,
+          textAlign: 'center',
+        }}
+      >
+        <CheckCircleOutline
+          sx={{
+            fontSize: 100,
+            color: 'success.main',
+            mb: 3,
+          }}
+        />
+        <Typography variant="h4" sx={{ fontWeight: 500, mb: 2 }}>
+          Session Complete!
+        </Typography>
+        <Typography
+          variant="body1"
+          sx={{ color: 'text.secondary', mb: 4, maxWidth: 300 }}
+        >
+          Great work! You've successfully completed your focus session.
+        </Typography>
+        <Button
+          variant="contained"
+          size="large"
+          onClick={resetToIdle}
+          sx={{ px: 4, py: 1.5 }}
+        >
+          Start New Session
+        </Button>
+      </Box>
+    );
+  }
 
   return (
     <Box
