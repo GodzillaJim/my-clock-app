@@ -109,7 +109,6 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   // Simple state management following SessionTimer approach
   const [sessions, setSessions] = useState<SimpleSession[]>([]);
   const [currentSessionIndex, setCurrentSessionIndex] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
   const [totalDuration, setTotalDuration] = useState(25);
   const [isComplete, setIsComplete] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
@@ -227,10 +226,19 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
 
     if (currentIndex < currentSessions.length - 1) {
       // Move to next session
-      setCurrentSessionIndex((prev) => prev + 1);
+      const nextIndex = currentIndex + 1;
+      setCurrentSessionIndex(nextIndex);
+      setSessionStartTime(new Date());
+
+      // Restart timer for next session
+      const nextSession = currentSessions[nextIndex];
+      const newExpiry = dayjs().add(nextSession.duration, "second").toDate();
+      restart(newExpiry, false);
+      activeExpiryRef.current = newExpiry;
+      resume(); // Start the next session immediately
     } else {
       // All sessions complete
-      setIsRunning(false);
+      pause(); // Stop the timer
       setIsComplete(true);
       notificationService.showNotification({
         type: 'session_complete',
@@ -241,7 +249,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     }
   };
 
-  const { seconds, minutes, hours, pause, resume, restart } = useTimer({
+  const { seconds, minutes, hours, pause, resume, restart, isRunning } = useTimer({
     expiryTimestamp: new Date(),
     autoStart: false,
     onExpire: handleSessionComplete,
@@ -275,7 +283,6 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
            activeExpiryRef.current = restoredExpiry;
            setRestoredExpiry(null);
            setSessionStartTime(new Date()); // Approximate start time for current session
-           setIsRunning(true);
         } else {
            // Normal session transition
            const newExpiryTimestamp = dayjs()
@@ -408,7 +415,6 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
     restart(newExpiryTimestamp, true);
     activeExpiryRef.current = newExpiryTimestamp;
 
-    setIsRunning(true);
     setIsComplete(false);
     setSessionStartTime(new Date());
 
@@ -422,12 +428,10 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
 
   const pauseSession = () => {
     pause();
-    setIsRunning(false);
   };
 
   const resumeSession = () => {
     resume();
-    setIsRunning(true);
   };
 
   const stopSession = () => {
@@ -437,7 +441,7 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
       .toDate();
     restart(newExpiryTimestamp, false);
     activeExpiryRef.current = newExpiryTimestamp;
-    setIsRunning(false);
+    pause(); // Stop the timer
     setCurrentSessionIndex(0);
     persistenceService.clearSnapshot();
   };
@@ -446,17 +450,18 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
   const resetToIdle = () => {
     // Stop any running timer
     pause();
-    setIsRunning(false);
     setIsComplete(false);
     setSessions([]); // remove old plan so input + presets show again
     setCurrentSessionIndex(0);
     setSessionStartTime(null);
   };
 
-  // Remove complex pause/resume logic - SessionTimer approach
-  const fastForwardSession = (secondsToSkip: number) => {
+  // Fast forward session for testing (reduce by 30 seconds)
+  const fastForwardSession = () => {
+    if (!isRunning) return;
+
     const remainingSeconds = hours * 3600 + minutes * 60 + seconds;
-    const newRemaining = Math.max(0, remainingSeconds - secondsToSkip);
+    const newRemaining = Math.max(1, remainingSeconds - 30);
     const newExpiry = dayjs().add(newRemaining, "second").toDate();
     restart(newExpiry, true);
     activeExpiryRef.current = newExpiry;
@@ -670,9 +675,9 @@ export const FocusTimer: React.FC<FocusTimerProps> = ({
         </Button>
       )}
 
-      {isRunning && (
-        <Tooltip title="Fast Forward 60s (for testing)">
-          <IconButton onClick={() => fastForwardSession(60)} color="secondary">
+      {isRunning && import.meta.env.DEV && (
+        <Tooltip title="Fast forward -30s (Test)">
+          <IconButton onClick={fastForwardSession} sx={{ color: 'warning.main' }}>
             <FastForward />
           </IconButton>
         </Tooltip>

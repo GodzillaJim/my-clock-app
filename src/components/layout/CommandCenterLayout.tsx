@@ -17,6 +17,8 @@ import {
   History,
   SkipNext,
   CheckCircleOutline,
+  FastForward,
+  AccessTime,
 } from '@mui/icons-material';
 import { CircularTimerRing } from '../timer/CircularTimerRing';
 import { AppSettings, SessionRecord, SessionType, CompletionStatus } from '@/features/timer/types';
@@ -77,7 +79,6 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
   const [totalDuration, setTotalDuration] = useState(settings.focusDuration);
   const [sessions, setSessions] = useState<SimpleSession[]>([]);
   const [currentSessionIndex, setCurrentSessionIndex] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const [recentSessions, setRecentSessions] = useState<any[]>([]);
@@ -165,27 +166,28 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
       setSessionStartTime(new Date());
       const nextSession = currentSessions[nextIndex];
       const newExpiry = dayjs().add(nextSession.duration, 'second').toDate();
-      restart(newExpiry, true);
+      restart(newExpiry, false);
+      resume(); // Start the next session immediately
     } else {
-      setIsRunning(false);
+      pause(); // Stop the timer
       setIsComplete(true);
       loadStats();
     }
   };
 
-  const resetToIdle = () => {
-    setIsComplete(false);
-    setIsRunning(false);
-    setSessions([]);
-    setCurrentSessionIndex(0);
-    setSessionStartTime(null);
-  };
-
-  const { seconds, minutes, hours, pause, resume, restart } = useTimer({
+  const { seconds, minutes, hours, pause, resume, restart, isRunning } = useTimer({
     expiryTimestamp: new Date(),
     autoStart: false,
     onExpire: handleExpire,
   });
+
+  const resetToIdle = () => {
+    setIsComplete(false);
+    pause(); // Stop the timer
+    setSessions([]);
+    setCurrentSessionIndex(0);
+    setSessionStartTime(null);
+  };
 
   useEffect(() => {
     loadStats();
@@ -236,25 +238,22 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
     setSessionStartTime(new Date());
     const firstSessionDuration = newSessions[0]?.duration || 0;
     const newExpiryTimestamp = dayjs().add(firstSessionDuration, 'second').toDate();
-    restart(newExpiryTimestamp, true);
-    setIsRunning(true);
+    restart(newExpiryTimestamp, true); // Auto-start
   };
 
   const pauseSession = () => {
     pause();
-    setIsRunning(false);
   };
 
   const resumeSession = () => {
     resume();
-    setIsRunning(true);
   };
 
   const stopSession = () => {
     if (sessions.length > 0 && sessionStartTime) {
       recordSession(CompletionStatus.INTERRUPTED);
     }
-    setIsRunning(false);
+    pause(); // Stop the timer
     setSessions([]);
     setCurrentSessionIndex(0);
     setSessionStartTime(null);
@@ -268,11 +267,35 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
       setSessionStartTime(new Date());
       const nextSession = sessions[nextIndex];
       const newExpiry = dayjs().add(nextSession.duration, 'second').toDate();
-      restart(newExpiry, true);
+      restart(newExpiry, false);
+      resume(); // Start the next session immediately
     }
   };
 
+  const fastForward = () => {
+    if (!isRunning) return;
+
+    // Calculate remaining time in seconds
+    const remainingSeconds = hours * 3600 + minutes * 60 + seconds;
+
+    // Reduce by 30 seconds, minimum 1 second
+    const newRemainingSeconds = Math.max(1, remainingSeconds - 30);
+
+    // Calculate new expiry time
+    const newExpiry = dayjs().add(newRemainingSeconds, 'second').toDate();
+    restart(newExpiry, true);
+  };
+
   const isPaused = isActive && !isRunning && !isComplete;
+
+  const getExpectedEndTime = () => {
+    if (isActive || isPaused) {
+      // When running or paused, show end time for the current session
+      return dayjs().add(hours, 'hour').add(minutes, 'minute').add(seconds, 'second');
+    }
+    // When idle, show end time for the entire plan if we start now
+    return dayjs().add(totalDuration, 'minute');
+  };
 
   // Show completion screen when all sessions are done
   if (isComplete) {
@@ -391,6 +414,14 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
             {isActive ? (isBreak ? 'BREAK' : 'FOCUS') : 'READY'}
           </Typography>
         </CircularTimerRing>
+      </Box>
+
+      {/* Expected End Time */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 3 }}>
+        <AccessTime fontSize="small" sx={{ color: 'text.secondary' }} />
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          Ends at {getExpectedEndTime().format('h:mm A')}
+        </Typography>
       </Box>
 
       {/* Session Timeline */}
@@ -592,6 +623,13 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
                 <SkipNext />
               </IconButton>
             </Tooltip>
+            {import.meta.env.DEV && (
+              <Tooltip title="Fast forward -30s (Test)">
+                <IconButton onClick={fastForward} size="small" sx={{ color: 'warning.main' }}>
+                  <FastForward />
+                </IconButton>
+              </Tooltip>
+            )}
           </>
         )}
 

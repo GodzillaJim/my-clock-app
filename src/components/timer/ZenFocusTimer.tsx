@@ -15,6 +15,8 @@ import {
   History,
   SkipNext,
   CheckCircleOutline,
+  FastForward,
+  AccessTime,
 } from "@mui/icons-material";
 import { useTimer } from "react-timer-hook";
 import dayjs from "dayjs";
@@ -84,10 +86,10 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
   const [totalDuration, setTotalDuration] = useState(settings.focusDuration);
   const [sessions, setSessions] = useState<SimpleSession[]>([]);
   const [currentSessionIndex, setCurrentSessionIndex] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const [nextSessionExpiry, setNextSessionExpiry] = useState<Date | null>(null);
   const activeExpiryRef = useRef<Date | null>(null);
 
   // Refs to hold latest state values for the timer callback
@@ -107,6 +109,18 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
   useEffect(() => {
     sessionStartTimeRef.current = sessionStartTime;
   }, [sessionStartTime]);
+
+  // Handle automatic session transitions
+  useEffect(() => {
+    if (nextSessionExpiry) {
+      // Defer the restart to avoid timing issues with onExpire callback
+      setTimeout(() => {
+        restart(nextSessionExpiry, true);
+        activeExpiryRef.current = nextSessionExpiry;
+      }, 0);
+      setNextSessionExpiry(null); // Reset the trigger
+    }
+  }, [nextSessionExpiry]); // Removed restart from deps since it's stable
 
   const recordSession = async (status: CompletionStatus) => {
     const currentSession = sessions[currentSessionIndex];
@@ -172,8 +186,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       setSessionStartTime(new Date()); // Track new session start
       const nextSession = currentSessions[nextIndex];
       const newExpiry = dayjs().add(nextSession.duration, "second").toDate();
-      restart(newExpiry, true);
-      activeExpiryRef.current = newExpiry;
+      setNextSessionExpiry(newExpiry); // Trigger auto-start in useEffect
 
       notificationService.showNotification({
         type: nextSession.type === "focus" ? "session_start" : "break_complete",
@@ -182,7 +195,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
         timestamp: new Date(),
       });
     } else {
-      setIsRunning(false);
+      pause(); // Stop the timer
       setIsComplete(true);
       notificationService.showNotification({
         type: "session_complete",
@@ -194,20 +207,20 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     }
   };
 
+  const { seconds, minutes, hours, pause, resume, restart, isRunning } = useTimer({
+    expiryTimestamp: new Date(),
+    autoStart: false,
+    onExpire: handleExpire,
+  });
+
   const resetToIdle = () => {
     setIsComplete(false);
-    setIsRunning(false);
+    pause(); // Stop the timer
     setSessions([]);
     setCurrentSessionIndex(0);
     setSessionStartTime(null);
     setShowControls(false);
   };
-
-  const { seconds, minutes, hours, pause, resume, restart } = useTimer({
-    expiryTimestamp: new Date(),
-    autoStart: false,
-    onExpire: handleExpire,
-  });
 
   useEffect(() => {
     onRunningStateChange?.(isRunning);
@@ -243,10 +256,9 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
 
     const firstSessionDuration = newSessions[0]?.duration || 0;
     const newExpiryTimestamp = dayjs().add(firstSessionDuration, "second").toDate();
-    restart(newExpiryTimestamp, true);
+    restart(newExpiryTimestamp, true); // Auto-start
     activeExpiryRef.current = newExpiryTimestamp;
 
-    setIsRunning(true);
     setSessionStartTime(new Date());
     setShowControls(true);
 
@@ -260,12 +272,10 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
 
   const pauseSession = () => {
     pause();
-    setIsRunning(false);
   };
 
   const resumeSession = () => {
     resume();
-    setIsRunning(true);
   };
 
   const stopSession = () => {
@@ -274,9 +284,9 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       recordSession(CompletionStatus.INTERRUPTED);
     }
     const newExpiryTimestamp = dayjs().add(sessions[0]?.duration || 0, "second").toDate();
-    restart(newExpiryTimestamp, false);
+    restart(newExpiryTimestamp, false); // Don't auto-start
     activeExpiryRef.current = newExpiryTimestamp;
-    setIsRunning(false);
+    pause(); // Stop the timer
     setCurrentSessionIndex(0);
     setSessions([]);
     setShowControls(false);
@@ -293,8 +303,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       setSessionStartTime(new Date());
       const nextSession = sessions[nextIndex];
       const newExpiry = dayjs().add(nextSession.duration, "second").toDate();
-      restart(newExpiry, true);
-      activeExpiryRef.current = newExpiry;
+      setNextSessionExpiry(newExpiry); // Trigger auto-start in useEffect
 
       notificationService.showNotification({
         type: nextSession.type === "focus" ? "session_start" : "break_complete",
@@ -305,7 +314,31 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     }
   };
 
+  const fastForward = () => {
+    if (!isRunning) return;
+
+    // Calculate remaining time in seconds
+    const remainingSeconds = hours * 3600 + minutes * 60 + seconds;
+
+    // Reduce by 30 seconds, minimum 1 second
+    const newRemainingSeconds = Math.max(1, remainingSeconds - 30);
+
+    // Calculate new expiry time
+    const newExpiry = dayjs().add(newRemainingSeconds, "second").toDate();
+    restart(newExpiry, true);
+    activeExpiryRef.current = newExpiry;
+  };
+
   const isPaused = sessions.length > 0 && !isRunning && !isComplete;
+
+  const getExpectedEndTime = () => {
+    if (isActive || isPaused) {
+      // When running or paused, show end time for the current session
+      return dayjs().add(hours, 'hour').add(minutes, 'minute').add(seconds, 'second');
+    }
+    // When idle, show end time for the entire plan if we start now
+    return dayjs().add(totalDuration, 'minute');
+  };
 
   // Show completion screen when all sessions are done
   if (isComplete) {
@@ -422,12 +455,23 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
         >
           {displayTime}
         </Typography>
-        
+
+        {/* Expected End Time */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mt: 1 }}>
+          <AccessTime fontSize="small" sx={{ color: 'text.secondary', fontSize: '0.875rem' }} />
+          <Typography
+            variant="body2"
+            sx={{ color: 'text.secondary' }}
+          >
+            Ends at {getExpectedEndTime().format('h:mm A')}
+          </Typography>
+        </Box>
+
         {/* Session indicator */}
         {sessions.length > 1 && (
           <Typography
             variant="caption"
-            sx={{ color: "text.secondary", mt: 1 }}
+            sx={{ color: "text.secondary", mt: 0.5 }}
           >
             {currentSessionIndex + 1} / {sessions.length}
           </Typography>
@@ -488,6 +532,18 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
                   <SkipNext />
                 </IconButton>
               </Tooltip>
+
+              {import.meta.env.DEV && (
+                <Tooltip title="Fast forward -30s (Test)">
+                  <IconButton
+                    onClick={fastForward}
+                    size="small"
+                    sx={{ color: "warning.main" }}
+                  >
+                    <FastForward />
+                  </IconButton>
+                </Tooltip>
+              )}
             </>
           )}
 

@@ -13,6 +13,7 @@ import {
   RestartAlt,
   Add,
   Remove,
+  AccessTime,
 } from '@mui/icons-material';
 import { useTimer } from 'react-timer-hook';
 import dayjs from 'dayjs';
@@ -102,6 +103,15 @@ export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningS
 
   const isPaused = isActive && !isRunning;
 
+  const getExpectedEndTime = () => {
+    if (isActive || isPaused) {
+      // When running or paused, show end time based on remaining time
+      return dayjs().add(hours, 'hour').add(timerMinutes, 'minute').add(seconds, 'second');
+    }
+    // When idle, show end time if we start now with the selected duration
+    return dayjs().add(minutes, 'minute');
+  };
+
   return (
     <Box
       sx={{
@@ -136,40 +146,56 @@ export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningS
         isBreak={false}
       >
         {!isActive ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <IconButton onClick={() => handleMinutesChange(-1)} size="small">
-              <Remove />
-            </IconButton>
-            <Typography
-              sx={{
-                fontSize: '3rem',
-                fontWeight: 200,
-                fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace',
-                color: 'text.secondary',
-                minWidth: 100,
-                textAlign: 'center',
-              }}
-            >
-              {minutes}m
-            </Typography>
-            <IconButton onClick={() => handleMinutesChange(1)} size="small">
-              <Add />
-            </IconButton>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <IconButton onClick={() => handleMinutesChange(-1)} size="small">
+                <Remove />
+              </IconButton>
+              <Typography
+                sx={{
+                  fontSize: '3rem',
+                  fontWeight: 200,
+                  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace',
+                  color: 'text.secondary',
+                  minWidth: 100,
+                  textAlign: 'center',
+                }}
+              >
+                {minutes}m
+              </Typography>
+              <IconButton onClick={() => handleMinutesChange(1)} size="small">
+                <Add />
+              </IconButton>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <AccessTime fontSize="small" sx={{ color: 'text.secondary', fontSize: '0.75rem' }} />
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                Ends at {getExpectedEndTime().format('h:mm A')}
+              </Typography>
+            </Box>
           </Box>
         ) : (
-          <Typography
-            variant="h1"
-            className={isRunning ? 'neon-text' : ''}
-            sx={{
-              fontSize: '4rem',
-              fontWeight: 200,
-              fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace',
-              color: isRunning ? 'primary.main' : 'text.secondary',
-              transition: 'all 0.3s ease',
-            }}
-          >
-            {formatTime(hours, timerMinutes, seconds)}
-          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Typography
+              variant="h1"
+              className={isRunning ? 'neon-text' : ''}
+              sx={{
+                fontSize: '4rem',
+                fontWeight: 200,
+                fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace',
+                color: isRunning ? 'primary.main' : 'text.secondary',
+                transition: 'all 0.3s ease',
+              }}
+            >
+              {formatTime(hours, timerMinutes, seconds)}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
+              <AccessTime fontSize="small" sx={{ color: 'text.secondary', fontSize: '0.875rem' }} />
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Ends at {getExpectedEndTime().format('h:mm A')}
+              </Typography>
+            </Box>
+          </Box>
         )}
       </CircularTimerRing>
 

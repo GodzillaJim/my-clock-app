@@ -101,13 +101,13 @@ if (process.platform === 'linux') {
       const startButton = await page.locator('button:has-text("Start")').first();
       await startButton.click();
 
-      // Verify session starts
-      await page.waitForSelector('text=Focus Session', { timeout: 10000 });
+      // Verify session starts - look for "FOCUS" text which indicates an active focus session
+      await page.waitForSelector('text=FOCUS', { timeout: 10000 });
       
       // For E2E, we'll just verify it can start properly
       // The detailed state transitions are better tested in unit/integration tests
-      const sessionIndicator = await page.textContent('text=Focus Session');
-      expect(sessionIndicator).toContain('Focus Session');
+      const sessionIndicator = await page.textContent('text=FOCUS');
+      expect(sessionIndicator).toBe('FOCUS');
     }, 30000);
   })
 }
