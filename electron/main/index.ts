@@ -5,6 +5,9 @@ import path from 'node:path'
 import url from 'node:url'
 import os from 'node:os'
 import { update } from './update'
+import { getDatabase, closeDatabase } from './database/connection'
+import { runMigrations, migrateLegacyData } from './database/migrations'
+import { registerDatabaseHandlers } from './database/ipcHandlers'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -42,6 +45,17 @@ if (!app.requestSingleInstanceLock()) {
 
 // Register custom protocol for file loading before app is ready
 app.whenReady().then(() => {
+  // Initialize SQLite database before creating window
+  try {
+    const db = getDatabase()
+    runMigrations(db)
+    migrateLegacyData(db)
+    registerDatabaseHandlers(db)
+    console.log('SQLite database initialized successfully')
+  } catch (err) {
+    console.error('Failed to initialize database:', err)
+  }
+
   const { protocol } = require('electron')
   protocol.registerFileProtocol('app', (request: Electron.ProtocolRequest, callback: (response: Electron.ProtocolResponse) => void) => {
     const url = request.url.substr(6)
@@ -291,6 +305,7 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   isQuitting = true
   globalShortcut.unregisterAll()
+  closeDatabase()
 })
 
 app.on('will-quit', () => {
@@ -344,12 +359,37 @@ ipcMain.handle('update-tray-status', (_, status: string) => {
 })
 
 ipcMain.handle('session-notification', (_, { title, body }: { title: string, body: string }) => {
-  const notification = new Notification({
+  const notificationOptions: Electron.NotificationConstructorOptions = {
     title,
     body,
-    icon: getIconPath('hour_glass.png')
-  });
+    icon: getIconPath('hour_glass.png'),
+    urgency: 'critical',
+  };
+
+  // On Windows, use toastXml with scenario="alarm" to break through Focus Assist / fullscreen
+  if (process.platform === 'win32') {
+    const escapeXml = (s: string) => s.replace(/[&<>"']/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c] || c));
+    notificationOptions.toastXml = `
+      <toast scenario="alarm" activationType="protocol">
+        <visual>
+          <binding template="ToastGeneric">
+            <text>${escapeXml(title)}</text>
+            <text>${escapeXml(body)}</text>
+          </binding>
+        </visual>
+        <audio src="ms-winsoundevent:Notification.Default"/>
+      </toast>`;
+  }
+
+  const notification = new Notification(notificationOptions);
   notification.show();
+
+  // Flash taskbar as additional visual cue when window is not focused
+  if (win && !win.isFocused()) {
+    win.flashFrame(true);
+    setTimeout(() => { if (win) win.flashFrame(false); }, 5000);
+  }
 });
 
 ipcMain.handle('get-user-data-path', () => {

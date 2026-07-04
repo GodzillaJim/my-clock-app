@@ -71,17 +71,26 @@ export const StatsPanel: React.FC = () => {
 
   const loadStats = async () => {
     try {
-      const history = await focusStorage.getTodayHistory();
+      const [history, lifetime] = await Promise.all([
+        focusStorage.getTodayHistory(),
+        focusStorage.getLifetimeStats(),
+      ]);
+
       if (history) {
         const totalMinutes = Math.round(history.totalFocusTime / 60);
         const hours = Math.floor(totalMinutes / 60);
         const mins = totalMinutes % 60;
 
+        const weeklyAvgMinutes = Math.round((lifetime.last7Days?.averageDailyFocusTime || 0) / 60);
+        const wHours = Math.floor(weeklyAvgMinutes / 60);
+        const wMins = weeklyAvgMinutes % 60;
+        const weeklyAvg = wHours > 0 ? `${wHours}h ${wMins}m` : `${wMins}m`;
+
         setStats({
           todayFocus: `${hours}h ${mins}m`,
           streak: history.longestStreak || 0,
           completed: history.completedSessions || 0,
-          weeklyAvg: '2h', // Placeholder - would need weekly data
+          weeklyAvg,
         });
       }
     } catch (error) {

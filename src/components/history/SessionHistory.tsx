@@ -19,7 +19,10 @@ import {
   Select,
   MenuItem,
   FormControl,
+  Tabs,
+  Tab,
 } from '@mui/material';
+import { StatsOverview } from './StatsOverview';
 import {
   PlayCircle,
   PauseCircle,
@@ -40,28 +43,43 @@ import {
   SessionType,
   CompletionStatus,
   DailyHistory,
+  SessionPlan,
+  SessionPlanSegment,
   formatTime,
   formatDurationFromSeconds,
   AppSettings
 } from '@/features/timer/types';
 import { focusStorage } from '@/services/focusStorage';
 import dayjs from 'dayjs';
+import { LinearProgress } from '@mui/material';
 
 interface SessionHistoryProps {
   open: boolean;
   onClose: () => void;
   settings: AppSettings;
+  onResumePlan?: (plan: SessionPlan) => void;
 }
+
+/** A plan can be resumed if it stopped short and still has segments left to run. */
+const isPlanResumable = (plan: SessionPlan): boolean => {
+  if (plan.status === 'completed') return false;
+  return plan.segments.some(
+    s => s.status === 'pending' || s.status === 'in_progress' || s.status === 'interrupted'
+  );
+};
 
 export const SessionHistory: React.FC<SessionHistoryProps> = ({
   open,
   onClose,
-  settings
+  settings,
+  onResumePlan
 }) => {
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [history, setHistory] = useState<DailyHistory | null>(null);
+  const [plans, setPlans] = useState<SessionPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState(0);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
@@ -101,8 +119,12 @@ export const SessionHistory: React.FC<SessionHistoryProps> = ({
   const loadHistoryForDate = async (date: string) => {
     try {
       setLoading(true);
-      const historyData = await focusStorage.getHistoryByDate(date);
+      const [historyData, plansData] = await Promise.all([
+        focusStorage.getHistoryByDate(date),
+        focusStorage.getPlansForDate(date),
+      ]);
       setHistory(historyData);
+      setPlans(plansData);
     } catch (error) {
       console.error('Failed to load history:', error);
     } finally {
@@ -286,44 +308,197 @@ export const SessionHistory: React.FC<SessionHistoryProps> = ({
     const breakMinutes = Math.round(history.totalBreakTime / 60);
 
     return (
-      <Box sx={{
-        display: 'flex',
-        gap: 3,
-        mb: 3,
-        flexWrap: 'wrap',
-      }}>
-        <Box sx={{ textAlign: 'center', flex: 1, minWidth: 100 }}>
-          <Typography variant="h4" color="primary.main" fontWeight={600}>
-            {Math.floor(focusMinutes / 60)}h {focusMinutes % 60}m
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Focus Time
-          </Typography>
+      <Box sx={{ mb: 3 }}>
+        {/* Day start/end times */}
+        {(history.dayStartTime || history.dayEndTime) && (
+          <Box sx={{ display: 'flex', gap: 2, mb: 2, justifyContent: 'center' }}>
+            {history.dayStartTime && (
+              <Typography variant="body2" color="text.secondary">
+                Started: {formatTime(new Date(history.dayStartTime), settings.timeFormat)}
+              </Typography>
+            )}
+            {history.dayStartTime && history.dayEndTime && (
+              <Typography variant="body2" color="text.secondary">|</Typography>
+            )}
+            {history.dayEndTime && (
+              <Typography variant="body2" color="text.secondary">
+                Ended: {formatTime(new Date(history.dayEndTime), settings.timeFormat)}
+              </Typography>
+            )}
+          </Box>
+        )}
+
+        <Box sx={{
+          display: 'flex',
+          gap: 3,
+          flexWrap: 'wrap',
+        }}>
+          <Box sx={{ textAlign: 'center', flex: 1, minWidth: 100 }}>
+            <Typography variant="h4" color="primary.main" fontWeight={600}>
+              {Math.floor(focusMinutes / 60)}h {focusMinutes % 60}m
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Focus Time
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'center', flex: 1, minWidth: 100 }}>
+            <Typography variant="h4" color="secondary.main" fontWeight={600}>
+              {breakMinutes}m
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Break Time
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'center', flex: 1, minWidth: 100 }}>
+            <Typography variant="h4" color="success.main" fontWeight={600}>
+              {history.completedSessions}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Completed
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'center', flex: 1, minWidth: 100 }}>
+            <Typography variant="h4" color="text.secondary" fontWeight={600}>
+              {history.sessions?.length || 0}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Total Sessions
+            </Typography>
+          </Box>
         </Box>
-        <Box sx={{ textAlign: 'center', flex: 1, minWidth: 100 }}>
-          <Typography variant="h4" color="secondary.main" fontWeight={600}>
-            {breakMinutes}m
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Break Time
-          </Typography>
-        </Box>
-        <Box sx={{ textAlign: 'center', flex: 1, minWidth: 100 }}>
-          <Typography variant="h4" color="success.main" fontWeight={600}>
-            {history.completedSessions}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Completed
-          </Typography>
-        </Box>
-        <Box sx={{ textAlign: 'center', flex: 1, minWidth: 100 }}>
-          <Typography variant="h4" color="text.secondary" fontWeight={600}>
-            {history.sessions?.length || 0}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Total Sessions
-          </Typography>
-        </Box>
+      </Box>
+    );
+  };
+
+  const getSegmentStatusColor = (status: string): 'success' | 'error' | 'warning' | 'default' | 'info' => {
+    switch (status) {
+      case 'completed': return 'success';
+      case 'interrupted': return 'error';
+      case 'skipped': return 'warning';
+      case 'in_progress': return 'info';
+      default: return 'default';
+    }
+  };
+
+  const renderPlanTimeline = () => {
+    if (plans.length === 0) return null;
+
+    return (
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          Session Plans
+          <Chip label={plans.length} size="small" variant="outlined" />
+        </Typography>
+
+        {plans.map((plan, planIdx) => {
+          const completedSegs = plan.segments.filter(s => s.status === 'completed').length;
+          const progress = plan.segments.length > 0
+            ? (completedSegs / plan.segments.length) * 100
+            : 0;
+          const startedAt = new Date(plan.createdAt);
+          const endedAt = plan.actualEndTime ? new Date(plan.actualEndTime) : null;
+
+          return (
+            <Box
+              key={plan.id}
+              sx={{
+                mb: 2,
+                p: 2,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+              }}
+            >
+              {/* Plan header */}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="subtitle2">
+                    Plan {planIdx + 1}
+                  </Typography>
+                  <Chip
+                    label={plan.status}
+                    size="small"
+                    color={
+                      plan.status === 'completed' ? 'success' :
+                      plan.status === 'interrupted' ? 'error' :
+                      plan.status === 'abandoned' ? 'warning' : 'info'
+                    }
+                    variant="filled"
+                  />
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {formatTime(startedAt, settings.timeFormat)}
+                    {endedAt && <> — {formatTime(endedAt, settings.timeFormat)}</>}
+                  </Typography>
+                  {onResumePlan && isPlanResumable(plan) && (
+                    <Tooltip title="Resume the remaining segments of this session">
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                        startIcon={<PlayCircle />}
+                        onClick={() => onResumePlan(plan)}
+                        sx={{ py: 0.25 }}
+                      >
+                        Resume
+                      </Button>
+                    </Tooltip>
+                  )}
+                </Box>
+              </Box>
+
+              {/* Progress bar */}
+              <Box sx={{ mb: 1 }}>
+                <LinearProgress
+                  variant="determinate"
+                  value={progress}
+                  sx={{ height: 4, borderRadius: 2 }}
+                />
+                <Typography variant="caption" color="text.secondary">
+                  {completedSegs}/{plan.segments.length} segments
+                  {' | '}
+                  {formatDurationFromSeconds(plan.totalElapsed)} elapsed
+                  {' of '}
+                  {formatDurationFromSeconds(plan.totalPlannedDuration)} planned
+                </Typography>
+              </Box>
+
+              {/* Segment chips */}
+              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                {plan.segments.map((seg) => (
+                  <Tooltip
+                    key={seg.id}
+                    title={
+                      <Box>
+                        <div>{seg.type === SessionType.FOCUS ? 'Focus' : 'Break'} — {seg.status}</div>
+                        <div>Planned: {Math.round(seg.plannedDuration / 60)}m</div>
+                        {seg.actualDuration !== null && (
+                          <div>Actual: {Math.round(seg.actualDuration / 60)}m</div>
+                        )}
+                        {seg.actualStartTime && (
+                          <div>Started: {formatTime(new Date(seg.actualStartTime), settings.timeFormat)}</div>
+                        )}
+                        {seg.actualEndTime && (
+                          <div>Ended: {formatTime(new Date(seg.actualEndTime), settings.timeFormat)}</div>
+                        )}
+                      </Box>
+                    }
+                  >
+                    <Chip
+                      label={`${seg.type === SessionType.FOCUS ? 'F' : 'B'} ${Math.round(seg.plannedDuration / 60)}m`}
+                      size="small"
+                      color={getSegmentStatusColor(seg.status)}
+                      variant={seg.status === 'pending' ? 'outlined' : 'filled'}
+                      sx={{ minWidth: 50 }}
+                    />
+                  </Tooltip>
+                ))}
+              </Box>
+            </Box>
+          );
+        })}
       </Box>
     );
   };
@@ -451,34 +626,49 @@ export const SessionHistory: React.FC<SessionHistoryProps> = ({
         fullWidth
         PaperProps={{ sx: { height: '80vh' } }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 0 }}>
           <Timeline />
           Session History
         </DialogTitle>
 
+        <Tabs
+          value={activeTab}
+          onChange={(_, v) => setActiveTab(v)}
+          sx={{ px: 3, borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab label="History" />
+          <Tab label="Stats" />
+        </Tabs>
+
         <DialogContent>
-          {loading && availableDates.length === 0 ? (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography>Loading history...</Typography>
-            </Box>
-          ) : (
+          {activeTab === 0 && (
             <>
-              {renderDateNavigation()}
-              <Divider sx={{ mb: 3 }} />
-              {renderDaySummary()}
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                Sessions
-                {history?.sessions && (
-                  <Chip
-                    label={history.sessions.length}
-                    size="small"
-                    variant="outlined"
-                  />
-                )}
-              </Typography>
-              {renderSessionTimeline()}
+              {loading && availableDates.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography>Loading history...</Typography>
+                </Box>
+              ) : (
+                <>
+                  {renderDateNavigation()}
+                  <Divider sx={{ mb: 3 }} />
+                  {renderDaySummary()}
+                  {renderPlanTimeline()}
+                  <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    Sessions
+                    {history?.sessions && (
+                      <Chip
+                        label={history.sessions.length}
+                        size="small"
+                        variant="outlined"
+                      />
+                    )}
+                  </Typography>
+                  {renderSessionTimeline()}
+                </>
+              )}
             </>
           )}
+          {activeTab === 1 && <StatsOverview />}
         </DialogContent>
 
         <DialogActions>

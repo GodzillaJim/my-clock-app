@@ -58,7 +58,62 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Remove listeners
   removeAllListeners: (channel: string) => {
     ipcRenderer.removeAllListeners(channel)
-  }
+  },
+
+  // SQLite database API
+  db: {
+    sessions: {
+      save: (session: any) => ipcRenderer.invoke('db:sessions:save', session),
+      getByDate: (date: string) => ipcRenderer.invoke('db:sessions:getByDate', date),
+      getHistory: (limit: number) => ipcRenderer.invoke('db:sessions:getHistory', limit),
+      delete: (id: string) => ipcRenderer.invoke('db:sessions:delete', id),
+      deleteByDate: (date: string) => ipcRenderer.invoke('db:sessions:deleteByDate', date),
+      deleteAll: () => ipcRenderer.invoke('db:sessions:deleteAll'),
+      saveAndUpdateHistory: (session: any, historyData: any) => ipcRenderer.invoke('db:sessions:saveAndUpdateHistory', session, historyData),
+    },
+    plans: {
+      save: (plan: any) => ipcRenderer.invoke('db:plans:save', plan),
+      get: (id: string) => ipcRenderer.invoke('db:plans:get', id),
+      getByDate: (date: string) => ipcRenderer.invoke('db:plans:getByDate', date),
+      getByDateRange: (start: string, end: string) => ipcRenderer.invoke('db:plans:getByDateRange', start, end),
+      update: (id: string, updates: any) => ipcRenderer.invoke('db:plans:update', id, updates),
+      updateSegment: (segmentId: string, updates: any) => ipcRenderer.invoke('db:plans:updateSegment', segmentId, updates),
+    },
+    history: {
+      save: (history: any) => ipcRenderer.invoke('db:history:save', history),
+      getByDate: (date: string) => ipcRenderer.invoke('db:history:getByDate', date),
+      getByRange: (start: string, end: string) => ipcRenderer.invoke('db:history:getByRange', start, end),
+      getAllDates: () => ipcRenderer.invoke('db:history:getAllDates'),
+      deleteByDate: (date: string) => ipcRenderer.invoke('db:history:deleteByDate', date),
+      deleteAll: () => ipcRenderer.invoke('db:history:deleteAll'),
+      clearToday: (date: string) => ipcRenderer.invoke('db:history:clearToday', date),
+      resetAll: () => ipcRenderer.invoke('db:history:resetAll'),
+    },
+    challenges: {
+      getAll: () => ipcRenderer.invoke('db:challenges:getAll'),
+      getById: (id: string) => ipcRenderer.invoke('db:challenges:getById', id),
+      save: (challenge: any) => ipcRenderer.invoke('db:challenges:save', challenge),
+      delete: (id: string) => ipcRenderer.invoke('db:challenges:delete', id),
+      markDay: (challengeId: string, date: string, status: string, note?: string) =>
+        ipcRenderer.invoke('db:challenges:markDay', challengeId, date, status, note),
+    },
+    feedback: {
+      getAll: (filters?: any) => ipcRenderer.invoke('db:feedback:getAll', filters),
+      save: (item: any) => ipcRenderer.invoke('db:feedback:save', item),
+      update: (id: string, updates: any) => ipcRenderer.invoke('db:feedback:update', id, updates),
+      delete: (id: string) => ipcRenderer.invoke('db:feedback:delete', id),
+      getStats: () => ipcRenderer.invoke('db:feedback:getStats'),
+    },
+    kv: {
+      get: (key: string) => ipcRenderer.invoke('db:kv:get', key),
+      set: (key: string, value: any) => ipcRenderer.invoke('db:kv:set', key, value),
+    },
+    snapshot: {
+      save: (plan: any) => ipcRenderer.invoke('db:snapshot:save', plan),
+      load: () => ipcRenderer.invoke('db:snapshot:load'),
+      clear: () => ipcRenderer.invoke('db:snapshot:clear'),
+    },
+  },
 })
 
 // --------- Preload scripts loading ---------

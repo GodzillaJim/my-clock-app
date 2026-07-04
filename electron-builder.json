@@ -4,6 +4,9 @@
   "productName": "Focus Sessions",
   "copyright": "Copyright © 2024 Focus Sessions App",
   "asar": true,
+  "asarUnpack": [
+    "node_modules/better-sqlite3/**"
+  ],
   "directories": {
     "output": "release/${version}",
     "buildResources": "build"

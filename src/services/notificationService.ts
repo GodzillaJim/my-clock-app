@@ -30,8 +30,10 @@ class NotificationService {
       promises.push(this.showSystemNotification(notification));
     }
 
-    if (this.settings.enableAudioNotifications && notification.sound) {
-      promises.push(this.playSound(notification.sound));
+    if (this.settings.enableAudioNotifications) {
+      // Use explicit sound if provided, otherwise auto-select based on notification type
+      const soundName = notification.sound || this.getSoundForType(notification.type);
+      promises.push(this.playSound(soundName));
     }
 
     if (this.settings.enableVisualNotifications) {
@@ -39,6 +41,14 @@ class NotificationService {
     }
 
     await Promise.all(promises);
+  }
+
+  private getSoundForType(type: SessionNotification['type']): string {
+    switch (type) {
+      case 'session_complete': return this.settings?.sessionCompleteSound || 'complete';
+      case 'break_complete': return this.settings?.breakCompleteSound || 'break';
+      default: return 'default';
+    }
   }
 
   private async showSystemNotification(notification: SessionNotification): Promise<void> {
@@ -146,8 +156,13 @@ class NotificationService {
     if (!this.audioContext || !this.settings) return;
 
     try {
+      // Resume AudioContext if it was suspended (happens when window loses focus)
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+      }
+
       let audioBuffer = this.sounds.get(soundName);
-      
+
       if (!audioBuffer) {
         audioBuffer = await this.loadSound(soundName);
         this.sounds.set(soundName, audioBuffer);
@@ -155,13 +170,13 @@ class NotificationService {
 
       const source = this.audioContext.createBufferSource();
       const gainNode = this.audioContext.createGain();
-      
+
       gainNode.gain.value = this.settings.notificationVolume / 100;
-      
+
       source.buffer = audioBuffer;
       source.connect(gainNode);
       gainNode.connect(this.audioContext.destination);
-      
+
       source.start(0);
     } catch (error) {
       console.error('Failed to play sound:', error);

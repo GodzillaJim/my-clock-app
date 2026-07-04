@@ -45,6 +45,13 @@ export interface DailyHistory {
   longestStreak: number; // consecutive completed sessions
   createdAt: Date;
   updatedAt: Date;
+  // Enhanced record-keeping fields
+  dayStartTime: number | null;    // timestamp of first session start
+  dayEndTime: number | null;      // timestamp of last session end
+  sessionPlanIds: string[];       // IDs of SessionPlans that ran this day
+  totalPlannedTime: number;       // seconds, total planned across all plans
+  totalActualTime: number;        // seconds, total actual across all plans
+  completionRate: number;         // 0-1, completed segments / total segments
 }
 
 // Application settings
@@ -333,6 +340,77 @@ export const createChallengeDays = (startDate: string, endDate: string): Challen
 
   return days;
 };
+
+// ============================================
+// Session Plan Types (Comprehensive Record Keeping)
+// ============================================
+
+export type SessionPlanStatus = 'active' | 'completed' | 'interrupted' | 'abandoned';
+export type SegmentStatus = 'pending' | 'in_progress' | 'completed' | 'skipped' | 'interrupted';
+
+export interface SessionPlanSegment {
+  id: string;
+  index: number;
+  type: SessionType;
+  plannedDuration: number;       // seconds
+  actualDuration: number | null; // seconds, filled on completion
+  expectedStartTime: number;     // timestamp
+  expectedEndTime: number;       // timestamp
+  actualStartTime: number | null;
+  actualEndTime: number | null;
+  status: SegmentStatus;
+  pausedTime: number;            // total ms spent paused
+  elapsedAtLastUpdate: number;   // seconds elapsed (for crash recovery)
+}
+
+export interface SessionPlan {
+  id: string;
+  createdAt: number;             // timestamp
+  status: SessionPlanStatus;
+  segments: SessionPlanSegment[];
+  currentSegmentIndex: number;   // -1 if not started
+  settings: {
+    focusDuration: number;       // minutes
+    shortBreakDuration: number;  // minutes
+  };
+  expectedEndTime: number;       // timestamp
+  actualEndTime: number | null;
+  interruptedAt: number | null;
+  totalPlannedDuration: number;  // seconds
+  totalElapsed: number;          // seconds
+  lastUpdated: number;           // timestamp
+}
+
+export interface PeriodSummary {
+  totalFocusTime: number;        // seconds
+  totalSessions: number;
+  averageDailyFocusTime: number; // seconds
+  completionRate: number;        // 0-1
+  daysActive: number;
+}
+
+export interface LifetimeStats {
+  lastUpdated: number;
+  totalDaysActive: number;
+  totalSessions: number;
+  totalFocusTime: number;        // seconds
+  totalBreakTime: number;        // seconds
+
+  averageDayStartTime: string;   // "HH:mm"
+  averageDayEndTime: string;     // "HH:mm"
+  averageDailyFocusTime: number; // seconds
+  averageDailySessionCount: number;
+  averageSessionDuration: number; // seconds
+
+  currentDayStreak: number;
+  longestDayStreak: number;
+
+  overallCompletionRate: number; // 0-1
+  totalInterruptedSessions: number;
+
+  last7Days: PeriodSummary;
+  last30Days: PeriodSummary;
+}
 
 // Export types for external use and backward compatibility
 export type {

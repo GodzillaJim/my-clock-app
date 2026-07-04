@@ -10,9 +10,11 @@ import { SessionHistory } from './components/history/SessionHistory';
 import { FocusSettings } from './components/settings/FocusSettings';
 import { FeedbackForm } from './components/feedback/FeedbackForm';
 import { FeedbackManager } from './components/feedback/FeedbackManager';
-import { AppSettings, DEFAULT_SETTINGS } from './features/timer/types';
+import { AppSettings, DEFAULT_SETTINGS, SessionPlan } from './features/timer/types';
 import { focusStorage } from './services/focusStorage';
 import { notificationService } from './services/notificationService';
+import { useRecovery } from './features/timer/hooks/useRecovery';
+import { RecoveryBanner } from './components/timer/RecoveryBanner';
 import "./App.css";
 
 const App: React.FC = () => {
@@ -23,6 +25,23 @@ const App: React.FC = () => {
   const [feedbackManagerOpen, setFeedbackManagerOpen] = useState(false);
   const [currentTool, setCurrentTool] = useState(0);
   const [theme, setTheme] = useState(createTheme());
+  const [resumePlan, setResumePlan] = useState<SessionPlan | null>(null);
+  const { recoveryInfo, dismiss: dismissRecovery, resume: resumeRecovery } = useRecovery();
+
+  const handleResume = () => {
+    const plan = resumeRecovery();
+    if (plan) {
+      setResumePlan(plan);
+      setCurrentTool(0); // Switch to focus timer
+    }
+  };
+
+  // Resume an interrupted plan chosen from the History view.
+  const handleResumePlan = (plan: SessionPlan) => {
+    setResumePlan(plan);
+    setCurrentTool(0); // Switch to focus timer
+    setHistoryOpen(false);
+  };
 
   useEffect(() => {
     initializeApp();
@@ -40,6 +59,9 @@ const App: React.FC = () => {
   const initializeApp = async () => {
     try {
       await focusStorage.initialize();
+      // Finalize any plans left `active` by an abrupt shutdown so they don't
+      // linger as ghosts in history and remain resumable.
+      await focusStorage.reconcileOrphanedPlans();
       const appState = await focusStorage.getAppState();
       setSettings(appState.settings);
       notificationService.setSettings(appState.settings);
@@ -495,12 +517,19 @@ const App: React.FC = () => {
           backgroundColor: 'background.default',
         }}
       >
+        {/* Recovery banner for interrupted sessions */}
+        {recoveryInfo && (
+          <RecoveryBanner recovery={recoveryInfo} onDismiss={dismissRecovery} onResume={handleResume} />
+        )}
+
         {/* Render layout based on settings */}
         {settings.layout === 'commandCenter' && (
           <CommandCenterLayout
             settings={settings}
             onOpenSettings={() => setSettingsOpen(true)}
             onOpenHistory={() => setHistoryOpen(true)}
+            resumePlan={resumePlan}
+            onResumeConsumed={() => setResumePlan(null)}
           />
         )}
 
@@ -512,6 +541,8 @@ const App: React.FC = () => {
             onOpenFeedback={() => setFeedbackOpen(true)}
             initialTool={currentTool}
             onToolChange={setCurrentTool}
+            resumePlan={resumePlan}
+            onResumeConsumed={() => setResumePlan(null)}
           />
         )}
 
@@ -531,6 +562,8 @@ const App: React.FC = () => {
                 settings={settings}
                 onOpenSettings={() => setSettingsOpen(true)}
                 onOpenHistory={() => setHistoryOpen(true)}
+                resumePlan={resumePlan}
+                onResumeConsumed={() => setResumePlan(null)}
               />
             )}
             {currentTool === 1 && <ZenCountdownTimer />}
@@ -542,6 +575,7 @@ const App: React.FC = () => {
           open={historyOpen}
           onClose={() => setHistoryOpen(false)}
           settings={settings}
+          onResumePlan={handleResumePlan}
         />
 
         <FocusSettings

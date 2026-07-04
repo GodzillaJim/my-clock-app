@@ -21,7 +21,7 @@ import {
   AccessTime,
 } from '@mui/icons-material';
 import { CircularTimerRing } from '../timer/CircularTimerRing';
-import { AppSettings, SessionRecord, SessionType, CompletionStatus } from '@/features/timer/types';
+import { AppSettings, SessionRecord, SessionType, CompletionStatus, SessionPlan } from '@/features/timer/types';
 import { focusStorage } from '@/services/focusStorage';
 import { useTimer } from 'react-timer-hook';
 import dayjs from 'dayjs';
@@ -69,12 +69,16 @@ interface CommandCenterLayoutProps {
   settings: AppSettings;
   onOpenSettings: () => void;
   onOpenHistory: () => void;
+  resumePlan?: SessionPlan | null;
+  onResumeConsumed?: () => void;
 }
 
 export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
   settings,
   onOpenSettings,
   onOpenHistory,
+  resumePlan,
+  onResumeConsumed,
 }) => {
   const [totalDuration, setTotalDuration] = useState(settings.focusDuration);
   const [sessions, setSessions] = useState<SimpleSession[]>([]);
@@ -240,6 +244,68 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
     const newExpiryTimestamp = dayjs().add(firstSessionDuration, 'second').toDate();
     restart(newExpiryTimestamp, true); // Auto-start
   };
+
+  // Resume an interrupted plan: rebuild the timer from its remaining segments,
+  // continuing the first (partially-elapsed) segment with the time that was left.
+  const resumeFromPlan = (oldPlan: SessionPlan) => {
+    const remaining = oldPlan.segments.filter(
+      s => s.status === 'pending' || s.status === 'in_progress' || s.status === 'interrupted'
+    );
+    if (remaining.length === 0) return;
+
+    const now = new Date();
+    let currentTime = now.getTime();
+    const newSessions: SimpleSession[] = remaining.map((seg, i) => {
+      const elapsedSoFar = Math.max(seg.elapsedAtLastUpdate || 0, seg.actualDuration || 0);
+      const isPartial = i === 0 && (seg.status === 'in_progress' || seg.status === 'interrupted');
+      const dur = isPartial ? Math.max(1, seg.plannedDuration - elapsedSoFar) : seg.plannedDuration;
+      const startTime = new Date(currentTime);
+      const endTime = new Date(currentTime + dur * 1000);
+      currentTime = endTime.getTime();
+      return {
+        type: seg.type === SessionType.FOCUS ? 'focus' as const : 'break' as const,
+        duration: dur,
+        startTime,
+        endTime,
+      };
+    });
+
+    setSessions(newSessions);
+    setCurrentSessionIndex(0);
+    setSessionStartTime(now);
+    setIsComplete(false);
+    const firstExpiry = dayjs().add(newSessions[0].duration, 'second').toDate();
+    restart(firstExpiry, true); // Auto-start
+
+    // Finalize the old plan so it is no longer flagged as resumable. Its
+    // remaining segments are carried into this run; preserve any elapsed time.
+    const nowTs = now.getTime();
+    const finalizedSegments = oldPlan.segments.map(s => {
+      if (s.status === 'pending' || s.status === 'in_progress' || s.status === 'interrupted') {
+        const elapsed = Math.max(s.elapsedAtLastUpdate || 0, s.actualDuration || 0);
+        return { ...s, status: 'skipped', actualEndTime: s.actualEndTime ?? nowTs, actualDuration: elapsed };
+      }
+      return s;
+    });
+    focusStorage.saveSessionPlan({
+      ...oldPlan,
+      segments: finalizedSegments,
+      status: 'interrupted',
+      interruptedAt: nowTs,
+      actualEndTime: nowTs,
+      totalElapsed: finalizedSegments.reduce((sum, s) => sum + (s.actualDuration || 0), 0),
+      lastUpdated: nowTs,
+    } as SessionPlan).catch(err => console.error('Failed to finalize resumed plan:', err));
+  };
+
+  // Auto-trigger resume when a resumePlan prop is provided.
+  useEffect(() => {
+    if (resumePlan && sessions.length === 0 && !isComplete) {
+      resumeFromPlan(resumePlan);
+      onResumeConsumed?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumePlan]);
 
   const pauseSession = () => {
     pause();
