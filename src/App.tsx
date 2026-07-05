@@ -6,7 +6,7 @@ import { CommandCenterLayout } from './components/layout/CommandCenterLayout';
 import { ZenFocusTimer } from './components/timer/ZenFocusTimer';
 import { ZenCountdownTimer } from './components/timer/ZenCountdownTimer';
 import { ZenStopwatch } from './components/timer/ZenStopwatch';
-import { SessionHistory } from './components/history/SessionHistory';
+import { HistoryView } from './components/history/HistoryView';
 import { FocusSettings } from './components/settings/FocusSettings';
 import { FeedbackForm } from './components/feedback/FeedbackForm';
 import { FeedbackManager } from './components/feedback/FeedbackManager';
@@ -571,12 +571,13 @@ const App: React.FC = () => {
           </Box>
         )}
 
-        <SessionHistory
-          open={historyOpen}
-          onClose={() => setHistoryOpen(false)}
-          settings={settings}
-          onResumePlan={handleResumePlan}
-        />
+        {historyOpen && (
+          <HistoryView
+            settings={settings}
+            onClose={() => setHistoryOpen(false)}
+            onResumePlan={handleResumePlan}
+          />
+        )}
 
         <FocusSettings
           open={settingsOpen}
