@@ -1,11 +1,11 @@
+import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import {
   type ElectronApplication,
   type Page,
-  type JSHandle,
   _electron as electron,
 } from 'playwright'
-import type { BrowserWindow } from 'electron'
 import {
   beforeAll,
   afterAll,
@@ -15,50 +15,42 @@ import {
 } from 'vitest'
 
 const root = path.join(__dirname, '..')
+const screenshotDir = path.join(root, 'test', 'screenshots')
 let electronApp: ElectronApplication
 let page: Page
+let userDataDir: string
 
 if (process.platform === 'linux') {
   // pass ubuntu
   test(() => expect(true).true)
 } else {
   beforeAll(async () => {
-    const mainEntry = path.join(root, 'dist-electron', 'main', 'index.js');
-    
-    console.log(`[E2E] Launching Electron with entry: ${mainEntry}`);
+    const mainEntry = path.join(root, 'dist-electron', 'main', 'index.js')
+
+    // Run against a throwaway profile so tests never touch the real database
+    // and don't collide with the single-instance lock of a running app.
+    userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'focus-e2e-'))
 
     electronApp = await electron.launch({
       args: [mainEntry, '--no-sandbox'],
       cwd: root,
-      env: { ...process.env, NODE_ENV: 'test' }, // Use 'test' env
-    });
+      env: { ...process.env, NODE_ENV: 'test', FOCUS_USER_DATA_DIR: userDataDir },
+    })
 
-    // Add a delay to ensure the app has time to initialize
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    page = await electronApp.firstWindow();
-    
-    // Add a check to ensure page is valid
-    if (!page) {
-      throw new Error("Playwright failed to get the first window. The app may have crashed on startup.");
-    }
-
-    await page.waitForLoadState('domcontentloaded');
-
-    const mainWin: JSHandle<BrowserWindow> = await electronApp.browserWindow(page);
-    await mainWin.evaluate(async (win) => {
-      win.webContents.openDevTools();
-      win.webContents.executeJavaScript('console.log("Execute JavaScript with e2e testing.")');
-    });
-  }, 60000); // Increased timeout for slower CI environments
+    page = await electronApp.firstWindow()
+    await page.waitForLoadState('domcontentloaded')
+  }, 60000)
 
   afterAll(async () => {
     if (page) {
-      await page.screenshot({ path: 'test/screenshots/e2e.png' })
-      await page.close()
+      fs.mkdirSync(screenshotDir, { recursive: true })
+      await page.screenshot({ path: path.join(screenshotDir, 'e2e.png') }).catch(() => {})
     }
     if (electronApp) {
       await electronApp.close()
+    }
+    if (userDataDir) {
+      fs.rmSync(userDataDir, { recursive: true, force: true })
     }
   })
 
@@ -68,46 +60,27 @@ if (process.platform === 'linux') {
       expect(title).eq('Focus Sessions - Ready to Focus')
     })
 
-    test('should load focus timer interface', async () => {
-      // Wait for React app to load
-      await page.waitForSelector('#root', { timeout: 15000 })
-      
-      // Debug: Log the page content
-      const content = await page.content()
-      console.log('Page HTML length:', content.length)
-      
-      // Check if the root div has content
-      const rootExists = await page.$('#root') !== null
-      expect(rootExists).toBe(true)
+    test('uses an isolated user-data directory', async () => {
+      const userData = await electronApp.evaluate(({ app }) => app.getPath('userData'))
+      expect(path.resolve(userData)).toBe(path.resolve(userDataDir))
     })
 
-    test('should have control buttons', async () => {
-      // Wait for React to render
-      await page.waitForTimeout(3000)
-      
-      // Debug: Take a screenshot and log HTML
-      await page.screenshot({ path: 'test/debug.png' })
-      const bodyHTML = await page.$eval('body', el => el.innerHTML)
-      console.log('Body content preview:', bodyHTML.substring(0, 500))
-      
-      // Look for any elements in the body
-      const allElements = await page.$$('*')
-      expect(allElements.length).toBeGreaterThan(5)
+    test('renders the idle focus timer', async () => {
+      await page.getByText('READY', { exact: true }).waitFor({ timeout: 15000 })
+
+      const startButton = page.getByRole('button', { name: /^Start \d+m Focus$/ }).first()
+      await startButton.waitFor({ state: 'visible', timeout: 15000 })
+      expect(await startButton.isEnabled()).toBe(true)
     })
 
-    test('should complete a full session cycle without getting stuck', async () => {
-      // Simplified test - just verify the timer can start and doesn't get stuck
-      // Look for start button with more flexible selector
-      const startButton = await page.locator('button:has-text("Start")').first();
-      await startButton.click();
+    test('starts a focus session and stops it again', async () => {
+      await page.getByRole('button', { name: /^Start \d+m Focus$/ }).first().click()
 
-      // Verify session starts - look for "FOCUS" text which indicates an active focus session
-      await page.waitForSelector('text=FOCUS', { timeout: 10000 });
-      
-      // For E2E, we'll just verify it can start properly
-      // The detailed state transitions are better tested in unit/integration tests
-      const sessionIndicator = await page.textContent('text=FOCUS');
-      expect(sessionIndicator).toBe('FOCUS');
-    }, 30000);
+      await page.getByText('FOCUS', { exact: true }).waitFor({ timeout: 10000 })
+
+      // Stop so the run doesn't leave an active plan behind
+      await page.getByRole('button', { name: 'Stop session' }).first().click()
+      await page.getByText('READY', { exact: true }).waitFor({ timeout: 10000 })
+    }, 30000)
   })
 }
