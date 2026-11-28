@@ -1,3 +1,7 @@
+import { createLogger } from '@/services/logger';
+
+const log = createLogger('storage');
+
 interface StorageService<T> {
   load: () => Promise<T | null>;
   save: (data: T) => Promise<void>;
@@ -14,7 +18,7 @@ export const createStorageService = <T>(key: string): StorageService<T> => {
           const data = localStorage.getItem(key);
           return data ? (JSON.parse(data) as T) : null;
         } catch (error) {
-          console.error('LocalStorage load failed:', error);
+          log.error('LocalStorage load failed:', error);
           return null;
         }
       }
@@ -24,7 +28,7 @@ export const createStorageService = <T>(key: string): StorageService<T> => {
         const data = await window.electronAPI!.storageRead(filePath);
         return data ? (JSON.parse(data) as T) : null;
       } catch (error) {
-        console.error('File storage load failed:', error);
+        log.error('File storage load failed:', error);
         return null;
       }
     },
@@ -34,7 +38,7 @@ export const createStorageService = <T>(key: string): StorageService<T> => {
         try {
           localStorage.setItem(key, JSON.stringify(data));
         } catch (error) {
-          console.error('LocalStorage save failed:', error);
+          log.error('LocalStorage save failed:', error);
         }
         return;
       }
@@ -43,7 +47,7 @@ export const createStorageService = <T>(key: string): StorageService<T> => {
         const filePath = await window.electronAPI!.getStoragePath(key);
         await window.electronAPI!.storageWrite(filePath, JSON.stringify(data, null, 2));
       } catch (error) {
-        console.error('File storage save failed:', error);
+        log.error('File storage save failed:', error);
         throw error;
       }
     },
@@ -53,7 +57,7 @@ export const createStorageService = <T>(key: string): StorageService<T> => {
         try {
           localStorage.removeItem(key);
         } catch (error) {
-          console.error('LocalStorage clear failed:', error);
+          log.error('LocalStorage clear failed:', error);
         }
         return;
       }
@@ -62,7 +66,7 @@ export const createStorageService = <T>(key: string): StorageService<T> => {
         const filePath = await window.electronAPI!.getStoragePath(key);
         await window.electronAPI!.storageDelete(filePath);
       } catch (error) {
-        console.error('File storage clear failed:', error);
+        log.error('File storage clear failed:', error);
       }
     },
   };

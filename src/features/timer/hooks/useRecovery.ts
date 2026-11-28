@@ -8,6 +8,9 @@ import {
   getTodayDateString,
   formatDurationFromSeconds,
 } from '../types';
+import { createLogger } from '@/services/logger';
+
+const log = createLogger('useRecovery');
 
 // Persisted so a dismissed recovery doesn't re-nag on every subsequent launch.
 const DISMISSED_KEY = 'FOCUS_RECOVERY_DISMISSED_PLAN_ID';
@@ -180,7 +183,7 @@ export const useRecovery = () => {
         setRecoveryInfo(buildRecoveryInfo(plan, interruptedAt));
       }
     } catch (err) {
-      console.error('Failed to check for resumable plans:', err);
+      log.error('Failed to check for resumable plans:', err);
     }
   };
 
@@ -215,12 +218,12 @@ export const useRecovery = () => {
 
       focusStorage
         .saveSessionPlan(plan)
-        .catch((err) => console.error('Failed to save interrupted plan:', err));
+        .catch((err) => log.error('Failed to save interrupted plan:', err));
       persistenceService.clearPlanSnapshot();
 
       focusStorage
         .recalculateLifetimeStats()
-        .catch((err) => console.error('Failed to recalculate stats after recovery:', err));
+        .catch((err) => log.error('Failed to recalculate stats after recovery:', err));
     }
 
     rawPlanRef.current = null;

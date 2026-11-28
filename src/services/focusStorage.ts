@@ -18,6 +18,9 @@ import {
 } from '@/features/timer/types';
 import { FeedbackItem } from '@/types/feedback';
 import { createStorageService } from './storage';
+import { createLogger } from '@/services/logger';
+
+const log = createLogger('focusStorage');
 
 class FocusStorageService {
   // Legacy storage services (browser fallback)
@@ -43,7 +46,7 @@ class FocusStorageService {
   }
 
   async initialize(): Promise<void> {
-    console.log(`FocusStorageService initialized (${this.useDb ? 'SQLite' : 'localStorage'})`);
+    log.info(`FocusStorageService initialized (${this.useDb ? 'SQLite' : 'localStorage'})`);
   }
 
   // ============================================
@@ -82,7 +85,7 @@ class FocusStorageService {
       }
       return defaultState;
     } catch (error) {
-      console.error('Failed to get app state:', error);
+      log.error('Failed to get app state:', error);
       return defaultState;
     }
   }
@@ -95,7 +98,7 @@ class FocusStorageService {
         await this.appStateStorage.save(state);
       }
     } catch (error) {
-      console.error('Failed to save app state:', error);
+      log.error('Failed to save app state:', error);
       throw error;
     }
   }
@@ -118,7 +121,7 @@ class FocusStorageService {
       }
       await this.updateDailyStats(getTodayDateString());
     } catch (error) {
-      console.error('Failed to save session:', error);
+      log.error('Failed to save session:', error);
       throw error;
     }
   }
@@ -137,7 +140,7 @@ class FocusStorageService {
         .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
         .slice(0, limit);
     } catch (error) {
-      console.error('Failed to get session history:', error);
+      log.error('Failed to get session history:', error);
       return [];
     }
   }
@@ -151,7 +154,7 @@ class FocusStorageService {
         await this.sessionsStorage.save(sessions.filter((s) => s.id !== sessionId));
       }
     } catch (error) {
-      console.error('Failed to delete session:', error);
+      log.error('Failed to delete session:', error);
       throw error;
     }
   }
@@ -165,7 +168,7 @@ class FocusStorageService {
       const sessions = (await this.sessionsStorage.load()) || [];
       return this.calculateStats(sessions);
     } catch (error) {
-      console.error('Failed to get session stats:', error);
+      log.error('Failed to get session stats:', error);
       return this.calculateStats([]);
     }
   }
@@ -262,7 +265,7 @@ class FocusStorageService {
       const histories = (await this.dailyHistoryStorage.load()) || [];
       return histories.find((h) => h.date === today) || defaultHistory;
     } catch (error) {
-      console.error('Failed to get today history:', error);
+      log.error('Failed to get today history:', error);
       return defaultHistory;
     }
   }
@@ -286,7 +289,7 @@ class FocusStorageService {
         );
       }
     } catch (error) {
-      console.error('Failed to save daily history:', error);
+      log.error('Failed to save daily history:', error);
       throw error;
     }
   }
@@ -387,7 +390,7 @@ class FocusStorageService {
 
       await this.saveDailyHistory(history);
     } catch (error) {
-      console.error('Failed to update daily stats:', error);
+      log.error('Failed to update daily stats:', error);
       throw error;
     }
   }
@@ -400,7 +403,7 @@ class FocusStorageService {
       const histories = (await this.dailyHistoryStorage.load()) || [];
       return histories.filter((h) => h.date >= startDate && h.date <= endDate);
     } catch (error) {
-      console.error('Failed to get history for period:', error);
+      log.error('Failed to get history for period:', error);
       return [];
     }
   }
@@ -413,7 +416,7 @@ class FocusStorageService {
       const histories = (await this.dailyHistoryStorage.load()) || [];
       return histories.map((h) => h.date).sort((a, b) => b.localeCompare(a));
     } catch (error) {
-      console.error('Failed to get history dates:', error);
+      log.error('Failed to get history dates:', error);
       return [];
     }
   }
@@ -430,7 +433,7 @@ class FocusStorageService {
       const histories = (await this.dailyHistoryStorage.load()) || [];
       return histories.find((h) => h.date === date) || null;
     } catch (error) {
-      console.error('Failed to get history by date:', error);
+      log.error('Failed to get history by date:', error);
       return null;
     }
   }
@@ -454,7 +457,7 @@ class FocusStorageService {
         );
       }
     } catch (error) {
-      console.error('Failed to clear today history:', error);
+      log.error('Failed to clear today history:', error);
       throw error;
     }
   }
@@ -468,7 +471,7 @@ class FocusStorageService {
         await this.dailyHistoryStorage.save([]);
       }
     } catch (error) {
-      console.error('Failed to reset all history:', error);
+      log.error('Failed to reset all history:', error);
       throw error;
     }
   }
@@ -517,7 +520,7 @@ class FocusStorageService {
         await this.plansStorage.save(plans.filter((p) => p.createdAt >= ninetyDaysAgo));
       }
     } catch (error) {
-      console.error('Failed to save session plan:', error);
+      log.error('Failed to save session plan:', error);
       throw error;
     }
   }
@@ -530,7 +533,7 @@ class FocusStorageService {
       const plans = (await this.plansStorage.load()) || [];
       return plans.find((p) => p.id === id) || null;
     } catch (error) {
-      console.error('Failed to get session plan:', error);
+      log.error('Failed to get session plan:', error);
       return null;
     }
   }
@@ -545,7 +548,7 @@ class FocusStorageService {
       const dayEnd = new Date(`${date}T23:59:59.999`).getTime();
       return plans.filter((p) => p.createdAt >= dayStart && p.createdAt <= dayEnd);
     } catch (error) {
-      console.error('Failed to get plans for date:', error);
+      log.error('Failed to get plans for date:', error);
       return [];
     }
   }
@@ -560,7 +563,7 @@ class FocusStorageService {
       const end = new Date(`${endDate}T23:59:59.999`).getTime();
       return plans.filter((p) => p.createdAt >= start && p.createdAt <= end);
     } catch (error) {
-      console.error('Failed to get plans for period:', error);
+      log.error('Failed to get plans for period:', error);
       return [];
     }
   }
@@ -577,7 +580,7 @@ class FocusStorageService {
       await this.plansStorage.save(plans);
       return plans[index];
     } catch (error) {
-      console.error('Failed to update session plan:', error);
+      log.error('Failed to update session plan:', error);
       return null;
     }
   }
@@ -640,16 +643,16 @@ class FocusStorageService {
 
       for (const date of affectedDates) {
         await this.updateDailyStats(date).catch((err) =>
-          console.error('Failed to update stats after reconcile:', err),
+          log.error('Failed to update stats after reconcile:', err),
         );
       }
       await this.recalculateLifetimeStats().catch((err) =>
-        console.error('Failed to recalculate stats after reconcile:', err),
+        log.error('Failed to recalculate stats after reconcile:', err),
       );
 
       return orphaned;
     } catch (error) {
-      console.error('Failed to reconcile orphaned plans:', error);
+      log.error('Failed to reconcile orphaned plans:', error);
       return [];
     }
   }
@@ -668,7 +671,7 @@ class FocusStorageService {
         if (stats) return stats;
       }
     } catch (error) {
-      console.error('Failed to get lifetime stats:', error);
+      log.error('Failed to get lifetime stats:', error);
     }
     return this.createDefaultLifetimeStats();
   }
@@ -681,7 +684,7 @@ class FocusStorageService {
         await this.lifetimeStatsStorage.save(stats);
       }
     } catch (error) {
-      console.error('Failed to save lifetime stats:', error);
+      log.error('Failed to save lifetime stats:', error);
     }
   }
 
@@ -884,7 +887,7 @@ class FocusStorageService {
         await this.feedbackStorage.save(feedbacks);
       }
     } catch (error) {
-      console.error('Failed to add feedback:', error);
+      log.error('Failed to add feedback:', error);
       throw error;
     }
   }
@@ -908,7 +911,7 @@ class FocusStorageService {
       if (filters?.limit) filtered = filtered.slice(0, filters.limit);
       return filtered;
     } catch (error) {
-      console.error('Failed to get feedback:', error);
+      log.error('Failed to get feedback:', error);
       return [];
     }
   }
@@ -926,7 +929,7 @@ class FocusStorageService {
         }
       }
     } catch (error) {
-      console.error('Failed to update feedback:', error);
+      log.error('Failed to update feedback:', error);
       throw error;
     }
   }
@@ -940,7 +943,7 @@ class FocusStorageService {
         await this.feedbackStorage.save(feedbacks.filter((f) => f.id !== id));
       }
     } catch (error) {
-      console.error('Failed to delete feedback:', error);
+      log.error('Failed to delete feedback:', error);
       throw error;
     }
   }
@@ -951,7 +954,7 @@ class FocusStorageService {
         return await this.db.feedback.getStats();
       }
     } catch (error) {
-      console.error('Failed to get feedback stats:', error);
+      log.error('Failed to get feedback stats:', error);
     }
     const feedbacks = (await this.feedbackStorage.load()) || [];
     return {
@@ -1029,7 +1032,7 @@ class FocusStorageService {
         })),
       }));
     } catch (error) {
-      console.error('Failed to get challenges:', error);
+      log.error('Failed to get challenges:', error);
       return [];
     }
   }
@@ -1045,7 +1048,7 @@ class FocusStorageService {
         return await this.db.challenges.getById(id);
       }
     } catch (error) {
-      console.error('Failed to get challenge by id:', error);
+      log.error('Failed to get challenge by id:', error);
     }
     const challenges = await this.getChallenges();
     return challenges.find((c) => c.id === id) || null;
@@ -1083,7 +1086,7 @@ class FocusStorageService {
         await this.challengeStorage.save(challenges);
       }
     } catch (error) {
-      console.error('Failed to create challenge:', error);
+      log.error('Failed to create challenge:', error);
       throw error;
     }
 
@@ -1105,7 +1108,7 @@ class FocusStorageService {
         await this.challengeStorage.save(challenges);
       }
     } catch (error) {
-      console.error('Failed to update challenge:', error);
+      log.error('Failed to update challenge:', error);
       throw error;
     }
 
@@ -1151,7 +1154,7 @@ class FocusStorageService {
         await this.challengeStorage.save(challenges);
       }
     } catch (error) {
-      console.error('Failed to mark challenge day:', error);
+      log.error('Failed to mark challenge day:', error);
       throw error;
     }
 
@@ -1167,7 +1170,7 @@ class FocusStorageService {
         await this.challengeStorage.save(challenges.filter((c) => c.id !== id));
       }
     } catch (error) {
-      console.error('Failed to delete challenge:', error);
+      log.error('Failed to delete challenge:', error);
       throw error;
     }
   }
@@ -1208,7 +1211,7 @@ class FocusStorageService {
   // ============================================
 
   async migrateFromIndexedDB(): Promise<void> {
-    console.log('Migration handled by SQLite migration system');
+    log.debug('Migration handled by SQLite migration system');
   }
 }
 

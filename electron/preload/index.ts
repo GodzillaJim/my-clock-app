@@ -25,6 +25,10 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 
 // --------- Expose Focus Sessions Electron API ---------
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Logging: forwarded to the main-process log file
+  log: (level: string, scope: string, args: unknown[]) =>
+    ipcRenderer.send('log:write', level, scope, args),
+
   // System tray functions
   minimizeToTray: () => ipcRenderer.invoke('minimize-to-tray'),
   showWindow: () => ipcRenderer.invoke('show-window'),

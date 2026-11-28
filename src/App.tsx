@@ -16,6 +16,9 @@ import { notificationService } from './services/notificationService';
 import { useRecovery } from './features/timer/hooks/useRecovery';
 import { RecoveryBanner } from './components/timer/RecoveryBanner';
 import './App.css';
+import { createLogger } from '@/services/logger';
+
+const log = createLogger('App');
 
 const App: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
@@ -74,7 +77,7 @@ const App: React.FC = () => {
         await notificationService.requestPermission();
       }
     } catch (error) {
-      console.error('Failed to initialize app:', error);
+      log.error('Failed to initialize app:', error);
     }
   };
 
@@ -410,13 +413,6 @@ const App: React.FC = () => {
   };
 
   const handleSettingsChange = (newSettings: AppSettings) => {
-    console.log('App: handleSettingsChange called with:', newSettings);
-    console.log(
-      'App: Current quickPresets:',
-      settings.quickPresets,
-      '-> New quickPresets:',
-      newSettings.quickPresets,
-    );
     setSettings(newSettings);
     notificationService.setSettings(newSettings);
   };
@@ -445,7 +441,7 @@ const App: React.FC = () => {
         });
       }
     } catch (error) {
-      console.warn('Electron API not available:', error);
+      log.warn('Electron API not available:', error);
     }
   };
 

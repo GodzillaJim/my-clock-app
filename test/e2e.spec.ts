@@ -81,6 +81,23 @@ if (process.platform === 'linux') {
       expect(fs.existsSync(path.join(userDataDir, 'focus-sessions.db'))).toBe(true);
     });
 
+    test('writes main and renderer logs to the log file', async () => {
+      const logFile = path.join(userDataDir, 'logs', 'main.log');
+      await page.evaluate(() =>
+        (window as any).electronAPI.log('warn', 'e2e', ['renderer log probe', { n: 1 }]),
+      );
+      const deadline = Date.now() + 5000;
+      let contents = '';
+      while (Date.now() < deadline) {
+        contents = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : '';
+        if (contents.includes('renderer log probe')) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      expect(contents).toContain('Focus Sessions');
+      expect(contents).toContain('SQLite database initialized');
+      expect(contents).toMatch(/\[warn\]\s*\(renderer:e2e\)\s*renderer log probe/);
+    });
+
     test('renders the idle focus timer', async () => {
       await page.getByText('READY', { exact: true }).waitFor({ timeout: 15000 });
 

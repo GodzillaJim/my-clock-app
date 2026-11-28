@@ -43,6 +43,9 @@ import {
 } from '@mui/icons-material';
 import { FeedbackItem } from '@/types/feedback';
 import { focusStorage } from '@/services/focusStorage';
+import { createLogger } from '@/services/logger';
+
+const log = createLogger('FeedbackManager');
 
 interface FeedbackManagerProps {
   open: boolean;
@@ -162,7 +165,7 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
       setFeedback(allFeedback);
       setStats(feedbackStats);
     } catch (error) {
-      console.error('Failed to load feedback:', error);
+      log.error('Failed to load feedback:', error);
     } finally {
       setLoading(false);
     }
@@ -189,7 +192,7 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
       await focusStorage.updateFeedbackStatus(id, status);
       await loadFeedback(); // Reload data
     } catch (error) {
-      console.error('Failed to update feedback status:', error);
+      log.error('Failed to update feedback status:', error);
     }
   };
 
@@ -199,7 +202,7 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
         await focusStorage.deleteFeedback(id);
         await loadFeedback(); // Reload data
       } catch (error) {
-        console.error('Failed to delete feedback:', error);
+        log.error('Failed to delete feedback:', error);
       }
     }
   };
@@ -217,7 +220,7 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Failed to export feedback:', error);
+      log.error('Failed to export feedback:', error);
     }
   };
 

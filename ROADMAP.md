@@ -72,7 +72,7 @@ _Exit criteria: `npm run check` (and a pre-commit hook) runs lint, format, typec
 
 ### Code hygiene
 
-- [ ] [#36](https://github.com/GodzillaJim/my-clock-app/issues/36) structured logging with electron-log
+- [x] [#36](https://github.com/GodzillaJim/my-clock-app/issues/36) structured logging with electron-log
 - [ ] [#37](https://github.com/GodzillaJim/my-clock-app/issues/37) eliminate `any` usages
 
 ---

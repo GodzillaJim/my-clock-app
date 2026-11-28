@@ -7,6 +7,9 @@ import {
   TrendingUp,
 } from '@mui/icons-material';
 import { focusStorage } from '@/services/focusStorage';
+import { createLogger } from '@/services/logger';
+
+const log = createLogger('StatsPanel');
 
 interface StatCardProps {
   icon: React.ReactNode;
@@ -96,7 +99,7 @@ export const StatsPanel: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('Failed to load stats:', error);
+      log.error('Failed to load stats:', error);
     }
   };
 

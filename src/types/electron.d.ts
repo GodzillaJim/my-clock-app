@@ -52,6 +52,9 @@ interface ElectronDbAPI {
 }
 
 interface ElectronAPI {
+  // Logging: forwarded to the main-process log file
+  log: (level: 'error' | 'warn' | 'info' | 'debug', scope: string, args: unknown[]) => void;
+
   // System tray functions
   minimizeToTray: () => Promise<void>;
   showWindow: () => Promise<void>;

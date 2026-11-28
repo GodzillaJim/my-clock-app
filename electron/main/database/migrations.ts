@@ -3,6 +3,9 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { app } from 'electron';
 import { up as migration001 } from './migrations/001_initial_schema';
+import { createLogger } from '../logger';
+
+const log = createLogger('migrations');
 
 interface Migration {
   version: number;
@@ -30,7 +33,7 @@ export function runMigrations(db: Database.Database): void {
 
   for (const migration of migrations) {
     if (migration.version > appliedVersion) {
-      console.log(`Applying migration ${migration.version}: ${migration.description}`);
+      log.info(`Applying migration ${migration.version}: ${migration.description}`);
       db.transaction(() => {
         migration.up(db);
         db.prepare('INSERT INTO schema_version (version, description) VALUES (?, ?)').run(
@@ -38,7 +41,7 @@ export function runMigrations(db: Database.Database): void {
           migration.description,
         );
       })();
-      console.log(`Migration ${migration.version} applied successfully`);
+      log.info(`Migration ${migration.version} applied successfully`);
     }
   }
 }
@@ -66,7 +69,7 @@ export function migrateLegacyData(db: Database.Database): void {
     return;
   }
 
-  console.log('Starting legacy data migration from JSON files...');
+  log.info('Starting legacy data migration from JSON files...');
 
   const readJsonFile = (filePath: string): string | null => {
     try {
@@ -311,9 +314,9 @@ export function migrateLegacyData(db: Database.Database): void {
   try {
     if (!fs.existsSync(backupDir)) {
       fs.renameSync(dataDir, backupDir);
-      console.log('Legacy data migrated and backed up to:', backupDir);
+      log.info('Legacy data migrated and backed up to:', backupDir);
     }
   } catch (err) {
-    console.warn('Could not rename legacy data dir (non-critical):', err);
+    log.warn('Could not rename legacy data dir (non-critical):', err);
   }
 }

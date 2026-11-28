@@ -23,6 +23,9 @@ import {
   ChallengeStatus,
   ChallengeDay,
 } from '@/features/timer/types';
+import { createLogger } from '@/services/logger';
+
+const log = createLogger('CreateChallengeDialog');
 
 interface CreateChallengeDialogProps {
   open: boolean;
@@ -84,7 +87,7 @@ export const CreateChallengeDialog: React.FC<CreateChallengeDialogProps> = ({
 
       handleClose();
     } catch (error) {
-      console.error('Failed to create challenge:', error);
+      log.error('Failed to create challenge:', error);
     } finally {
       setIsSubmitting(false);
     }

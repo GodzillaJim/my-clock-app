@@ -20,6 +20,9 @@ import { APP_ORIGIN, resolveAppRequest } from './appProtocol';
 import { getDatabase, closeDatabase } from './database/connection';
 import { runMigrations, migrateLegacyData } from './database/migrations';
 import { registerDatabaseHandlers } from './database/ipcHandlers';
+import { createLogger, initLogging } from './logger';
+
+const log = createLogger('main');
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -62,6 +65,8 @@ if (!app.requestSingleInstanceLock()) {
   process.exit(0);
 }
 
+initLogging();
+
 // The packaged renderer is served from `app://bundle/...`. Registering it as a
 // standard, secure scheme gives the page a real origin, so module scripts,
 // fetch and storage work with web security enabled. Must run before `ready`.
@@ -76,9 +81,9 @@ app.whenReady().then(() => {
     runMigrations(db);
     migrateLegacyData(db);
     registerDatabaseHandlers(db);
-    console.log('SQLite database initialized successfully');
+    log.info('SQLite database initialized');
   } catch (err) {
-    console.error('Failed to initialize database:', err);
+    log.error('Failed to initialize database:', err);
   }
 
   protocol.handle('app', (request) => {
@@ -434,7 +439,7 @@ ipcMain.handle('storage-write', async (_, filePath: string, data: string) => {
   try {
     await fs.mkdir(dir, { recursive: true });
   } catch (error) {
-    console.error('Failed to create storage directory:', error);
+    log.error('Failed to create storage directory:', error);
   }
 
   await fs.writeFile(filePath, data);
