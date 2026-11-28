@@ -4,11 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FocusTimerProvider, useFocusTimerContext } from '../FocusTimerContext';
 import { isTimerSpace } from '../isTimerSpace';
 
-vi.mock('@/services/focusStorage', () => ({
-  focusStorage: {
-    addSession: vi.fn(() => Promise.resolve()),
-    saveSessionPlan: vi.fn(() => Promise.resolve()),
-    recalculateLifetimeStats: vi.fn(() => Promise.resolve()),
+vi.mock('@/services/domain', () => ({
+  services: {
+    sessions: { add: vi.fn(() => Promise.resolve()) },
+    plans: { save: vi.fn(() => Promise.resolve()) },
+    stats: { recalculate: vi.fn(() => Promise.resolve()) },
   },
 }));
 vi.mock('@/services/persistenceService', () => ({

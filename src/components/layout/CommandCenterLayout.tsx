@@ -13,7 +13,7 @@ import {
 } from '@mui/icons-material';
 import { CircularTimerRing } from '../timer/CircularTimerRing';
 import { AppSettings, SessionRecord, SessionType } from '@/features/timer/types';
-import { focusStorage } from '@/services/focusStorage';
+import { services } from '@/services/domain';
 import { useFocusTimerContext } from '@/features/timer/FocusTimerContext';
 import { formatClock } from '@/features/timer/engine/format';
 import dayjs from 'dayjs';
@@ -42,7 +42,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
 
   const loadStats = async () => {
     try {
-      const history = await focusStorage.getTodayHistory();
+      const history = await services.history.today();
       if (history) {
         setTodayStats({
           focusTime: Math.round(history.totalFocusTime / 60),

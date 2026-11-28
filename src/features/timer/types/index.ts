@@ -113,15 +113,6 @@ export interface AppState {
   lastActiveDate: string; // YYYY-MM-DD
 }
 
-// Statistics for UI display
-export interface SessionStats {
-  totalFocusTime: string; // formatted time
-  completedSessions: number;
-  currentStreak: number;
-  todayProgress: number; // percentage
-  averageSessionTime: string; // formatted time
-}
-
 // Notification types
 export interface SessionNotification {
   type: 'session_start' | 'session_complete' | 'break_complete' | 'break_reminder';

@@ -20,7 +20,8 @@ import {
   ChallengeDay,
   ChallengeDayStatus,
 } from '@/features/timer/types';
-import { focusStorage } from '@/services/focusStorage';
+import { services } from '@/services/domain';
+import type { NewChallenge } from '@/services/domain/challenges';
 import { ChallengeCard } from './ChallengeCard';
 import { ChallengeCalendar } from './ChallengeCalendar';
 import { CreateChallengeDialog } from './CreateChallengeDialog';
@@ -48,7 +49,7 @@ export const ChallengesView: React.FC = () => {
   const loadChallenges = async () => {
     setLoading(true);
     try {
-      const data = await focusStorage.getChallenges();
+      const data = await services.challenges.list();
       setChallenges(data);
     } catch (error) {
       log.error('Failed to load challenges:', error);
@@ -72,16 +73,14 @@ export const ChallengesView: React.FC = () => {
 
   const filteredChallenges = getFilteredChallenges();
 
-  const handleCreateChallenge = async (
-    challengeData: Parameters<typeof focusStorage.createChallenge>[0],
-  ) => {
-    await focusStorage.createChallenge(challengeData);
+  const handleCreateChallenge = async (challengeData: NewChallenge) => {
+    await services.challenges.create(challengeData);
     await loadChallenges();
   };
 
   const handleDeleteChallenge = async () => {
     if (!menuChallenge) return;
-    await focusStorage.deleteChallenge(menuChallenge.id);
+    await services.challenges.remove(menuChallenge.id);
     setMenuAnchor(null);
     setMenuChallenge(null);
     if (selectedChallenge?.id === menuChallenge.id) {
@@ -99,7 +98,7 @@ export const ChallengesView: React.FC = () => {
   const handleSaveDay = async () => {
     if (!selectedDay || !selectedChallenge) return;
 
-    await focusStorage.markChallengeDay(
+    await services.challenges.markDay(
       selectedChallenge.id,
       selectedDay.date,
       dayStatus,
@@ -109,7 +108,7 @@ export const ChallengesView: React.FC = () => {
     setSelectedDay(null);
     setDayNote('');
     await loadChallenges();
-    const updated = await focusStorage.getChallengeById(selectedChallenge.id);
+    const updated = await services.challenges.byId(selectedChallenge.id);
     if (updated) {
       setSelectedChallenge(updated);
     }

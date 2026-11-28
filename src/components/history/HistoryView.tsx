@@ -9,8 +9,9 @@ import {
   CompletionStatus,
   AppSettings,
   getTodayDateString,
+  DailyHistory,
 } from '@/features/timer/types';
-import { focusStorage } from '@/services/focusStorage';
+import { services } from '@/services/domain';
 import { MomentumHeader } from './MomentumHeader';
 import { FocusHeatmap } from './FocusHeatmap';
 import { DayTimeline } from './DayTimeline';
@@ -42,10 +43,7 @@ const formatDayLabel = (dateStr: string): string => {
 
 // Older days may predate plan tracking. Rebuild a display-only plan from the
 // day's session records so the timeline still has something to show.
-const synthesizePlanFromSessions = (
-  date: string,
-  history: Awaited<ReturnType<typeof focusStorage.getHistoryByDate>>,
-): SessionPlan[] => {
+const synthesizePlanFromSessions = (date: string, history: DailyHistory | null): SessionPlan[] => {
   if (!history?.sessions || history.sessions.length === 0) return [];
   const segments: SessionPlanSegment[] = history.sessions.map((s, i) => {
     const start = new Date(s.startTime).getTime();
@@ -111,12 +109,12 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ settings, onClose, onR
   const loadOverview = async () => {
     try {
       setLoading(true);
-      const lifetime = await focusStorage.recalculateLifetimeStats();
+      const lifetime = await services.stats.recalculate();
 
       const today = new Date();
       const start = new Date(today);
       start.setDate(today.getDate() - (HEATMAP_WEEKS * 7 - 1));
-      const histories = await focusStorage.getHistoryForPeriod(dateKey(start), dateKey(today));
+      const histories = await services.history.forPeriod(dateKey(start), dateKey(today));
 
       const map = new Map<string, number>();
       histories.forEach((h) => map.set(h.date, h.totalFocusTime || 0));
@@ -141,12 +139,12 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ settings, onClose, onR
 
   const loadDay = async (date: string) => {
     try {
-      const plans = await focusStorage.getPlansForDate(date);
+      const plans = await services.plans.forDate(date);
       if (plans.length > 0) {
         setDayPlans(plans);
         return;
       }
-      const history = await focusStorage.getHistoryByDate(date);
+      const history = await services.history.byDate(date);
       setDayPlans(synthesizePlanFromSessions(date, history));
     } catch (err) {
       log.error('Failed to load day:', err);

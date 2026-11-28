@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { persistenceService } from '@/services/persistenceService';
-import { focusStorage } from '@/services/focusStorage';
+import { services } from '@/services/domain';
 import {
   SessionPlan,
   SessionPlanSegment,
@@ -169,7 +169,7 @@ export const useRecovery = () => {
     // snapshot is gone (e.g. reconciled on a previous launch). Offer the most
     // recent one from today that hasn't been dismissed.
     try {
-      const todaysPlans = await focusStorage.getPlansForDate(getTodayDateString());
+      const todaysPlans = await services.plans.forDate(getTodayDateString());
       const candidates = todaysPlans
         .filter((p) => p.status !== 'completed' && p.id !== dismissedId && planHasRemaining(p))
         .sort((a, b) => (b.lastUpdated || b.createdAt) - (a.lastUpdated || a.createdAt));
@@ -216,13 +216,11 @@ export const useRecovery = () => {
       plan.actualEndTime = interruptedAt;
       plan.totalElapsed = plan.segments.reduce((sum, s) => sum + (s.actualDuration || 0), 0);
 
-      focusStorage
-        .saveSessionPlan(plan)
-        .catch((err) => log.error('Failed to save interrupted plan:', err));
+      services.plans.save(plan).catch((err) => log.error('Failed to save interrupted plan:', err));
       persistenceService.clearPlanSnapshot();
 
-      focusStorage
-        .recalculateLifetimeStats()
+      services.stats
+        .recalculate()
         .catch((err) => log.error('Failed to recalculate stats after recovery:', err));
     }
 

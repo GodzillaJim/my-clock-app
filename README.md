@@ -143,7 +143,9 @@ src/
     challenges/       # challenges view, calendar, create dialog
     settings/         # settings dialog
   features/timer/     # timer engine (pure state machines in engine/), React hooks, domain types
-  services/           # storage, notifications, sounds, crash-recovery snapshots
+  features/stats/     # pure statistics: day summaries, streaks, lifetime stats
+  services/domain/    # domain services (settings, sessions, plans, history, stats, challenges)
+  services/           # data store (db.ts), notifications, sounds, crash-recovery snapshot
   __tests__/          # unit tests (Vitest + Testing Library)
 test/                 # e2e tests (Playwright driving Electron) and main-process unit tests
 ```
