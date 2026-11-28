@@ -13,17 +13,9 @@
   },
   "files": [
     "dist-electron",
-    "dist",
-    "public/sounds/**/*"
+    "dist"
   ],
   "extraResources": [
-    {
-      "from": "public/sounds",
-      "to": "sounds",
-      "filter": [
-        "**/*"
-      ]
-    },
     {
       "from": "build/hour_glass.ico",
       "to": "icons/hour_glass.ico"

@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   },
   notificationService: {
     showNotification: vi.fn(),
+    playTickSound: vi.fn(() => Promise.resolve()),
   },
 }));
 
@@ -203,6 +204,17 @@ describe('ZenFocusTimer', () => {
 
     expect(screen.getByText('READY')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /start 25m focus/i })).toBeInTheDocument();
+  });
+
+  it('ticks once per second during the last 10 seconds only', async () => {
+    renderTimer({ ...baseSettings, focusDuration: 1, quickPresets: [1, 5] });
+
+    fireEvent.click(screen.getByRole('button', { name: /start 1m focus/i }));
+    await tick(49 * 1000); // 11s remaining
+    expect(mocks.notificationService.playTickSound).not.toHaveBeenCalled();
+
+    for (let i = 0; i < 10; i++) await tick(1000); // 10s → 1s remaining, one render per second
+    expect(mocks.notificationService.playTickSound).toHaveBeenCalledTimes(10);
   });
 
   it('shows the completion screen after the final segment and can start over', async () => {
