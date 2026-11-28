@@ -20,8 +20,6 @@ import { BugReport, Lightbulb, Warning, ThumbDown } from '@mui/icons-material';
 
 import { FeedbackItem } from '@/types/feedback';
 
-export type { FeedbackItem };
-
 interface FeedbackFormProps {
   open: boolean;
   onClose: () => void;

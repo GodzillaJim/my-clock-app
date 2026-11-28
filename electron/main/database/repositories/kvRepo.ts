@@ -16,7 +16,3 @@ export function set(db: Database.Database, key: string, value: any): void {
     'INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES (?, ?, ?)'
   ).run(key, json, Date.now());
 }
-
-export function remove(db: Database.Database, key: string): void {
-  db.prepare('DELETE FROM kv_store WHERE key = ?').run(key);
-}
