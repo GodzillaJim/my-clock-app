@@ -156,7 +156,6 @@ describe('TICK', () => {
       'recordSession',
       'savePlan',
       'clearPlanSnapshot',
-      'clearSessionSnapshot',
       'recalculateStats',
       'notify',
     ]);
@@ -281,7 +280,7 @@ describe('STOP', () => {
       CompletionStatus.INTERRUPTED,
     );
     expect(effects.map((e) => e.type)).toEqual(
-      expect.arrayContaining(['clearPlanSnapshot', 'clearSessionSnapshot', 'recalculateStats']),
+      expect.arrayContaining(['clearPlanSnapshot', 'recalculateStats']),
     );
   });
 

@@ -16,35 +16,20 @@ import {
   LifetimeStats,
   PeriodSummary,
 } from '@/features/timer/types';
-import { createStorageService } from './storage';
+import { db as defaultDb, type FocusDb } from './db';
 import { createLogger } from '@/services/logger';
 
 const log = createLogger('focusStorage');
 
-class FocusStorageService {
-  // Legacy storage services (browser fallback)
-  private appStateStorage = createStorageService<AppState>('focus_sessions_app_state');
-  private sessionsStorage = createStorageService<SessionRecord[]>('focus_sessions_sessions');
-  private dailyHistoryStorage = createStorageService<DailyHistory[]>(
-    'focus_sessions_daily_history',
-  );
-  private challengeStorage = createStorageService<Challenge[]>('focus_sessions_challenges');
-  private plansStorage = createStorageService<SessionPlan[]>('focus_sessions_plans');
-  private lifetimeStatsStorage = createStorageService<LifetimeStats>(
-    'focus_sessions_lifetime_stats',
-  );
-
-  // SQLite via Electron IPC when available
-  private get useDb(): boolean {
-    return !!window.electronAPI?.db;
-  }
-
-  private get db() {
-    return window.electronAPI!.db;
-  }
+/**
+ * Domain operations over the app's data store (SQLite via the bridge, ADR 0002).
+ * Takes the store as a parameter so tests can pass an in-memory one.
+ */
+export class FocusStorageService {
+  constructor(private readonly db: FocusDb) {}
 
   async initialize(): Promise<void> {
-    log.info(`FocusStorageService initialized (${this.useDb ? 'SQLite' : 'localStorage'})`);
+    log.info('FocusStorageService initialized');
   }
 
   // ============================================
@@ -61,13 +46,7 @@ class FocusStorageService {
     };
 
     try {
-      let loadedState: AppState | null = null;
-
-      if (this.useDb) {
-        loadedState = await this.db.kv.get('app_state');
-      } else {
-        loadedState = await this.appStateStorage.load();
-      }
+      const loadedState = await this.db.kv.get('app_state');
 
       if (loadedState) {
         const state: AppState = {
@@ -90,11 +69,7 @@ class FocusStorageService {
 
   async saveAppState(state: AppState): Promise<void> {
     try {
-      if (this.useDb) {
-        await this.db.kv.set('app_state', state);
-      } else {
-        await this.appStateStorage.save(state);
-      }
+      await this.db.kv.set('app_state', state);
     } catch (error) {
       log.error('Failed to save app state:', error);
       throw error;
@@ -107,16 +82,7 @@ class FocusStorageService {
 
   async saveSession(session: SessionRecord): Promise<void> {
     try {
-      if (this.useDb) {
-        await this.db.sessions.save(session);
-      } else {
-        const sessions = (await this.sessionsStorage.load()) || [];
-        sessions.push(session);
-        const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
-        await this.sessionsStorage.save(
-          sessions.filter((s) => new Date(s.startTime).getTime() >= cutoff),
-        );
-      }
+      await this.db.sessions.save(session);
       await this.updateDailyStats(getTodayDateString());
     } catch (error) {
       log.error('Failed to save session:', error);
@@ -130,13 +96,7 @@ class FocusStorageService {
 
   async getSessionHistory(limit: number = 50): Promise<SessionRecord[]> {
     try {
-      if (this.useDb) {
-        return await this.db.sessions.getHistory(limit);
-      }
-      const sessions = (await this.sessionsStorage.load()) || [];
-      return sessions
-        .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
-        .slice(0, limit);
+      return await this.db.sessions.getHistory(limit);
     } catch (error) {
       log.error('Failed to get session history:', error);
       return [];
@@ -145,12 +105,7 @@ class FocusStorageService {
 
   async deleteSession(sessionId: string): Promise<void> {
     try {
-      if (this.useDb) {
-        await this.db.sessions.delete(sessionId);
-      } else {
-        const sessions = (await this.sessionsStorage.load()) || [];
-        await this.sessionsStorage.save(sessions.filter((s) => s.id !== sessionId));
-      }
+      await this.db.sessions.delete(sessionId);
     } catch (error) {
       log.error('Failed to delete session:', error);
       throw error;
@@ -159,12 +114,7 @@ class FocusStorageService {
 
   async getSessionStats(): Promise<SessionStats> {
     try {
-      if (this.useDb) {
-        const sessions = await this.db.sessions.getHistory();
-        return this.calculateStats(sessions);
-      }
-      const sessions = (await this.sessionsStorage.load()) || [];
-      return this.calculateStats(sessions);
+      return this.calculateStats(await this.db.sessions.getHistory());
     } catch (error) {
       log.error('Failed to get session stats:', error);
       return this.calculateStats([]);
@@ -251,17 +201,7 @@ class FocusStorageService {
     };
 
     try {
-      if (this.useDb) {
-        const history = await this.db.history.getByDate(today);
-        if (history) {
-          // Populate sessions from sessions table
-          history.sessions = await this.db.sessions.getByDate(today);
-          return history;
-        }
-        return defaultHistory;
-      }
-      const histories = (await this.dailyHistoryStorage.load()) || [];
-      return histories.find((h) => h.date === today) || defaultHistory;
+      return (await this.getHistoryByDate(today)) ?? defaultHistory;
     } catch (error) {
       log.error('Failed to get today history:', error);
       return defaultHistory;
@@ -270,22 +210,7 @@ class FocusStorageService {
 
   async saveDailyHistory(history: DailyHistory): Promise<void> {
     try {
-      if (this.useDb) {
-        await this.db.history.save(history);
-      } else {
-        const histories = (await this.dailyHistoryStorage.load()) || [];
-        const existingIndex = histories.findIndex((h) => h.date === history.date);
-        if (existingIndex >= 0) {
-          histories[existingIndex] = history;
-        } else {
-          histories.push(history);
-        }
-        const ninetyDaysAgo = new Date();
-        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-        await this.dailyHistoryStorage.save(
-          histories.filter((h) => new Date(h.date) >= ninetyDaysAgo),
-        );
-      }
+      await this.db.history.save(history);
     } catch (error) {
       log.error('Failed to save daily history:', error);
       throw error;
@@ -294,19 +219,7 @@ class FocusStorageService {
 
   async updateDailyStats(date: string): Promise<void> {
     try {
-      let daySessions: SessionRecord[];
-
-      if (this.useDb) {
-        daySessions = await this.db.sessions.getByDate(date);
-      } else {
-        const sessions = (await this.sessionsStorage.load()) || [];
-        const dayStartTime = new Date(`${date}T00:00:00.000Z`).getTime();
-        const dayEndTime = new Date(`${date}T23:59:59.999Z`).getTime();
-        daySessions = sessions.filter((session) => {
-          const sessionTime = new Date(session.startTime).getTime();
-          return sessionTime >= dayStartTime && sessionTime <= dayEndTime;
-        });
-      }
+      const daySessions = await this.db.sessions.getByDate(date);
 
       const completedSessions = daySessions.filter(
         (s) => s.completionStatus === CompletionStatus.COMPLETED,
@@ -395,11 +308,7 @@ class FocusStorageService {
 
   async getHistoryForPeriod(startDate: string, endDate: string): Promise<DailyHistory[]> {
     try {
-      if (this.useDb) {
-        return await this.db.history.getByRange(startDate, endDate);
-      }
-      const histories = (await this.dailyHistoryStorage.load()) || [];
-      return histories.filter((h) => h.date >= startDate && h.date <= endDate);
+      return await this.db.history.getByRange(startDate, endDate);
     } catch (error) {
       log.error('Failed to get history for period:', error);
       return [];
@@ -408,11 +317,7 @@ class FocusStorageService {
 
   async getAllHistoryDates(): Promise<string[]> {
     try {
-      if (this.useDb) {
-        return await this.db.history.getAllDates();
-      }
-      const histories = (await this.dailyHistoryStorage.load()) || [];
-      return histories.map((h) => h.date).sort((a, b) => b.localeCompare(a));
+      return await this.db.history.getAllDates();
     } catch (error) {
       log.error('Failed to get history dates:', error);
       return [];
@@ -421,15 +326,12 @@ class FocusStorageService {
 
   async getHistoryByDate(date: string): Promise<DailyHistory | null> {
     try {
-      if (this.useDb) {
-        const history = await this.db.history.getByDate(date);
-        if (history) {
-          history.sessions = await this.db.sessions.getByDate(date);
-        }
-        return history;
+      const history = await this.db.history.getByDate(date);
+      if (history) {
+        // Sessions live in their own table
+        history.sessions = await this.db.sessions.getByDate(date);
       }
-      const histories = (await this.dailyHistoryStorage.load()) || [];
-      return histories.find((h) => h.date === date) || null;
+      return history;
     } catch (error) {
       log.error('Failed to get history by date:', error);
       return null;
@@ -439,21 +341,7 @@ class FocusStorageService {
   async clearTodayHistory(): Promise<void> {
     const today = getTodayDateString();
     try {
-      if (this.useDb) {
-        await this.db.history.clearToday(today);
-      } else {
-        const histories = (await this.dailyHistoryStorage.load()) || [];
-        await this.dailyHistoryStorage.save(histories.filter((h) => h.date !== today));
-        const sessions = (await this.sessionsStorage.load()) || [];
-        const dayStartTime = new Date(`${today}T00:00:00.000Z`).getTime();
-        const dayEndTime = new Date(`${today}T23:59:59.999Z`).getTime();
-        await this.sessionsStorage.save(
-          sessions.filter((session) => {
-            const t = new Date(session.startTime).getTime();
-            return !(t >= dayStartTime && t <= dayEndTime);
-          }),
-        );
-      }
+      await this.db.history.clearToday(today);
     } catch (error) {
       log.error('Failed to clear today history:', error);
       throw error;
@@ -462,12 +350,7 @@ class FocusStorageService {
 
   async resetAllHistory(): Promise<void> {
     try {
-      if (this.useDb) {
-        await this.db.history.resetAll();
-      } else {
-        await this.sessionsStorage.save([]);
-        await this.dailyHistoryStorage.save([]);
-      }
+      await this.db.history.resetAll();
     } catch (error) {
       log.error('Failed to reset all history:', error);
       throw error;
@@ -504,19 +387,7 @@ class FocusStorageService {
 
   async saveSessionPlan(plan: SessionPlan): Promise<void> {
     try {
-      if (this.useDb) {
-        await this.db.plans.save(plan);
-      } else {
-        const plans = (await this.plansStorage.load()) || [];
-        const existingIndex = plans.findIndex((p) => p.id === plan.id);
-        if (existingIndex >= 0) {
-          plans[existingIndex] = plan;
-        } else {
-          plans.push(plan);
-        }
-        const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
-        await this.plansStorage.save(plans.filter((p) => p.createdAt >= ninetyDaysAgo));
-      }
+      await this.db.plans.save(plan);
     } catch (error) {
       log.error('Failed to save session plan:', error);
       throw error;
@@ -525,11 +396,7 @@ class FocusStorageService {
 
   async getSessionPlan(id: string): Promise<SessionPlan | null> {
     try {
-      if (this.useDb) {
-        return await this.db.plans.get(id);
-      }
-      const plans = (await this.plansStorage.load()) || [];
-      return plans.find((p) => p.id === id) || null;
+      return await this.db.plans.get(id);
     } catch (error) {
       log.error('Failed to get session plan:', error);
       return null;
@@ -538,13 +405,7 @@ class FocusStorageService {
 
   async getPlansForDate(date: string): Promise<SessionPlan[]> {
     try {
-      if (this.useDb) {
-        return await this.db.plans.getByDate(date);
-      }
-      const plans = (await this.plansStorage.load()) || [];
-      const dayStart = new Date(`${date}T00:00:00`).getTime();
-      const dayEnd = new Date(`${date}T23:59:59.999`).getTime();
-      return plans.filter((p) => p.createdAt >= dayStart && p.createdAt <= dayEnd);
+      return await this.db.plans.getByDate(date);
     } catch (error) {
       log.error('Failed to get plans for date:', error);
       return [];
@@ -553,13 +414,7 @@ class FocusStorageService {
 
   async getPlansForPeriod(startDate: string, endDate: string): Promise<SessionPlan[]> {
     try {
-      if (this.useDb) {
-        return await this.db.plans.getByDateRange(startDate, endDate);
-      }
-      const plans = (await this.plansStorage.load()) || [];
-      const start = new Date(`${startDate}T00:00:00`).getTime();
-      const end = new Date(`${endDate}T23:59:59.999`).getTime();
-      return plans.filter((p) => p.createdAt >= start && p.createdAt <= end);
+      return await this.db.plans.getByDateRange(startDate, endDate);
     } catch (error) {
       log.error('Failed to get plans for period:', error);
       return [];
@@ -568,15 +423,7 @@ class FocusStorageService {
 
   async updateSessionPlan(id: string, updates: Partial<SessionPlan>): Promise<SessionPlan | null> {
     try {
-      if (this.useDb) {
-        return await this.db.plans.update(id, updates);
-      }
-      const plans = (await this.plansStorage.load()) || [];
-      const index = plans.findIndex((p) => p.id === id);
-      if (index === -1) return null;
-      plans[index] = { ...plans[index], ...updates, lastUpdated: Date.now() };
-      await this.plansStorage.save(plans);
-      return plans[index];
+      return await this.db.plans.update(id, updates);
     } catch (error) {
       log.error('Failed to update session plan:', error);
       return null;
@@ -661,13 +508,8 @@ class FocusStorageService {
 
   async getLifetimeStats(): Promise<LifetimeStats> {
     try {
-      if (this.useDb) {
-        const stats = await this.db.kv.get('lifetime_stats');
-        if (stats) return stats;
-      } else {
-        const stats = await this.lifetimeStatsStorage.load();
-        if (stats) return stats;
-      }
+      const stats = await this.db.kv.get('lifetime_stats');
+      if (stats) return stats;
     } catch (error) {
       log.error('Failed to get lifetime stats:', error);
     }
@@ -676,38 +518,23 @@ class FocusStorageService {
 
   async saveLifetimeStats(stats: LifetimeStats): Promise<void> {
     try {
-      if (this.useDb) {
-        await this.db.kv.set('lifetime_stats', stats);
-      } else {
-        await this.lifetimeStatsStorage.save(stats);
-      }
+      await this.db.kv.set('lifetime_stats', stats);
     } catch (error) {
       log.error('Failed to save lifetime stats:', error);
     }
   }
 
   async recalculateLifetimeStats(): Promise<LifetimeStats> {
-    let histories: DailyHistory[];
-
-    if (this.useDb) {
-      // Get all history dates and load them
-      const dates = await this.db.history.getAllDates();
-      if (dates.length === 0) {
-        const stats = this.createDefaultLifetimeStats();
-        await this.saveLifetimeStats(stats);
-        return stats;
-      }
-      const oldest = dates[dates.length - 1];
-      const newest = dates[0];
-      histories = await this.db.history.getByRange(oldest, newest);
-      // Populate session counts from sessions table for active day detection
-      for (const h of histories) {
-        if (!h.sessions || h.sessions.length === 0) {
-          h.sessions = await this.db.sessions.getByDate(h.date);
-        }
-      }
-    } else {
-      histories = (await this.dailyHistoryStorage.load()) || [];
+    const dates = await this.db.history.getAllDates();
+    if (dates.length === 0) {
+      const stats = this.createDefaultLifetimeStats();
+      await this.saveLifetimeStats(stats);
+      return stats;
+    }
+    const histories = await this.db.history.getByRange(dates[dates.length - 1], dates[0]);
+    // Sessions live in their own table; load them for active-day detection
+    for (const h of histories) {
+      h.sessions = await this.db.sessions.getByDate(h.date);
     }
 
     const now = Date.now();
@@ -871,19 +698,7 @@ class FocusStorageService {
 
   async getChallenges(): Promise<Challenge[]> {
     try {
-      if (this.useDb) {
-        return await this.db.challenges.getAll();
-      }
-      const challenges = (await this.challengeStorage.load()) || [];
-      return challenges.map((c) => ({
-        ...c,
-        createdAt: new Date(c.createdAt),
-        updatedAt: new Date(c.updatedAt),
-        days: c.days.map((d) => ({
-          ...d,
-          markedAt: d.markedAt ? new Date(d.markedAt) : undefined,
-        })),
-      }));
+      return await this.db.challenges.getAll();
     } catch (error) {
       log.error('Failed to get challenges:', error);
       return [];
@@ -897,14 +712,11 @@ class FocusStorageService {
 
   async getChallengeById(id: string): Promise<Challenge | null> {
     try {
-      if (this.useDb) {
-        return await this.db.challenges.getById(id);
-      }
+      return await this.db.challenges.getById(id);
     } catch (error) {
       log.error('Failed to get challenge by id:', error);
+      return null;
     }
-    const challenges = await this.getChallenges();
-    return challenges.find((c) => c.id === id) || null;
   }
 
   async createChallenge(
@@ -931,13 +743,7 @@ class FocusStorageService {
     };
 
     try {
-      if (this.useDb) {
-        await this.db.challenges.save(newChallenge);
-      } else {
-        const challenges = await this.getChallenges();
-        challenges.push(newChallenge);
-        await this.challengeStorage.save(challenges);
-      }
+      await this.db.challenges.save(newChallenge);
     } catch (error) {
       log.error('Failed to create challenge:', error);
       throw error;
@@ -955,11 +761,7 @@ class FocusStorageService {
     this.recalculateChallengeStats(challenges[index]);
 
     try {
-      if (this.useDb) {
-        await this.db.challenges.save(challenges[index]);
-      } else {
-        await this.challengeStorage.save(challenges);
-      }
+      await this.db.challenges.save(challenges[index]);
     } catch (error) {
       log.error('Failed to update challenge:', error);
       throw error;
@@ -1001,11 +803,7 @@ class FocusStorageService {
     }
 
     try {
-      if (this.useDb) {
-        await this.db.challenges.save(challenge);
-      } else {
-        await this.challengeStorage.save(challenges);
-      }
+      await this.db.challenges.save(challenge);
     } catch (error) {
       log.error('Failed to mark challenge day:', error);
       throw error;
@@ -1016,12 +814,7 @@ class FocusStorageService {
 
   async deleteChallenge(id: string): Promise<void> {
     try {
-      if (this.useDb) {
-        await this.db.challenges.delete(id);
-      } else {
-        const challenges = await this.getChallenges();
-        await this.challengeStorage.save(challenges.filter((c) => c.id !== id));
-      }
+      await this.db.challenges.delete(id);
     } catch (error) {
       log.error('Failed to delete challenge:', error);
       throw error;
@@ -1058,14 +851,6 @@ class FocusStorageService {
     challenge.currentStreak = currentStreak;
     challenge.longestStreak = longestStreak;
   }
-
-  // ============================================
-  // Migration
-  // ============================================
-
-  async migrateFromIndexedDB(): Promise<void> {
-    log.debug('Migration handled by SQLite migration system');
-  }
 }
 
-export const focusStorage = new FocusStorageService();
+export const focusStorage = new FocusStorageService(defaultDb);

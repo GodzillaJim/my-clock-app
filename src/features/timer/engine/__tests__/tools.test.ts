@@ -64,13 +64,13 @@ describe('countdown', () => {
     expect(countdownTransition(started, { type: 'TICK', now: T0 + 4999 }).state).toBe(started);
     const { state, effects } = run([{ type: 'TICK', now: T0 + 5000 }], started);
     expect(state).toBe(initialCountdownState);
-    expect(effects).toEqual(['finished', 'cleared']);
+    expect(effects).toEqual(['finished']);
   });
 
   it('resets without notifying', () => {
     const { state, effects } = run([{ type: 'START', now: T0, seconds: 5 }, { type: 'RESET' }]);
     expect(state).toBe(initialCountdownState);
-    expect(effects).toEqual(['cleared']);
+    expect(effects).toEqual([]);
   });
 
   it('ignores events that do not apply', () => {

@@ -68,7 +68,6 @@ export type FocusEffect =
   | { type: 'savePlan'; plan: SessionPlan }
   | { type: 'savePlanSnapshot'; plan: SessionPlan }
   | { type: 'clearPlanSnapshot' }
-  | { type: 'clearSessionSnapshot' }
   | { type: 'recordSession'; record: SessionRecord }
   | { type: 'notify'; notification: FocusNotification }
   | { type: 'recalculateStats' };
@@ -254,7 +253,6 @@ function finishSegment(
       { type: 'recordSession', record },
       { type: 'savePlan', plan: finished },
       { type: 'clearPlanSnapshot' },
-      { type: 'clearSessionSnapshot' },
       { type: 'recalculateStats' },
       {
         type: 'notify',
@@ -413,7 +411,6 @@ export function transition(state: FocusState, event: FocusEvent, deps: FocusDeps
           },
           { type: 'savePlan', plan: abandoned },
           { type: 'clearPlanSnapshot' },
-          { type: 'clearSessionSnapshot' },
           { type: 'recalculateStats' },
         ],
       };

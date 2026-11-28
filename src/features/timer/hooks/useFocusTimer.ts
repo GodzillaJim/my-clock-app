@@ -39,9 +39,6 @@ export function runFocusEffect(effect: FocusEffect): void {
     case 'clearPlanSnapshot':
       persistenceService.clearPlanSnapshot();
       break;
-    case 'clearSessionSnapshot':
-      persistenceService.clearSnapshot();
-      break;
     case 'recordSession':
       focusStorage
         .addSession(effect.record)

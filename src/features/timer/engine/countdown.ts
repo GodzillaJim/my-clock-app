@@ -19,7 +19,7 @@ export type CountdownEvent =
   | { type: 'TICK'; now: number }
   | { type: 'RESET' };
 
-export type CountdownEffect = 'finished' | 'cleared';
+export type CountdownEffect = 'finished';
 
 export const initialCountdownState: CountdownState = {
   phase: 'idle',
@@ -72,9 +72,9 @@ export function countdownTransition(
       };
     case 'TICK':
       if (state.phase !== 'running' || countdownRemainingMs(state, event.now) > 0) return same;
-      return { state: initialCountdownState, effects: ['finished', 'cleared'] };
+      return { state: initialCountdownState, effects: ['finished'] };
     case 'RESET':
       if (state.phase === 'idle') return same;
-      return { state: initialCountdownState, effects: ['cleared'] };
+      return { state: initialCountdownState, effects: [] };
   }
 }
