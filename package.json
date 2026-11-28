@@ -1,10 +1,18 @@
 {
   "name": "focus-sessions",
   "version": "1.0.0",
-  "main": "dist-electron/main/index.js",
-  "description": "A focus timer application for productive work sessions with session tracking and daily history.",
-  "author": "Focus Sessions App",
+  "description": "A Windows focus timer with planned focus/break sessions, crash recovery, history and challenges.",
+  "author": "Jimna Njoroge",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GodzillaJim/my-clock-app.git"
+  },
+  "homepage": "https://github.com/GodzillaJim/my-clock-app#readme",
+  "bugs": {
+    "url": "https://github.com/GodzillaJim/my-clock-app/issues"
+  },
+  "main": "dist-electron/main/index.js",
   "private": true,
   "debug": {
     "env": {
@@ -18,19 +26,15 @@
   "scripts": {
     "postinstall": "electron-builder install-app-deps",
     "dev": "vite",
-    "build": "tsc && vite build && electron-builder",
-    "build:win": "tsc && vite build && electron-builder --win",
-    "build:mac": "tsc && vite build && electron-builder --mac",
-    "build:linux": "tsc && vite build && electron-builder --linux",
-    "dist": "tsc && vite build && electron-builder --publish=never",
-    "dist:win": "tsc && vite build && electron-builder --win --publish=never",
+    "build": "tsc && vite build && electron-builder --win",
+    "dist": "tsc && vite build && electron-builder --win --publish=never",
     "preview": "vite preview",
     "pretest": "vite build --mode=test",
     "test": "vitest run",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm run knip && npm test && vite build",
-    "knip": "knip"
+    "knip": "knip",
+    "check": "npm run typecheck && npm run knip && npm test && vite build"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

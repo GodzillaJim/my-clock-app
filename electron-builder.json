@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
   "appId": "com.focussessions.app",
   "productName": "Focus Sessions",
-  "copyright": "Copyright © 2024 Focus Sessions App",
+  "copyright": "Copyright © 2025-2026 Jimna Njoroge",
   "asar": true,
   "asarUnpack": [
     "node_modules/better-sqlite3/**"
@@ -20,7 +20,9 @@
     {
       "from": "public/sounds",
       "to": "sounds",
-      "filter": ["**/*"]
+      "filter": [
+        "**/*"
+      ]
     },
     {
       "from": "build/hour_glass.ico",
@@ -31,27 +33,20 @@
       "to": "icons/hour_glass.png"
     }
   ],
-  "mac": {
-    "category": "public.app-category.productivity",
-    "icon": "build/hour_glass.icns",
-    "artifactName": "${productName}_${version}.${ext}",
-    "target": [
-      {
-        "target": "dmg",
-        "arch": ["x64", "arm64"]
-      }
-    ]
-  },
   "win": {
     "icon": "build/hour_glass.ico",
     "target": [
       {
         "target": "nsis",
-        "arch": ["x64"]
+        "arch": [
+          "x64"
+        ]
       },
       {
         "target": "portable",
-        "arch": ["x64"]
+        "arch": [
+          "x64"
+        ]
       }
     ],
     "artifactName": "${productName}_${version}.${ext}",
@@ -73,15 +68,5 @@
   },
   "portable": {
     "artifactName": "${productName}_${version}_portable.${ext}"
-  },
-  "linux": {
-    "icon": "build/hour_glass.png",
-    "target": [
-      {
-        "target": "AppImage",
-        "arch": ["x64"]
-      }
-    ],
-    "category": "Office"
   }
 }
