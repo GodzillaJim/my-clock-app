@@ -9,6 +9,7 @@ import {
   remainingMs,
   remainingSeconds,
   SNAPSHOT_INTERVAL_MS,
+  SUSPEND_GAP_MS,
   transition,
   type FocusEffect,
   type FocusEvent,
@@ -44,6 +45,13 @@ const start = (totalMinutes = 4, now = T0): FocusEvent => ({
   totalMinutes,
   settings,
 });
+
+/** One TICK per second after `from` up to and including `to`, as a running app produces. */
+const ticks = (from: number, to: number): FocusEvent[] =>
+  Array.from({ length: Math.ceil((to - from) / 1000) }, (_, i) => ({
+    type: 'TICK' as const,
+    now: Math.min(from + (i + 1) * 1000, to),
+  }));
 
 const of = <T extends FocusEffect['type']>(effects: FocusEffect[], type: T) =>
   effects.filter((e): e is Extract<FocusEffect, { type: T }> => e.type === type);
@@ -112,7 +120,7 @@ describe('time keeping', () => {
 
 describe('TICK', () => {
   it('moves on to the next segment when the current one ends', () => {
-    const { state, effects } = run([start(4), { type: 'TICK', now: T0 + MIN }]);
+    const { state, effects } = run([start(4), ...ticks(T0, T0 + MIN)]);
     expect(state.phase).toBe('running');
     expect(state.index).toBe(1);
     expect(isBreakSegment(currentSegment(state))).toBe(true);
@@ -136,23 +144,17 @@ describe('TICK', () => {
   });
 
   it('announces focus again after a break', () => {
-    const { effects } = run([
-      start(4),
-      { type: 'TICK', now: T0 + MIN },
-      { type: 'TICK', now: T0 + 3 * MIN },
-    ]);
+    const { effects } = run([start(4), ...ticks(T0, T0 + MIN), ...ticks(T0 + MIN, T0 + 3 * MIN)]);
     expect(of(effects, 'notify').at(-1)!.notification.title).toBe('Focus Time!');
   });
 
   it('completes the plan after the last segment', () => {
-    const { state, effects } = run([start(1), { type: 'TICK', now: T0 + MIN }]);
+    const before = run([start(1), ...ticks(T0, T0 + MIN - 1000)]).state;
+    const { state, effects } = transition(before, { type: 'TICK', now: T0 + MIN }, deps());
     expect(state.phase).toBe('complete');
     expect(state.plan!.status).toBe('completed');
     expect(state.plan!.actualEndTime).toBe(T0 + MIN);
     expect(effects.map((e) => e.type)).toEqual([
-      'savePlan',
-      'savePlanSnapshot',
-      'notify',
       'recordSession',
       'savePlan',
       'clearPlanSnapshot',
@@ -166,7 +168,7 @@ describe('TICK', () => {
       start(1),
       { type: 'PAUSE', now: T0 + 20_000 },
       { type: 'RESUME', now: T0 + 50_000 },
-      { type: 'TICK', now: T0 + 90_000 },
+      ...ticks(T0 + 50_000, T0 + 90_000),
     ]);
     const [record] = of(effects, 'recordSession');
     expect(record.record.actualDuration).toBe(60);
@@ -177,7 +179,7 @@ describe('TICK', () => {
   it('snapshots progress for crash recovery every few seconds', () => {
     const started = run([start()]).state;
     const early = transition(started, { type: 'TICK', now: T0 + 1000 }, deps());
-    expect(early.state).toBe(started);
+    expect(early.state.plan).toBe(started.plan);
     expect(early.effects).toEqual([]);
 
     const later = transition(started, { type: 'TICK', now: T0 + SNAPSHOT_INTERVAL_MS }, deps());
@@ -193,6 +195,71 @@ describe('TICK', () => {
     );
     const paused = run([start(1), { type: 'PAUSE', now: T0 }]).state;
     expect(transition(paused, { type: 'TICK', now: T0 + 10 * MIN }, deps()).state).toBe(paused);
+  });
+});
+
+describe('sleep and clock changes', () => {
+  it('pauses at the moment the system suspends, even when told only after waking', () => {
+    const asleep = run([start(), ...ticks(T0, T0 + 10_000)]).state;
+    // The suspend notice is processed on wake, two hours later
+    const { state, effects } = transition(asleep, { type: 'SUSPEND', at: T0 + 10_000 }, deps());
+    expect(state.phase).toBe('paused');
+    expect(remainingSeconds(state, T0 + 2 * 60 * MIN)).toBe(50);
+    expect(of(effects, 'notify')[0].notification.title).toBe('Session paused');
+    expect(of(effects, 'savePlanSnapshot')).toHaveLength(1);
+
+    // Resuming continues with the time that was left
+    const resumed = run([{ type: 'RESUME', now: T0 + 2 * 60 * MIN }], state).state;
+    expect(remainingSeconds(resumed, T0 + 2 * 60 * MIN + 1000)).toBe(49);
+  });
+
+  it('pauses at the last tick when the app was frozen without a suspend notice', () => {
+    const before = run([start(), ...ticks(T0, T0 + 10_000)]).state;
+    const woke = T0 + 10_000 + SUSPEND_GAP_MS + 1;
+    const { state, effects } = transition(before, { type: 'TICK', now: woke }, deps());
+    expect(state.phase).toBe('paused');
+    expect(state.pausedAt).toBe(T0 + 10_000);
+    expect(remainingSeconds(state, woke)).toBe(50);
+    expect(of(effects, 'notify')[0].notification.title).toBe('Session paused');
+    // The suspend notice arriving afterwards changes nothing
+    expect(transition(state, { type: 'SUSPEND', at: T0 + 10_000 }, deps()).state).toBe(state);
+  });
+
+  it('never completes a segment because of time spent asleep', () => {
+    const before = run([start(1), ...ticks(T0, T0 + 30_000)]).state;
+    const { state, effects } = transition(before, { type: 'TICK', now: T0 + 3 * MIN }, deps());
+    expect(state.phase).toBe('paused');
+    expect(of(effects, 'recordSession')).toEqual([]);
+  });
+
+  it('tolerates ordinary late ticks', () => {
+    const before = run([start(), ...ticks(T0, T0 + 10_000)]).state;
+    const late = transition(before, { type: 'TICK', now: T0 + 10_000 + SUSPEND_GAP_MS }, deps());
+    expect(late.state.phase).toBe('running');
+    expect(remainingSeconds(late.state, T0 + 10_000 + SUSPEND_GAP_MS)).toBe(20);
+  });
+
+  it('keeps counting correctly when the clock jumps backwards', () => {
+    const before = run([start(), ...ticks(T0, T0 + 20_000)]).state;
+    // The clock is set back 10 minutes
+    const back = T0 + 20_000 - 10 * MIN;
+    const { state } = transition(before, { type: 'TICK', now: back }, deps());
+    expect(state.phase).toBe('running');
+    expect(remainingSeconds(state, back)).toBe(40);
+    const later = run(ticks(back, back + 5000), state).state;
+    expect(remainingSeconds(later, back + 5000)).toBe(35);
+  });
+
+  it('ignores small backwards jitter', () => {
+    const before = run([start(), ...ticks(T0, T0 + 20_000)]).state;
+    const { state } = transition(before, { type: 'TICK', now: T0 + 19_000 }, deps());
+    expect(state.runningSince).toBe(before.runningSince);
+  });
+
+  it('ignores a suspend notice when nothing is running', () => {
+    expect(transition(initialFocusState, { type: 'SUSPEND', at: T0 }, deps()).state).toBe(
+      initialFocusState,
+    );
   });
 });
 
@@ -294,7 +361,7 @@ describe('STOP', () => {
 
 describe('RESET', () => {
   it('returns from complete to idle, and only from complete', () => {
-    const complete = run([start(1), { type: 'TICK', now: T0 + MIN }]).state;
+    const complete = run([start(1), ...ticks(T0, T0 + MIN)]).state;
     expect(transition(complete, { type: 'RESET' }, deps()).state).toBe(initialFocusState);
     const running = run([start()]).state;
     expect(transition(running, { type: 'RESET' }, deps()).state).toBe(running);
@@ -316,7 +383,7 @@ describe('SNAPSHOT', () => {
     expect(transition(initialFocusState, { type: 'SNAPSHOT', now: T0 }, deps()).effects).toEqual(
       [],
     );
-    const complete = run([start(1), { type: 'TICK', now: T0 + MIN }]).state;
+    const complete = run([start(1), ...ticks(T0, T0 + MIN)]).state;
     expect(transition(complete, { type: 'SNAPSHOT', now: T0 + MIN }, deps()).effects).toEqual([]);
   });
 });

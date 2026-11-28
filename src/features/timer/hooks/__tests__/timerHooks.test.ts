@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCountdown, useStopwatch } from '../useToolTimers';
-import { runFocusEffect } from '../useFocusTimer';
+import { runFocusEffect, useFocusTimer } from '../useFocusTimer';
 import type { SessionPlan, SessionRecord } from '@/features/timer/types';
 
 const mocks = vi.hoisted(() => ({
@@ -104,6 +104,35 @@ describe('useStopwatch', () => {
   });
 });
 
+describe('useFocusTimer', () => {
+  afterEach(() => {
+    delete window.electronAPI;
+  });
+
+  it('pauses a running session when the system reports going to sleep', () => {
+    let notifySuspend: ((at: number) => void) | undefined;
+    const unsubscribe = vi.fn();
+    window.electronAPI = {
+      onSystemSuspend: (callback: (at: number) => void) => {
+        notifySuspend = callback;
+        return unsubscribe;
+      },
+    } as unknown as NonNullable<Window['electronAPI']>;
+
+    const { result, unmount } = renderHook(() => useFocusTimer());
+    act(() => result.current.actions.start(25, { focusDuration: 25, shortBreakDuration: 5 }));
+    act(() => vi.advanceTimersByTime(10_000));
+
+    // Delivered on wake, with the time the system went to sleep
+    act(() => notifySuspend!(Date.now()));
+    act(() => vi.advanceTimersByTime(60_000));
+    expect(result.current.isPaused).toBe(true);
+    expect(result.current.remainingSeconds).toBe(25 * 60 - 10);
+
+    unmount();
+    expect(unsubscribe).toHaveBeenCalled();
+  });
+});
 describe('runFocusEffect', () => {
   const plan = { id: 'p' } as SessionPlan;
   const record = { id: 'r' } as SessionRecord;

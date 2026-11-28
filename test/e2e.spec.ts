@@ -67,6 +67,9 @@ if (process.platform === 'linux') {
           contextIsolation: p?.contextIsolation,
           nodeIntegration: p?.nodeIntegration,
           webSecurity: p?.webSecurity,
+          // Not echoed by getLastWebPreferences; read the live setting
+          backgroundThrottling:
+            BrowserWindow.getAllWindows()[0].webContents.getBackgroundThrottling(),
         };
       });
       expect(prefs).toEqual({
@@ -74,6 +77,7 @@ if (process.platform === 'linux') {
         contextIsolation: true,
         nodeIntegration: false,
         webSecurity: true,
+        backgroundThrottling: false,
       });
       expect(page.url()).toBe('app://bundle/index.html');
     });
@@ -108,6 +112,7 @@ if (process.platform === 'linux') {
           'log',
           'minimizeToTray',
           'onGlobalShortcutStartSession',
+          'onSystemSuspend',
           'onTrayOpenHistory',
           'onTrayOpenSettings',
           'onTrayStartSession',
@@ -280,6 +285,22 @@ if (process.platform === 'linux') {
       expect(url.href).toMatch(/^https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/new\?/);
       expect(url.searchParams.get('body')).toMatch(/Focus Sessions \d+\.\d+\.\d+ · Electron/);
     });
+    test('pauses a running session when the system goes to sleep', async () => {
+      await page
+        .getByRole('button', { name: /^Start \d+m Focus$/ })
+        .first()
+        .click();
+      await page.getByText('FOCUS', { exact: true }).waitFor({ timeout: 10000 });
+
+      // What Windows sends just before sleeping, through the real main-process handler
+      await electronApp.evaluate(({ powerMonitor }) => powerMonitor.emit('suspend'));
+      await page.getByRole('button', { name: 'Resume' }).waitFor({ timeout: 10000 });
+      const log = fs.readFileSync(path.join(userDataDir, 'logs', 'main.log'), 'utf8');
+      expect(log).toContain('System suspending');
+
+      await page.getByRole('button', { name: 'Stop session' }).first().click();
+      await page.getByText('READY', { exact: true }).waitFor({ timeout: 10000 });
+    }, 30000);
     test('opens settings and history from the tray menu', async () => {
       const send = (channel: string) =>
         electronApp.evaluate(

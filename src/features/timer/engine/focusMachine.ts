@@ -6,6 +6,16 @@
  *                                   ├─ last segment ends ──▶ complete ──RESET──▶ idle
  *                                   └─ STOP ──▶ idle (plan abandoned)
  *
+ * Sleep and clock changes (see SUSPEND_GAP_MS):
+ * - The computer sleeping pauses the session at the moment it went to sleep,
+ *   from either the system's suspend notice (SUSPEND) or, failing that, a gap
+ *   between ticks longer than SUSPEND_GAP_MS. Time asleep never counts as
+ *   focus, and the user resumes when they are back.
+ * - The wall clock jumping backwards (a manual change, a time sync) shifts the
+ *   running span by the same amount, so the countdown neither stalls nor
+ *   repeats. A small forward jump counts as elapsed time; a large one looks
+ *   like sleep and pauses.
+ *
  * `transition` never reads the clock or touches storage: every event carries
  * `now`, and side effects (persistence, notifications) are returned as data
  * for the caller to run. Time is tracked as active milliseconds, so pauses
@@ -46,6 +56,8 @@ export interface FocusState {
   pausedMs: number;
   /** When the crash-recovery snapshot was last written. */
   lastSnapshotAt: number;
+  /** Clock reading of the previous TICK (or start/resume), to notice sleep and clock jumps. */
+  lastTickAt: number;
 }
 
 export type FocusEvent =
@@ -54,6 +66,8 @@ export type FocusEvent =
   | { type: 'PAUSE'; now: number }
   | { type: 'RESUME'; now: number }
   | { type: 'TICK'; now: number }
+  /** The system is going to sleep; `at` is when (it may arrive after waking). */
+  | { type: 'SUSPEND'; at: number }
   | { type: 'SKIP'; now: number }
   | { type: 'STOP'; now: number }
   | { type: 'RESET' }
@@ -84,6 +98,16 @@ export interface FocusDeps {
 /** How often the running plan is snapshotted for crash recovery. */
 export const SNAPSHOT_INTERVAL_MS = 5000;
 
+/**
+ * Ticks arrive every 250 ms (the window is never throttled). A gap longer than
+ * this means the app was frozen (sleep, hibernate, a suspended VM) and is
+ * treated as a pause starting at the last tick.
+ */
+export const SUSPEND_GAP_MS = 30_000;
+
+/** A backwards clock jump larger than this is corrected for. */
+export const CLOCK_JUMP_TOLERANCE_MS = 2_000;
+
 export const initialFocusState: FocusState = {
   phase: 'idle',
   plan: null,
@@ -93,6 +117,7 @@ export const initialFocusState: FocusState = {
   pausedAt: null,
   pausedMs: 0,
   lastSnapshotAt: 0,
+  lastTickAt: 0,
 };
 
 // ---------------------------------------------------------------------------
@@ -156,8 +181,34 @@ function freshSegmentState(plan: SessionPlan, index: number, now: number): Focus
     pausedAt: null,
     pausedMs: 0,
     lastSnapshotAt: now,
+    lastTickAt: now,
   };
 }
+
+/** Pauses a running segment as of `at` and snapshots it. */
+function pauseAt(state: FocusState, at: number, effects: FocusEffect[] = []): Transition {
+  const paused: FocusState = {
+    ...state,
+    phase: 'paused',
+    elapsedMs: activeMs(state, at),
+    runningSince: null,
+    pausedAt: at,
+  };
+  const plan = withProgress(paused, at);
+  return {
+    state: { ...paused, plan, lastSnapshotAt: at },
+    effects: [{ type: 'savePlanSnapshot', plan }, ...effects],
+  };
+}
+
+const sleptNotice: FocusEffect = {
+  type: 'notify',
+  notification: {
+    type: 'break_reminder',
+    title: 'Session paused',
+    body: 'Your computer went to sleep, so the session was paused. Resume when you are back.',
+  },
+};
 
 /** Paused time of the current segment, including an ongoing pause. */
 function pausedMsAt(state: FocusState, now: number): number {
@@ -330,21 +381,13 @@ export function transition(state: FocusState, event: FocusEvent, deps: FocusDeps
       };
     }
 
-    case 'PAUSE': {
+    case 'PAUSE':
+      return state.phase === 'running' ? pauseAt(state, event.now) : unchanged(state);
+
+    case 'SUSPEND':
+      // Already paused (by the user, or by the tick-gap check after waking): nothing to do
       if (state.phase !== 'running') return unchanged(state);
-      const paused: FocusState = {
-        ...state,
-        phase: 'paused',
-        elapsedMs: activeMs(state, event.now),
-        runningSince: null,
-        pausedAt: event.now,
-      };
-      const plan = withProgress(paused, event.now);
-      return {
-        state: { ...paused, plan, lastSnapshotAt: event.now },
-        effects: [{ type: 'savePlanSnapshot', plan }],
-      };
-    }
+      return pauseAt(state, Math.max(event.at, state.runningSince!), [sleptNotice]);
 
     case 'RESUME': {
       if (state.phase !== 'paused') return unchanged(state);
@@ -355,6 +398,7 @@ export function transition(state: FocusState, event: FocusEvent, deps: FocusDeps
           runningSince: event.now,
           pausedMs: pausedMsAt(state, event.now),
           pausedAt: null,
+          lastTickAt: event.now,
         },
         effects: [],
       };
@@ -362,11 +406,28 @@ export function transition(state: FocusState, event: FocusEvent, deps: FocusDeps
 
     case 'TICK': {
       if (state.phase !== 'running') return unchanged(state);
-      if (remainingMs(state, event.now) <= 0) return finishSegment(state, event.now, 'completed');
-      if (event.now - state.lastSnapshotAt < SNAPSHOT_INTERVAL_MS) return unchanged(state);
-      const plan = withProgress(state, event.now);
+      const gap = event.now - state.lastTickAt;
+      // Frozen for a long time (sleep, hibernate): pause as of the last tick
+      if (gap > SUSPEND_GAP_MS) return pauseAt(state, state.lastTickAt, [sleptNotice]);
+
+      let ticked: FocusState = { ...state, lastTickAt: event.now };
+      if (gap < -CLOCK_JUMP_TOLERANCE_MS) {
+        // The clock went back: move the running span with it so no time is lost or repeated
+        ticked = {
+          ...ticked,
+          runningSince: state.runningSince! + gap,
+          lastSnapshotAt: Math.min(state.lastSnapshotAt, event.now),
+        };
+      }
+      if (remainingMs(ticked, event.now) <= 0) {
+        return finishSegment(ticked, event.now, 'completed');
+      }
+      if (event.now - ticked.lastSnapshotAt < SNAPSHOT_INTERVAL_MS) {
+        return { state: ticked, effects: [] };
+      }
+      const plan = withProgress(ticked, event.now);
       return {
-        state: { ...state, plan, lastSnapshotAt: event.now },
+        state: { ...ticked, plan, lastSnapshotAt: event.now },
         effects: [{ type: 'savePlanSnapshot', plan }],
       };
     }
@@ -439,7 +500,12 @@ export function transition(state: FocusState, event: FocusEvent, deps: FocusDeps
         activeMs(state, event.now) + event.seconds * 1000,
       );
       return {
-        state: { ...state, elapsedMs: Math.max(0, target), runningSince: event.now },
+        state: {
+          ...state,
+          elapsedMs: Math.max(0, target),
+          runningSince: event.now,
+          lastTickAt: event.now,
+        },
         effects: [],
       };
     }

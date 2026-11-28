@@ -100,7 +100,9 @@ export type EventChannel =
   | 'tray-start-session'
   | 'tray-open-settings'
   | 'tray-open-history'
-  | 'global-shortcut-start-session';
+  | 'global-shortcut-start-session'
+  /** The system is about to sleep; carries the time (ms since epoch). */
+  | 'system-suspend';
 
 type Invoker<C extends InvokeChannel> = (...args: InvokeArgs<C>) => Promise<InvokeResult<C>>;
 type Unsubscribe = () => void;
@@ -120,6 +122,8 @@ export interface ElectronAPI {
   onTrayOpenSettings: Subscriber;
   onTrayOpenHistory: Subscriber;
   onGlobalShortcutStartSession: Subscriber;
+  /** Called (possibly only after waking) with the time the system went to sleep. */
+  onSystemSuspend: (callback: (suspendedAt: number) => void) => Unsubscribe;
 
   db: {
     sessions: {
