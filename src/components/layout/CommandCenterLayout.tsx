@@ -86,7 +86,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
   const [currentSessionIndex, setCurrentSessionIndex] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
-  const [recentSessions, setRecentSessions] = useState<any[]>([]);
+  const [recentSessions, setRecentSessions] = useState<SessionRecord[]>([]);
   const [todayStats, setTodayStats] = useState({ focusTime: 0, completed: 0 });
 
   // Refs to hold latest state values for the timer callback

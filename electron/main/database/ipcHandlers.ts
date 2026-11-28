@@ -1,5 +1,5 @@
-import { ipcMain } from 'electron';
 import type Database from 'better-sqlite3';
+import { handle } from '../ipc';
 import * as sessionRepo from './repositories/sessionRepo';
 import * as planRepo from './repositories/planRepo';
 import * as dailyHistoryRepo from './repositories/dailyHistoryRepo';
@@ -8,170 +8,58 @@ import * as feedbackRepo from './repositories/feedbackRepo';
 import * as kvRepo from './repositories/kvRepo';
 import * as snapshotRepo from './repositories/snapshotRepo';
 
+/** Database channels of the IPC contract; arguments are schema-validated by `handle`. */
 export function registerDatabaseHandlers(db: Database.Database): void {
   // Sessions
-  ipcMain.handle('db:sessions:save', (_, session) => {
-    sessionRepo.insert(db, session);
-  });
+  handle('db:sessions:save', (session) => sessionRepo.insert(db, session));
+  handle('db:sessions:getByDate', (date) => sessionRepo.getByDate(db, date));
+  handle('db:sessions:getHistory', (limit) => sessionRepo.getHistory(db, limit));
+  handle('db:sessions:delete', (id) => sessionRepo.deleteById(db, id));
 
-  ipcMain.handle('db:sessions:getByDate', (_, date: string) => {
-    return sessionRepo.getByDate(db, date);
-  });
+  // Session plans
+  handle('db:plans:save', (plan) => planRepo.saveWithSegments(db, plan));
+  handle('db:plans:get', (id) => planRepo.get(db, id));
+  handle('db:plans:getByDate', (date) => planRepo.getByDate(db, date));
+  handle('db:plans:getByDateRange', (start, end) => planRepo.getByDateRange(db, start, end));
+  handle('db:plans:update', (id, updates) => planRepo.update(db, id, updates));
 
-  ipcMain.handle('db:sessions:getHistory', (_, limit?: number) => {
-    return sessionRepo.getHistory(db, limit);
-  });
-
-  ipcMain.handle('db:sessions:delete', (_, id: string) => {
-    sessionRepo.deleteById(db, id);
-  });
-
-  ipcMain.handle('db:sessions:deleteByDate', (_, date: string) => {
-    sessionRepo.deleteByDate(db, date);
-  });
-
-  ipcMain.handle('db:sessions:deleteAll', () => {
-    sessionRepo.deleteAll(db);
-  });
-
-  // Session Plans
-  ipcMain.handle('db:plans:save', (_, plan) => {
-    planRepo.saveWithSegments(db, plan);
-  });
-
-  ipcMain.handle('db:plans:get', (_, id: string) => {
-    return planRepo.get(db, id);
-  });
-
-  ipcMain.handle('db:plans:getByDate', (_, date: string) => {
-    return planRepo.getByDate(db, date);
-  });
-
-  ipcMain.handle('db:plans:getByDateRange', (_, start: string, end: string) => {
-    return planRepo.getByDateRange(db, start, end);
-  });
-
-  ipcMain.handle('db:plans:update', (_, id: string, updates: any) => {
-    return planRepo.update(db, id, updates);
-  });
-
-  ipcMain.handle('db:plans:updateSegment', (_, segmentId: string, updates: any) => {
-    planRepo.updateSegment(db, segmentId, updates);
-  });
-
-  // Daily History
-  ipcMain.handle('db:history:save', (_, history) => {
-    dailyHistoryRepo.save(db, history);
-  });
-
-  ipcMain.handle('db:history:getByDate', (_, date: string) => {
-    return dailyHistoryRepo.getByDate(db, date);
-  });
-
-  ipcMain.handle('db:history:getByRange', (_, start: string, end: string) => {
-    return dailyHistoryRepo.getByRange(db, start, end);
-  });
-
-  ipcMain.handle('db:history:getAllDates', () => {
-    return dailyHistoryRepo.getAllDates(db);
-  });
-
-  ipcMain.handle('db:history:deleteByDate', (_, date: string) => {
-    dailyHistoryRepo.deleteByDate(db, date);
-  });
-
-  ipcMain.handle('db:history:deleteAll', () => {
-    dailyHistoryRepo.deleteAll(db);
-  });
-
-  // Challenges
-  ipcMain.handle('db:challenges:getAll', () => {
-    return challengeRepo.getAll(db);
-  });
-
-  ipcMain.handle('db:challenges:getById', (_, id: string) => {
-    return challengeRepo.getById(db, id);
-  });
-
-  ipcMain.handle('db:challenges:save', (_, challenge) => {
-    challengeRepo.saveWithDays(db, challenge);
-  });
-
-  ipcMain.handle('db:challenges:delete', (_, id: string) => {
-    challengeRepo.deleteById(db, id);
-  });
-
-  ipcMain.handle(
-    'db:challenges:markDay',
-    (_, challengeId: string, date: string, status: string, note?: string) => {
-      challengeRepo.markDay(db, challengeId, date, status, note);
-    },
-  );
-
-  // Feedback
-  ipcMain.handle('db:feedback:getAll', (_, filters?: any) => {
-    return feedbackRepo.getAll(db, filters);
-  });
-
-  ipcMain.handle('db:feedback:save', (_, item) => {
-    feedbackRepo.insert(db, item);
-  });
-
-  ipcMain.handle('db:feedback:update', (_, id: string, updates: any) => {
-    feedbackRepo.update(db, id, updates);
-  });
-
-  ipcMain.handle('db:feedback:delete', (_, id: string) => {
-    feedbackRepo.deleteById(db, id);
-  });
-
-  ipcMain.handle('db:feedback:getStats', () => {
-    return feedbackRepo.getStats(db);
-  });
-
-  // KV Store (AppState, LifetimeStats)
-  ipcMain.handle('db:kv:get', (_, key: string) => {
-    return kvRepo.get(db, key);
-  });
-
-  ipcMain.handle('db:kv:set', (_, key: string, value: any) => {
-    kvRepo.set(db, key, value);
-  });
-
-  // Active Snapshot (crash recovery)
-  ipcMain.handle('db:snapshot:save', (_, plan) => {
-    snapshotRepo.save(db, plan);
-  });
-
-  ipcMain.handle('db:snapshot:load', () => {
-    return snapshotRepo.load(db);
-  });
-
-  ipcMain.handle('db:snapshot:clear', () => {
-    snapshotRepo.clear(db);
-  });
-
-  // Compound operations
-  ipcMain.handle('db:sessions:saveAndUpdateHistory', (_, session, historyData) => {
-    db.transaction(() => {
-      sessionRepo.insert(db, session);
-      if (historyData) {
-        dailyHistoryRepo.save(db, historyData);
-      }
-    })();
-  });
-
-  ipcMain.handle('db:history:clearToday', (_, date: string) => {
+  // Daily history
+  handle('db:history:save', (history) => dailyHistoryRepo.save(db, history));
+  handle('db:history:getByDate', (date) => dailyHistoryRepo.getByDate(db, date));
+  handle('db:history:getByRange', (start, end) => dailyHistoryRepo.getByRange(db, start, end));
+  handle('db:history:getAllDates', () => dailyHistoryRepo.getAllDates(db));
+  handle('db:history:clearToday', (date) =>
     db.transaction(() => {
       dailyHistoryRepo.deleteByDate(db, date);
       sessionRepo.deleteByDate(db, date);
-    })();
-  });
-
-  ipcMain.handle('db:history:resetAll', () => {
+    })(),
+  );
+  handle('db:history:resetAll', () =>
     db.transaction(() => {
       sessionRepo.deleteAll(db);
       dailyHistoryRepo.deleteAll(db);
-    })();
-  });
+    })(),
+  );
+
+  // Challenges
+  handle('db:challenges:getAll', () => challengeRepo.getAll(db));
+  handle('db:challenges:getById', (id) => challengeRepo.getById(db, id));
+  handle('db:challenges:save', (challenge) => challengeRepo.saveWithDays(db, challenge));
+  handle('db:challenges:delete', (id) => challengeRepo.deleteById(db, id));
+
+  // Feedback
+  handle('db:feedback:getAll', (filters) => feedbackRepo.getAll(db, filters));
+  handle('db:feedback:save', (item) => feedbackRepo.insert(db, item));
+  handle('db:feedback:update', (id, updates) => feedbackRepo.update(db, id, updates));
+  handle('db:feedback:delete', (id) => feedbackRepo.deleteById(db, id));
+  handle('db:feedback:getStats', () => feedbackRepo.getStats(db));
+
+  // Key-value documents (app state, lifetime stats)
+  handle('db:kv:get', (key) => kvRepo.get(db, key));
+  handle('db:kv:set', (...entry) => kvRepo.set(db, ...entry));
+
+  // Active plan snapshot (crash recovery)
+  handle('db:snapshot:save', (plan) => snapshotRepo.save(db, plan));
+  handle('db:snapshot:load', () => snapshotRepo.load(db));
+  handle('db:snapshot:clear', () => snapshotRepo.clear(db));
 }

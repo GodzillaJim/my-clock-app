@@ -1,7 +1,27 @@
 import type Database from 'better-sqlite3';
+import type { DailyHistory } from '../../../../src/features/timer/types';
 import { retentionCutoff } from '../retention';
 
-function fromDbHistory(row: any): any {
+interface HistoryRow {
+  date: string;
+  total_focus_time: number;
+  total_break_time: number;
+  completed_sessions: number;
+  interrupted_sessions: number;
+  skipped_sessions: number;
+  average_session_length: number;
+  longest_streak: number;
+  created_at: string;
+  updated_at: string;
+  day_start_time: number | null;
+  day_end_time: number | null;
+  session_plan_ids: string | null;
+  total_planned_time: number;
+  total_actual_time: number;
+  completion_rate: number;
+}
+
+function fromDbHistory(row: HistoryRow): DailyHistory {
   return {
     date: row.date,
     sessions: [], // Sessions are in the sessions table, not embedded
@@ -16,14 +36,14 @@ function fromDbHistory(row: any): any {
     updatedAt: new Date(row.updated_at),
     dayStartTime: row.day_start_time,
     dayEndTime: row.day_end_time,
-    sessionPlanIds: JSON.parse(row.session_plan_ids || '[]'),
+    sessionPlanIds: JSON.parse(row.session_plan_ids || '[]') as string[],
     totalPlannedTime: row.total_planned_time,
     totalActualTime: row.total_actual_time,
     completionRate: row.completion_rate,
   };
 }
 
-export function save(db: Database.Database, history: any): void {
+export function save(db: Database.Database, history: DailyHistory): void {
   db.prepare(
     `
     INSERT OR REPLACE INTO daily_history (date, total_focus_time, total_break_time, completed_sessions,
@@ -34,36 +54,41 @@ export function save(db: Database.Database, history: any): void {
   `,
   ).run(
     history.date,
-    history.totalFocusTime || 0,
-    history.totalBreakTime || 0,
-    history.completedSessions || 0,
-    history.interruptedSessions || 0,
-    history.skippedSessions || 0,
-    history.averageSessionLength || 0,
-    history.longestStreak || 0,
+    history.totalFocusTime,
+    history.totalBreakTime,
+    history.completedSessions,
+    history.interruptedSessions,
+    history.skippedSessions,
+    history.averageSessionLength,
+    history.longestStreak,
     new Date(history.createdAt).toISOString(),
-    new Date(history.updatedAt || new Date()).toISOString(),
-    history.dayStartTime || null,
-    history.dayEndTime || null,
-    JSON.stringify(history.sessionPlanIds || []),
-    history.totalPlannedTime || 0,
-    history.totalActualTime || 0,
-    history.completionRate || 0,
+    new Date(history.updatedAt).toISOString(),
+    history.dayStartTime ?? null,
+    history.dayEndTime ?? null,
+    JSON.stringify(history.sessionPlanIds),
+    history.totalPlannedTime,
+    history.totalActualTime,
+    history.completionRate,
   );
 
   // Enforce date-based retention
   db.prepare('DELETE FROM daily_history WHERE date < ?').run(retentionCutoff().date);
 }
 
-export function getByDate(db: Database.Database, date: string): any | null {
-  const row = db.prepare('SELECT * FROM daily_history WHERE date = ?').get(date);
+export function getByDate(db: Database.Database, date: string): DailyHistory | null {
+  const row = db.prepare('SELECT * FROM daily_history WHERE date = ?').get(date) as
+    HistoryRow | undefined;
   return row ? fromDbHistory(row) : null;
 }
 
-export function getByRange(db: Database.Database, startDate: string, endDate: string): any[] {
+export function getByRange(
+  db: Database.Database,
+  startDate: string,
+  endDate: string,
+): DailyHistory[] {
   const rows = db
     .prepare('SELECT * FROM daily_history WHERE date >= ? AND date <= ? ORDER BY date ASC')
-    .all(startDate, endDate);
+    .all(startDate, endDate) as HistoryRow[];
   return rows.map(fromDbHistory);
 }
 

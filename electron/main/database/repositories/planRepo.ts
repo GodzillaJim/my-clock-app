@@ -1,27 +1,52 @@
 import type Database from 'better-sqlite3';
+import type {
+  SegmentStatus,
+  SessionPlan,
+  SessionPlanStatus,
+  SessionType,
+} from '../../../../src/features/timer/types';
+import type { PlanUpdate } from '../../../ipc/contract';
 import { retentionCutoff } from '../retention';
 
-const TYPE_TO_DB: Record<string, string> = {
-  FOCUS: 'focus',
-  SHORT_BREAK: 'shortBreak',
-  LONG_BREAK: 'longBreak',
-  focus: 'focus',
-  shortBreak: 'shortBreak',
-  longBreak: 'longBreak',
-};
-const DB_TO_TYPE: Record<string, string> = {
-  focus: 'FOCUS',
-  shortBreak: 'SHORT_BREAK',
-  longBreak: 'LONG_BREAK',
-};
+interface PlanRow {
+  id: string;
+  created_at: number;
+  status: string;
+  current_segment_index: number;
+  settings: string;
+  expected_end_time: number;
+  actual_end_time: number | null;
+  interrupted_at: number | null;
+  total_planned_duration: number;
+  total_elapsed: number;
+  last_updated: number;
+}
 
-function fromDbPlan(planRow: any, segmentRows: any[]): any {
+interface SegmentRow {
+  id: string;
+  plan_id: string;
+  idx: number;
+  type: string;
+  planned_duration: number;
+  actual_duration: number | null;
+  expected_start_time: number;
+  expected_end_time: number;
+  actual_start_time: number | null;
+  actual_end_time: number | null;
+  status: string;
+  paused_time: number;
+  elapsed_at_last_update: number;
+}
+
+// Columns hold the domain enum values ('focus', 'in_progress', ...) unchanged;
+// the schema's CHECK constraints guarantee them.
+function fromDbPlan(planRow: PlanRow, segmentRows: SegmentRow[]): SessionPlan {
   return {
     id: planRow.id,
     createdAt: planRow.created_at,
-    status: planRow.status,
+    status: planRow.status as SessionPlanStatus,
     currentSegmentIndex: planRow.current_segment_index,
-    settings: JSON.parse(planRow.settings),
+    settings: JSON.parse(planRow.settings) as SessionPlan['settings'],
     expectedEndTime: planRow.expected_end_time,
     actualEndTime: planRow.actual_end_time,
     interruptedAt: planRow.interrupted_at,
@@ -31,21 +56,21 @@ function fromDbPlan(planRow: any, segmentRows: any[]): any {
     segments: segmentRows.map((seg) => ({
       id: seg.id,
       index: seg.idx,
-      type: DB_TO_TYPE[seg.type] || seg.type,
+      type: seg.type as SessionType,
       plannedDuration: seg.planned_duration,
       actualDuration: seg.actual_duration,
       expectedStartTime: seg.expected_start_time,
       expectedEndTime: seg.expected_end_time,
       actualStartTime: seg.actual_start_time,
       actualEndTime: seg.actual_end_time,
-      status: seg.status,
+      status: seg.status as SegmentStatus,
       pausedTime: seg.paused_time,
       elapsedAtLastUpdate: seg.elapsed_at_last_update,
     })),
   };
 }
 
-export function saveWithSegments(db: Database.Database, plan: any): void {
+export function saveWithSegments(db: Database.Database, plan: SessionPlan): void {
   const saveTx = db.transaction(() => {
     db.prepare(
       `
@@ -60,8 +85,8 @@ export function saveWithSegments(db: Database.Database, plan: any): void {
       plan.currentSegmentIndex,
       JSON.stringify(plan.settings),
       plan.expectedEndTime,
-      plan.actualEndTime || null,
-      plan.interruptedAt || null,
+      plan.actualEndTime ?? null,
+      plan.interruptedAt ?? null,
       plan.totalPlannedDuration,
       plan.totalElapsed,
       plan.lastUpdated,
@@ -76,21 +101,21 @@ export function saveWithSegments(db: Database.Database, plan: any): void {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    for (const seg of plan.segments || []) {
+    for (const seg of plan.segments) {
       insertSeg.run(
         seg.id,
         plan.id,
         seg.index,
-        TYPE_TO_DB[seg.type] || seg.type || 'focus',
+        seg.type,
         seg.plannedDuration,
-        seg.actualDuration || null,
+        seg.actualDuration ?? null,
         seg.expectedStartTime,
         seg.expectedEndTime,
-        seg.actualStartTime || null,
-        seg.actualEndTime || null,
-        seg.status || 'pending',
-        seg.pausedTime || 0,
-        seg.elapsedAtLastUpdate || 0,
+        seg.actualStartTime ?? null,
+        seg.actualEndTime ?? null,
+        seg.status,
+        seg.pausedTime,
+        seg.elapsedAtLastUpdate,
       );
     }
 
@@ -104,70 +129,41 @@ export function saveWithSegments(db: Database.Database, plan: any): void {
   saveTx();
 }
 
-export function get(db: Database.Database, id: string): any | null {
-  const planRow = db.prepare('SELECT * FROM session_plans WHERE id = ?').get(id);
-  if (!planRow) return null;
-  const segmentRows = db
+function segmentsOf(db: Database.Database, planId: string): SegmentRow[] {
+  return db
     .prepare('SELECT * FROM plan_segments WHERE plan_id = ? ORDER BY idx ASC')
-    .all(id);
-  return fromDbPlan(planRow, segmentRows);
+    .all(planId) as SegmentRow[];
 }
 
-export function getByDateRange(db: Database.Database, startDate: string, endDate: string): any[] {
+export function get(db: Database.Database, id: string): SessionPlan | null {
+  const planRow = db.prepare('SELECT * FROM session_plans WHERE id = ?').get(id) as
+    PlanRow | undefined;
+  return planRow ? fromDbPlan(planRow, segmentsOf(db, id)) : null;
+}
+
+export function getByDateRange(
+  db: Database.Database,
+  startDate: string,
+  endDate: string,
+): SessionPlan[] {
   const start = new Date(`${startDate}T00:00:00`).getTime();
   const end = new Date(`${endDate}T23:59:59.999`).getTime();
   const planRows = db
     .prepare(
       'SELECT * FROM session_plans WHERE created_at >= ? AND created_at <= ? ORDER BY created_at ASC',
     )
-    .all(start, end);
-
-  return planRows.map((planRow: any) => {
-    const segmentRows = db
-      .prepare('SELECT * FROM plan_segments WHERE plan_id = ? ORDER BY idx ASC')
-      .all(planRow.id);
-    return fromDbPlan(planRow, segmentRows);
-  });
+    .all(start, end) as PlanRow[];
+  return planRows.map((planRow) => fromDbPlan(planRow, segmentsOf(db, planRow.id)));
 }
 
-export function getByDate(db: Database.Database, date: string): any[] {
+export function getByDate(db: Database.Database, date: string): SessionPlan[] {
   return getByDateRange(db, date, date);
 }
 
-export function update(db: Database.Database, id: string, updates: any): any | null {
+export function update(db: Database.Database, id: string, updates: PlanUpdate): SessionPlan | null {
   const existing = get(db, id);
   if (!existing) return null;
 
-  const merged = { ...existing, ...updates, lastUpdated: Date.now() };
-  saveWithSegments(db, merged);
+  saveWithSegments(db, { ...existing, ...updates, id, lastUpdated: Date.now() });
   return get(db, id);
-}
-
-export function updateSegment(
-  db: Database.Database,
-  segmentId: string,
-  updates: Record<string, any>,
-): void {
-  const setClauses: string[] = [];
-  const values: any[] = [];
-
-  for (const [key, value] of Object.entries(updates)) {
-    // Map camelCase to snake_case
-    const colMap: Record<string, string> = {
-      actualDuration: 'actual_duration',
-      actualStartTime: 'actual_start_time',
-      actualEndTime: 'actual_end_time',
-      elapsedAtLastUpdate: 'elapsed_at_last_update',
-      pausedTime: 'paused_time',
-      status: 'status',
-    };
-    const col = colMap[key] || key;
-    setClauses.push(`${col} = ?`);
-    values.push(value);
-  }
-
-  if (setClauses.length > 0) {
-    values.push(segmentId);
-    db.prepare(`UPDATE plan_segments SET ${setClauses.join(', ')} WHERE id = ?`).run(...values);
-  }
 }
