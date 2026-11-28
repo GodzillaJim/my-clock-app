@@ -158,6 +158,8 @@ Playwright (Electron e2e) · knip · electron-builder (NSIS)
 
 The renderer is sandboxed with a strict CSP and reaches the main process only through a typed, schema-validated IPC contract. See [docs/security.md](docs/security.md) for the Electron checklist review, findings and accepted risks.
 
+The reasoning behind the architecture (SQLite in the main process, the IPC contract, the timer state machine, layouts, Windows-only, local checks) is recorded in [docs/adr](docs/adr/README.md).
+
 ## Contributing
 
 1. Pick an issue from the [roadmap](ROADMAP.md) (`priority:high` first within a milestone)

@@ -99,12 +99,13 @@ _Exit criteria: One storage path, a typed IPC contract, a pure tested timer engi
 - [ ] [#46](https://github.com/GodzillaJim/my-clock-app/issues/46) split focusStorage into domain services
 - [ ] [#47](https://github.com/GodzillaJim/my-clock-app/issues/47) break up oversized components
 - [x] [#50](https://github.com/GodzillaJim/my-clock-app/issues/50) error boundaries and process crash handling
-- [ ] [#51](https://github.com/GodzillaJim/my-clock-app/issues/51) architecture decision records
+- [x] [#51](https://github.com/GodzillaJim/my-clock-app/issues/51) architecture decision records ([docs/adr](docs/adr/README.md))
+- [ ] [#101](https://github.com/GodzillaJim/my-clock-app/issues/101) replace Feedback with a Report a problem link
 
 ### Decisions
 
-- [ ] [#48](https://github.com/GodzillaJim/my-clock-app/issues/48) layout strategy (Zen / Dashboard / Command Center)
-- [ ] [#49](https://github.com/GodzillaJim/my-clock-app/issues/49) keep, polish or cut Challenges and Feedback
+- [x] [#48](https://github.com/GodzillaJim/my-clock-app/issues/48) layout strategy: keep all three ([ADR 0005](docs/adr/0005-keep-three-layouts.md))
+- [x] [#49](https://github.com/GodzillaJim/my-clock-app/issues/49) keep Challenges, replace Feedback ([ADR 0007](docs/adr/0007-keep-challenges-replace-feedback.md))
 
 ---
 
@@ -118,6 +119,7 @@ _Exit criteria: User data survives crashes, upgrades and migrations — proven b
 - [ ] [#55](https://github.com/GodzillaJim/my-clock-app/issues/55) data export/import and backup/restore
 - [ ] [#56](https://github.com/GodzillaJim/my-clock-app/issues/56) timer accuracy across sleep/hibernate and clock changes
 - [ ] [#57](https://github.com/GodzillaJim/my-clock-app/issues/57) performance budget checked locally
+- [ ] [#100](https://github.com/GodzillaJim/my-clock-app/issues/100) e2e coverage for the Dashboard and Command Center layouts
 
 ---
 
@@ -133,6 +135,8 @@ _Exit criteria: Design review and a WCAG 2.1 AA audit both pass; the first-run e
 - [ ] [#63](https://github.com/GodzillaJim/my-clock-app/issues/63) WCAG 2.1 AA pass
 - [ ] [#64](https://github.com/GodzillaJim/my-clock-app/issues/64) shortcut overlay / command palette
 - [ ] [#65](https://github.com/GodzillaJim/my-clock-app/issues/65) Windows-native integration
+- [ ] [#99](https://github.com/GodzillaJim/my-clock-app/issues/99) visible tool switcher in the Zen layout
+- [ ] [#102](https://github.com/GodzillaJim/my-clock-app/issues/102) polish Challenges
 
 ---
 
@@ -163,9 +167,7 @@ _Exit criteria: A visitor understands what it is, why it's well built, and can i
 
 ## Open decisions
 
-| Decision                                           | Milestone | Issue                                                        |
-| -------------------------------------------------- | --------- | ------------------------------------------------------------ |
-| rename repository to match the product             | M0        | [#22](https://github.com/GodzillaJim/my-clock-app/issues/22) |
-| layout strategy (Zen / Dashboard / Command Center) | M2        | [#48](https://github.com/GodzillaJim/my-clock-app/issues/48) |
-| keep, polish or cut Challenges and Feedback        | M2        | [#49](https://github.com/GodzillaJim/my-clock-app/issues/49) |
-| code signing                                       | M5        | [#68](https://github.com/GodzillaJim/my-clock-app/issues/68) |
+| Decision                               | Milestone | Issue                                                        |
+| -------------------------------------- | --------- | ------------------------------------------------------------ |
+| rename repository to match the product | M0        | [#22](https://github.com/GodzillaJim/my-clock-app/issues/22) |
+| code signing                           | M5        | [#68](https://github.com/GodzillaJim/my-clock-app/issues/68) |
