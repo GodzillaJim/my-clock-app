@@ -18,7 +18,7 @@ export function registerDatabaseHandlers(db: Database.Database): void {
     return sessionRepo.getByDate(db, date);
   });
 
-  ipcMain.handle('db:sessions:getHistory', (_, limit: number) => {
+  ipcMain.handle('db:sessions:getHistory', (_, limit?: number) => {
     return sessionRepo.getHistory(db, limit);
   });
 

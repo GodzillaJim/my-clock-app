@@ -88,5 +88,29 @@ if (process.platform === 'linux') {
       await page.getByRole('button', { name: 'Stop session' }).first().click()
       await page.getByText('READY', { exact: true }).waitFor({ timeout: 10000 })
     }, 30000)
+
+    test('retains every session from the last 90 days and prunes older ones', async () => {
+      const result = await page.evaluate(async () => {
+        const sessions = (window as any).electronAPI.db.sessions
+        const DAY = 24 * 60 * 60 * 1000
+        const make = (id: string, start: number) => ({
+          id, type: 'focus', sessionNumber: 1, plannedDuration: 60, actualDuration: 60,
+          startTime: new Date(start), endTime: new Date(start + 60_000), pausedTime: 0,
+          completionStatus: 'completed', remainingTime: 0,
+        })
+        await sessions.save(make('retention-old', Date.now() - 100 * DAY))
+        // More than the old 1000-row cap, all within the retention window
+        for (let i = 0; i < 1005; i++) {
+          await sessions.save(make(`retention-recent-${i}`, Date.now() - i * 60_000))
+        }
+        const all: { id: string }[] = await sessions.getHistory()
+        return {
+          recent: all.filter(s => s.id.startsWith('retention-recent-')).length,
+          hasOld: all.some(s => s.id === 'retention-old'),
+        }
+      })
+      expect(result.recent).toBe(1005)
+      expect(result.hasOld).toBe(false)
+    }, 30000)
   })
 }

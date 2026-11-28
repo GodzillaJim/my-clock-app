@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { retentionCutoff } from '../retention';
 
 const SESSION_TYPE_TO_DB: Record<string, string> = {
   FOCUS: 'focus', SHORT_BREAK: 'shortBreak', LONG_BREAK: 'longBreak',
@@ -57,12 +58,8 @@ export function insert(db: Database.Database, session: any): void {
       @start_time, @end_time, @paused_time, @completion_status, @remaining_time, @plan_id, @created_date)
   `).run(d);
 
-  // Enforce 1000 session limit
-  db.prepare(`
-    DELETE FROM sessions WHERE id NOT IN (
-      SELECT id FROM sessions ORDER BY start_time DESC LIMIT 1000
-    )
-  `).run();
+  // Enforce date-based retention (no cap on how many sessions a day may hold)
+  db.prepare('DELETE FROM sessions WHERE created_date < ?').run(retentionCutoff().date);
 }
 
 export function getByDate(db: Database.Database, date: string): any[] {
@@ -72,10 +69,11 @@ export function getByDate(db: Database.Database, date: string): any[] {
   return rows.map(fromDbSession);
 }
 
-export function getHistory(db: Database.Database, limit: number = 50): any[] {
-  const rows = db.prepare(
-    'SELECT * FROM sessions ORDER BY start_time DESC LIMIT ?'
-  ).all(limit);
+/** Most recent sessions first; all retained sessions when `limit` is omitted. */
+export function getHistory(db: Database.Database, limit?: number): any[] {
+  const rows = limit === undefined
+    ? db.prepare('SELECT * FROM sessions ORDER BY start_time DESC').all()
+    : db.prepare('SELECT * FROM sessions ORDER BY start_time DESC LIMIT ?').all(limit);
   return rows.map(fromDbSession);
 }
 
