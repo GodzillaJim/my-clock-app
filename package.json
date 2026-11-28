@@ -24,7 +24,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "postinstall": "electron-builder install-app-deps",
+    "postinstall": "electron-builder install-app-deps && simple-git-hooks",
     "dev": "vite",
     "build": "tsc && vite build && electron-builder --win",
     "dist": "tsc && vite build && electron-builder --win --publish=never",
@@ -34,8 +34,10 @@
     "test:e2e": "vite build --mode=test && vitest run --project e2e",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "knip": "knip",
-    "check": "npm run typecheck && npm run lint && npm run knip && npm test && vite build"
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm run knip && npm test && vite build"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -68,11 +70,14 @@
     "globals": "^17.14.0",
     "jsdom": "^26.1.0",
     "knip": "^5.88.1",
+    "lint-staged": "^17.6.2",
     "playwright": "^1.65.1",
     "postcss": "^8.4.49",
     "postcss-import": "^16.1.0",
+    "prettier": "^3.10.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "simple-git-hooks": "^2.14.0",
     "tailwindcss": "^3.4.15",
     "typescript": "^5.4.2",
     "typescript-eslint": "^8.74.0",
@@ -80,5 +85,15 @@
     "vite-plugin-electron": "^0.29.0",
     "vite-plugin-electron-renderer": "^0.14.6",
     "vitest": "^2.1.5"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "if [ -x node_modules/.bin/lint-staged ]; then node_modules/.bin/lint-staged; else echo \"pre-commit: lint-staged not installed, run npm ci\"; fi"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs}": [
+      "eslint --fix --max-warnings 0",
+      "prettier --write"
+    ],
+    "*.{json,md,html,css}": "prettier --write"
   }
 }

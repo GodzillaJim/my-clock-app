@@ -79,6 +79,7 @@ npm run check       # everything below, in order; stops at the first failure
 
 npm run typecheck   # tsc --noEmit
 npm run lint        # ESLint (typescript-eslint, react-hooks, jsx-a11y), zero warnings allowed
+npm run format:check # Prettier; `npm run format` fixes
 npm run knip        # no unused files, dependencies or exports
 npm test            # test:unit, then test:e2e
   npm run test:unit #   unit tests (jsdom), a few seconds, no build needed
@@ -89,21 +90,27 @@ npx vite build      # production build
 The e2e suite launches the real Electron app against a throwaway profile in your temp directory; it
 never touches your own Focus Sessions data, and works while the app is open.
 
+A **pre-commit hook** (installed by `npm ci`) runs ESLint `--fix` and Prettier on staged files, so
+formatting and lint issues are caught before they reach a commit. Bypass in an emergency with
+`git commit --no-verify`. For `git blame`, run once:
+`git config blame.ignoreRevsFile .git-blame-ignore-revs` to skip formatting-only commits.
+
 ## Scripts
 
-| Command             | Description                                                                   |
-| ------------------- | ----------------------------------------------------------------------------- |
-| `npm run dev`       | Run the app in development with hot reload                                    |
-| `npm run check`     | Typecheck, lint, knip, all tests and production build — run before every push |
-| `npm run typecheck` | TypeScript type check                                                         |
-| `npm run lint`      | ESLint with zero warnings allowed                                             |
-| `npm run knip`      | Find unused files, dependencies and exports                                   |
-| `npm test`          | Unit tests, then e2e tests                                                    |
-| `npm run test:unit` | Unit tests only (jsdom) — fast, no build                                      |
-| `npm run test:e2e`  | Build in test mode, then e2e tests against the real Electron app              |
-| `npm run build`     | Typecheck, build and package for Windows                                      |
-| `npm run dist`      | Same as `build`, never publishes                                              |
-| `npm run preview`   | Preview the renderer build in a browser                                       |
+| Command             | Description                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| `npm run dev`       | Run the app in development with hot reload                                                  |
+| `npm run check`     | Typecheck, lint, format check, knip, all tests and production build — run before every push |
+| `npm run typecheck` | TypeScript type check                                                                       |
+| `npm run lint`      | ESLint with zero warnings allowed                                                           |
+| `npm run format`    | Format everything with Prettier (`format:check` only checks)                                |
+| `npm run knip`      | Find unused files, dependencies and exports                                                 |
+| `npm test`          | Unit tests, then e2e tests                                                                  |
+| `npm run test:unit` | Unit tests only (jsdom) — fast, no build                                                    |
+| `npm run test:e2e`  | Build in test mode, then e2e tests against the real Electron app                            |
+| `npm run build`     | Typecheck, build and package for Windows                                                    |
+| `npm run dist`      | Same as `build`, never publishes                                                            |
+| `npm run preview`   | Preview the renderer build in a browser                                                     |
 
 ## Project structure
 
