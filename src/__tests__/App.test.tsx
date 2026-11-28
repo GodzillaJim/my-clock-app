@@ -84,29 +84,35 @@ const renderApp = () =>
 describe('App', () => {
   it('loads saved settings and shows the idle Zen timer with the saved duration', async () => {
     renderApp();
-    expect(await screen.findByRole('button', { name: 'Start 30m Focus' })).toBeInTheDocument();
-    expect(screen.getByText('READY')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Start focus' })).toBeInTheDocument();
+    expect(await screen.findByText('30:00')).toBeInTheDocument();
+    expect(screen.getByTestId('timer-status')).toHaveTextContent('Ready');
   });
 
   it('opens settings and history on demand, loading them when first needed', async () => {
     renderApp();
-    await screen.findByRole('button', { name: 'Start 30m Focus' });
+    await screen.findByRole('button', { name: 'Start focus' });
 
     fireEvent.keyDown(document, { key: 's', ctrlKey: true });
-    expect(await screen.findByText('Focus Sessions Settings')).toBeInTheDocument();
+    // Lazy chunks: allow for a loaded machine running the suite in parallel
+    expect(
+      await screen.findByText('Focus Sessions Settings', undefined, { timeout: 5000 }),
+    ).toBeInTheDocument();
     fireEvent.keyDown(document, { key: 'Escape' });
 
     fireEvent.keyDown(document, { key: 'h', ctrlKey: true });
-    expect(await screen.findByRole('button', { name: 'Back' })).toBeInTheDocument();
-  });
+    expect(
+      await screen.findByRole('button', { name: 'Back' }, { timeout: 5000 }),
+    ).toBeInTheDocument();
+  }, 15_000);
 
   it('switches tools with Ctrl+number', async () => {
     renderApp();
-    await screen.findByRole('button', { name: 'Start 30m Focus' });
+    await screen.findByRole('button', { name: 'Start focus' });
     fireEvent.keyDown(document, { key: '3', ctrlKey: true });
     expect(await screen.findByRole('button', { name: /^start$/i })).toBeInTheDocument();
     fireEvent.keyDown(document, { key: '1', ctrlKey: true });
-    expect(await screen.findByRole('button', { name: 'Start 30m Focus' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Start focus' })).toBeInTheDocument();
   });
 
   it('renders the saved layout', async () => {

@@ -96,8 +96,8 @@ const App: React.FC = () => {
   // Follows the system colour scheme live when the theme setting is "system"
   const prefersDark = useMediaQuery('(prefers-color-scheme: dark)');
   const theme = useMemo(
-    () => buildAppTheme({ theme: settings.theme, uiTheme: settings.uiTheme }, prefersDark),
-    [settings.theme, settings.uiTheme, prefersDark],
+    () => buildAppTheme({ theme: settings.theme }, prefersDark),
+    [settings.theme, prefersDark],
   );
 
   const initializeApp = async () => {
@@ -243,6 +243,8 @@ const App: React.FC = () => {
                 justifyContent: 'center',
                 minHeight: '100vh',
                 p: 4,
+                // The focus timer's History and Settings buttons sit in this corner
+                position: 'relative',
               }}
             >
               {currentTool === 0 && (
@@ -252,7 +254,7 @@ const App: React.FC = () => {
                   onOpenHistory={() => setHistoryOpen(true)}
                 />
               )}
-              {currentTool === 1 && <ZenCountdownTimer />}
+              {currentTool === 1 && <ZenCountdownTimer timeFormat={settings.timeFormat} />}
               {currentTool === 2 && <ZenStopwatch />}
             </Box>
           )}

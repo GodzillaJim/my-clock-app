@@ -6,6 +6,10 @@ import { type ElectronApplication, type Page, _electron as electron } from 'play
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import type { ElectronAPI } from '../electron/ipc/contract';
 
+/** The timer's status word (Focus, Break, Paused, Ready), matched case-insensitively. */
+const timerStatus = (page: Page, text: string) =>
+  page.getByTestId('timer-status').filter({ hasText: new RegExp(`^${text}$`, 'i') });
+
 const root = path.join(__dirname, '..');
 const mainEntry = path.join(root, 'dist-electron', 'main', 'index.js');
 let userDataDir: string;
@@ -72,8 +76,8 @@ describe('crash recovery', () => {
   test('a session killed mid-run is offered on relaunch and resumes where it stopped', async () => {
     // 1. Start a 25-minute focus session and let it run past a snapshot (every 5 s)
     let { app: running, page } = await launch();
-    await page.getByRole('button', { name: /^Start 25m Focus$/ }).click();
-    await page.getByText('FOCUS', { exact: true }).waitFor({ timeout: 10000 });
+    await page.getByRole('button', { name: /^Start focus$/ }).click();
+    await timerStatus(page, 'Focus').waitFor({ timeout: 10000 });
     await page.waitForTimeout(7000);
 
     // 2. Crash: kill the whole process tree at once (no quit handlers, no clean shutdown),
@@ -92,7 +96,7 @@ describe('crash recovery', () => {
 
     // 4. Resume continues with the time that was left, not a fresh 25 minutes
     await banner.getByRole('button', { name: 'Resume' }).click();
-    await page.getByText('FOCUS', { exact: true }).waitFor({ timeout: 10000 });
+    await timerStatus(page, 'Focus').waitFor({ timeout: 10000 });
     await banner.waitFor({ state: 'hidden', timeout: 10000 });
     const remaining = await clockSeconds(page);
     expect(remaining).toBeLessThan(25 * 60 - 4);
@@ -118,10 +122,10 @@ describe('crash recovery', () => {
 
     // 6. A clean stop leaves nothing to recover on the next launch
     await page.getByRole('button', { name: 'Stop session' }).first().click();
-    await page.getByText('READY', { exact: true }).waitFor({ timeout: 10000 });
+    await timerStatus(page, 'Ready').waitFor({ timeout: 10000 });
     await running.close();
     ({ app: running, page } = await launch());
-    await page.getByText('READY', { exact: true }).waitFor({ timeout: 15000 });
+    await timerStatus(page, 'Ready').waitFor({ timeout: 15000 });
     await page.waitForTimeout(1500);
     expect(await page.getByText('Session Interrupted').count()).toBe(0);
   }, 90_000);

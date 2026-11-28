@@ -14,7 +14,7 @@ import {
   stopwatchElapsedMs,
   stopwatchTransition,
 } from '../stopwatch';
-import { formatClock } from '../format';
+import { focusSummary, formatClock } from '../format';
 import { splitIntoSegments } from '../plan';
 import { SessionType } from '../../types';
 
@@ -124,6 +124,17 @@ describe('formatClock', () => {
     [-5, '00:00'],
   ])('%i s → %s', (seconds, text) => {
     expect(formatClock(seconds)).toBe(text);
+  });
+});
+
+describe('focusSummary', () => {
+  it.each([
+    [0, 'Under a minute of focus.'],
+    [29, 'Under a minute of focus.'],
+    [60, '1 minute of focus.'],
+    [1500, '25 minutes of focus.'],
+  ])('%i s → %s', (seconds, text) => {
+    expect(focusSummary(seconds)).toBe(text);
   });
 });
 

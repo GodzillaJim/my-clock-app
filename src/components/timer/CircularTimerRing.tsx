@@ -1,30 +1,31 @@
 import React from 'react';
 import { Box, useTheme } from '@mui/material';
+import { motion } from '@/theme/tokens';
 
 interface CircularTimerRingProps {
   progress: number; // 0-100
   size?: number;
   strokeWidth?: number;
-  isRunning?: boolean;
   isBreak?: boolean;
   children?: React.ReactNode;
 }
 
+/**
+ * The session ring: a thin track with the elapsed share drawn over it in the
+ * focus or break colour. No glow and no pulse; the progress itself is the motion.
+ */
 export const CircularTimerRing: React.FC<CircularTimerRingProps> = ({
   progress,
   size = 280,
-  strokeWidth = 8,
-  isRunning = false,
+  strokeWidth = 6,
   isBreak = false,
   children,
 }) => {
+  const { palette, tokens } = useTheme();
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
-
-  const { palette, tokens } = useTheme();
-  // Focus uses the primary accent, breaks the secondary one
-  const primaryColor = isBreak ? palette.secondary.main : palette.primary.main;
+  const color = isBreak ? palette.secondary.main : palette.primary.main;
 
   return (
     <Box
@@ -40,53 +41,35 @@ export const CircularTimerRing: React.FC<CircularTimerRingProps> = ({
       <svg
         width={size}
         height={size}
-        style={{
-          position: 'absolute',
-          transform: 'rotate(-90deg)',
-        }}
+        aria-hidden="true"
+        style={{ position: 'absolute', transform: 'rotate(-90deg)' }}
       >
-        {/* Background circle */}
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke={tokens.line.default}
-          strokeWidth={strokeWidth}
+          stroke={tokens.overlay.track}
+          strokeWidth={Math.max(1, strokeWidth / 2)}
         />
-        {/* Progress circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={primaryColor}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          style={{
-            transition: 'stroke-dashoffset 0.3s ease-out',
-          }}
-        />
+        {progress > 0 && (
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            style={{
+              transition: `stroke-dashoffset ${motion.slow} linear, stroke ${motion.base} ${motion.easeOut}`,
+            }}
+          />
+        )}
       </svg>
 
-      {/* Subtle outer ring when running */}
-      {isRunning && (
-        <Box
-          sx={{
-            position: 'absolute',
-            width: size + 16,
-            height: size + 16,
-            borderRadius: '50%',
-            border: `1px solid ${primaryColor}`,
-            opacity: 0.3,
-            animation: 'pulse-ring 2s ease-in-out infinite',
-          }}
-        />
-      )}
-
-      {/* Content (timer display) */}
       <Box
         sx={{
           position: 'relative',

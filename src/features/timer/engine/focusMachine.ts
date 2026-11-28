@@ -165,6 +165,13 @@ export function isBreakSegment(segment: SessionPlanSegment | null): boolean {
   return !!segment && segment.type !== SessionType.FOCUS;
 }
 
+/** Seconds of focus recorded on the plan's finished focus segments (breaks excluded). */
+export function focusSecondsDone(state: FocusState): number {
+  return (state.plan?.segments ?? [])
+    .filter((s) => s.type === SessionType.FOCUS)
+    .reduce((sum, s) => sum + (s.actualDuration ?? 0), 0);
+}
+
 // ---------------------------------------------------------------------------
 // Transition
 // ---------------------------------------------------------------------------

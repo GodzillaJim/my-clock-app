@@ -61,6 +61,27 @@ describe('settings', () => {
     expect(loaded.settings.focusDuration).toBe(40);
     expect(loaded.settings.enableTickSound).toBe(DEFAULT_SETTINGS.enableTickSound);
   });
+
+  it('maps the retired visual styles onto the light and dark theme', async () => {
+    const state = await services.settings.load();
+    const saveOld = (theme: string, uiTheme: string) =>
+      db.kv.set('app_state', {
+        ...state,
+        settings: { ...state.settings, theme, uiTheme } as never,
+      });
+
+    // Deep Focus was always dark, whatever the theme setting said
+    await saveOld('light', 'deepFocus');
+    let settings = (await services.settings.load()).settings;
+    expect(settings.theme).toBe('dark');
+    expect(settings).not.toHaveProperty('uiTheme');
+
+    // Aerogel followed the theme setting, so it is kept
+    await saveOld('light', 'aerogel');
+    settings = (await services.settings.load()).settings;
+    expect(settings.theme).toBe('light');
+    expect(settings).not.toHaveProperty('uiTheme');
+  });
 });
 
 describe('sessions and history', () => {

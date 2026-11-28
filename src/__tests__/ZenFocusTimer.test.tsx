@@ -72,7 +72,14 @@ const lastSavedPlan = (): SessionPlan => {
   return calls[calls.length - 1][0];
 };
 
-const pauseButton = () => screen.getByTestId('PauseIcon').closest('button')!;
+const pauseButton = () => screen.getByRole('button', { name: 'Pause' });
+
+/** The status word above the ring. */
+const status = (text: string) => {
+  const el = screen.getByTestId('timer-status');
+  expect(el).toHaveTextContent(new RegExp(`^${text}$`));
+  return el;
+};
 
 describe('ZenFocusTimer', () => {
   beforeEach(() => {
@@ -88,10 +95,10 @@ describe('ZenFocusTimer', () => {
   it('renders idle with the default focus duration', () => {
     renderTimer();
 
-    expect(screen.getByText('READY')).toBeInTheDocument();
+    expect(status('Ready')).toBeInTheDocument();
     expect(screen.getByText('25:00')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /start 25m focus/i })).toBeInTheDocument();
-    for (const preset of ['15m', '25m', '50m']) {
+    expect(screen.getByRole('button', { name: 'Start focus' })).toBeInTheDocument();
+    for (const preset of ['15 min', '25 min', '50 min']) {
       expect(screen.getByRole('button', { name: preset })).toBeInTheDocument();
     }
   });
@@ -99,18 +106,18 @@ describe('ZenFocusTimer', () => {
   it('changes the planned duration with a quick preset', () => {
     renderTimer();
 
-    fireEvent.click(screen.getByRole('button', { name: '50m' }));
+    fireEvent.click(screen.getByRole('button', { name: '50 min' }));
 
     expect(screen.getByText('50:00')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /start 50m focus/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start focus' })).toBeInTheDocument();
   });
 
   it('starts a focus session, counts down and persists the plan', async () => {
     renderTimer();
 
-    fireEvent.click(screen.getByRole('button', { name: /start 25m focus/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start focus' }));
 
-    expect(screen.getByText('FOCUS')).toBeInTheDocument();
+    expect(status('Focus')).toBeInTheDocument();
 
     await tick(1000);
     expect(screen.getByText('24:59')).toBeInTheDocument();
@@ -134,17 +141,17 @@ describe('ZenFocusTimer', () => {
     // 15 minutes of 1m focus / 5m break → F B F B F B(2m) = 6 segments
     renderTimer({ ...baseSettings, focusDuration: 1, shortBreakDuration: 5 });
 
-    fireEvent.click(screen.getByRole('button', { name: '15m' }));
-    fireEvent.click(screen.getByRole('button', { name: /start 15m focus/i }));
+    fireEvent.click(screen.getByRole('button', { name: '15 min' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start focus' }));
 
-    expect(screen.getByText('FOCUS')).toBeInTheDocument();
-    expect(screen.getByText('1 / 6')).toBeInTheDocument();
+    expect(status('Focus')).toBeInTheDocument();
+    expect(screen.getByText('1 of 6')).toBeInTheDocument();
 
     // The switch happens exactly when the focus minute is used up
     await tick(60 * 1000);
 
-    expect(screen.getByText('BREAK')).toBeInTheDocument();
-    expect(screen.getByText('2 / 6')).toBeInTheDocument();
+    expect(status('Break')).toBeInTheDocument();
+    expect(screen.getByText('2 of 6')).toBeInTheDocument();
     expect(screen.getByText('05:00')).toBeInTheDocument();
 
     // The break counts down from its full length
@@ -167,7 +174,7 @@ describe('ZenFocusTimer', () => {
   it('freezes the countdown while paused and continues on resume', async () => {
     renderTimer();
 
-    fireEvent.click(screen.getByRole('button', { name: /start 25m focus/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start focus' }));
     await tick(1000);
     expect(screen.getByText('24:59')).toBeInTheDocument();
 
@@ -186,15 +193,15 @@ describe('ZenFocusTimer', () => {
   it('skips to the next segment', async () => {
     renderTimer({ ...baseSettings, focusDuration: 1, shortBreakDuration: 5 });
 
-    fireEvent.click(screen.getByRole('button', { name: '15m' }));
-    fireEvent.click(screen.getByRole('button', { name: /start 15m focus/i }));
+    fireEvent.click(screen.getByRole('button', { name: '15 min' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start focus' }));
     await tick(1000);
 
     fireEvent.click(screen.getByRole('button', { name: /skip to next/i }));
     await tick(1000);
 
-    expect(screen.getByText('BREAK')).toBeInTheDocument();
-    expect(screen.getByText('2 / 6')).toBeInTheDocument();
+    expect(status('Break')).toBeInTheDocument();
+    expect(screen.getByText('2 of 6')).toBeInTheDocument();
 
     const plan = lastSavedPlan();
     expect(plan.segments[0].status).toBe('skipped');
@@ -204,7 +211,7 @@ describe('ZenFocusTimer', () => {
   it('stops a session, abandons the plan and returns to idle', async () => {
     renderTimer();
 
-    fireEvent.click(screen.getByRole('button', { name: /start 25m focus/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start focus' }));
     await tick(3000);
 
     fireEvent.click(screen.getByRole('button', { name: /stop session/i }));
@@ -218,14 +225,14 @@ describe('ZenFocusTimer', () => {
       expect.objectContaining({ completionStatus: 'interrupted' }),
     );
 
-    expect(screen.getByText('READY')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /start 25m focus/i })).toBeInTheDocument();
+    expect(status('Ready')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start focus' })).toBeInTheDocument();
   });
 
   it('ticks once per second during the last 10 seconds only', async () => {
     renderTimer({ ...baseSettings, focusDuration: 1, quickPresets: [1, 5] });
 
-    fireEvent.click(screen.getByRole('button', { name: /start 1m focus/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start focus' }));
     await tick(49 * 1000); // 11s remaining
     expect(mocks.notificationService.playTickSound).not.toHaveBeenCalled();
 
@@ -236,10 +243,11 @@ describe('ZenFocusTimer', () => {
   it('shows the completion screen after the final segment and can start over', async () => {
     renderTimer({ ...baseSettings, focusDuration: 1, quickPresets: [1, 5] });
 
-    fireEvent.click(screen.getByRole('button', { name: /start 1m focus/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start focus' }));
     await tick(61 * 1000);
 
-    expect(screen.getByText('Session Complete!')).toBeInTheDocument();
+    expect(screen.getByText('Done.')).toBeInTheDocument();
+    expect(screen.getByText('1 minute of focus.')).toBeInTheDocument();
 
     const plan = lastSavedPlan();
     expect(plan.status).toBe('completed');
@@ -250,8 +258,8 @@ describe('ZenFocusTimer', () => {
       expect.objectContaining({ type: 'session_complete' }),
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /start new session/i }));
-    expect(screen.getByText('READY')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /start another session/i }));
+    expect(status('Ready')).toBeInTheDocument();
   });
 
   it('resumes the remaining work of an interrupted plan', async () => {
@@ -302,8 +310,8 @@ describe('ZenFocusTimer', () => {
     renderTimer(baseSettings, interrupted);
     await tick(1000);
 
-    expect(screen.getByText('FOCUS')).toBeInTheDocument();
-    expect(screen.getByText('1 / 2')).toBeInTheDocument();
+    expect(status('Focus')).toBeInTheDocument();
+    expect(screen.getByText('1 of 2')).toBeInTheDocument();
     // 15 minutes of focus remained; one second has elapsed since resuming
     expect(screen.getByText('14:59')).toBeInTheDocument();
 

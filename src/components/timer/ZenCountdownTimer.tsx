@@ -1,19 +1,34 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Button, IconButton, Tooltip, Fade } from '@mui/material';
-import { PlayArrow, Pause, RestartAlt, Add, Remove, AccessTime } from '@mui/icons-material';
-import dayjs from 'dayjs';
+import {
+  Box,
+  Typography,
+  Button,
+  IconButton,
+  Tooltip,
+  ToggleButton,
+  ToggleButtonGroup,
+} from '@mui/material';
+import { PlayArrow, Pause, RestartAlt, Add, Remove } from '@mui/icons-material';
 import { CircularTimerRing } from './CircularTimerRing';
 import { useCountdown } from '@/features/timer/hooks/useToolTimers';
 import { formatClock } from '@/features/timer/engine/format';
+import { formatTime, type AppSettings } from '@/features/timer/types';
+import { motion, typography } from '@/theme/tokens';
+import { ControlRow, revealStyles } from './ControlRow';
 
 interface ZenCountdownTimerProps {
   onRunningStateChange?: (isRunning: boolean) => void;
+  timeFormat?: AppSettings['timeFormat'];
 }
 
+const PRESETS = [1, 5, 10, 15, 30, 60];
+
 /** View for the countdown tool; timing lives in `useCountdown`. */
-export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningStateChange }) => {
+export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({
+  onRunningStateChange,
+  timeFormat = '12h',
+}) => {
   const [minutes, setMinutes] = useState(5);
-  const [showControls, setShowControls] = useState(true);
   const countdown = useCountdown();
   const { isActive, isRunning, isPaused, actions } = countdown;
 
@@ -21,11 +36,16 @@ export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningS
     onRunningStateChange?.(isRunning);
   }, [isRunning, onRunningStateChange]);
 
-  const handleMinutesChange = (delta: number) => {
+  const changeMinutes = (delta: number) => {
     setMinutes((value) => Math.max(1, Math.min(480, value + delta)));
   };
 
-  const expectedEnd = dayjs(isActive ? countdown.endsAt : Date.now() + minutes * 60_000);
+  const endsAt = formatTime(
+    new Date(isActive ? countdown.endsAt : Date.now() + minutes * 60_000),
+    timeFormat,
+  );
+  const status = isRunning ? 'Running' : isPaused ? 'Paused' : 'Timer';
+
   return (
     <Box
       sx={{
@@ -34,155 +54,142 @@ export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningS
         alignItems: 'center',
         justifyContent: 'center',
         py: 4,
+        ...revealStyles(isRunning),
       }}
-      onMouseEnter={() => setShowControls(true)}
-      onMouseLeave={() => !isPaused && isActive && setShowControls(false)}
     >
-      {/* Status Label */}
       <Typography
-        variant="overline"
-        sx={{
-          color: 'primary.main',
-          letterSpacing: '0.2em',
-          mb: 4,
-          opacity: isActive ? 1 : 0.5,
-        }}
+        component="p"
+        aria-live="polite"
+        sx={{ ...typography.label, mb: 4, color: isRunning ? 'primary.main' : 'text.secondary' }}
       >
-        {isRunning ? 'RUNNING' : isActive ? 'PAUSED' : 'TIMER'}
+        {status}
       </Typography>
 
-      {/* Circular Timer */}
-      <CircularTimerRing
-        progress={countdown.progress}
-        size={300}
-        strokeWidth={6}
-        isRunning={isRunning}
-        isBreak={false}
-      >
+      <CircularTimerRing progress={countdown.progress} size={300} strokeWidth={6}>
         {!isActive ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <IconButton onClick={() => handleMinutesChange(-1)} size="small">
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <IconButton
+                aria-label="One minute less"
+                onClick={() => changeMinutes(-1)}
+                size="small"
+                sx={{ color: 'text.secondary' }}
+              >
                 <Remove />
               </IconButton>
               <Typography
+                component="p"
                 sx={{
-                  fontSize: '3rem',
-                  fontWeight: 200,
-                  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace',
-                  color: 'text.secondary',
-                  minWidth: 100,
+                  ...typography.timer,
+                  fontSize: '3.5rem',
+                  color: 'text.primary',
+                  minWidth: 150,
                   textAlign: 'center',
                 }}
               >
-                {minutes}m
+                {minutes}
+                <Box
+                  component="span"
+                  sx={{ fontSize: '1.25rem', ml: 0.75, color: 'text.secondary' }}
+                >
+                  min
+                </Box>
               </Typography>
-              <IconButton onClick={() => handleMinutesChange(1)} size="small">
+              <IconButton
+                aria-label="One minute more"
+                onClick={() => changeMinutes(1)}
+                size="small"
+                sx={{ color: 'text.secondary' }}
+              >
                 <Add />
               </IconButton>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <AccessTime fontSize="small" sx={{ color: 'text.secondary', fontSize: '0.75rem' }} />
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                Ends at {expectedEnd.format('h:mm A')}
-              </Typography>
-            </Box>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              Ends {endsAt}
+            </Typography>
           </Box>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <>
             <Typography
               variant="h1"
+              component="p"
+              role="timer"
               sx={{
-                fontSize: '4rem',
-                fontWeight: 200,
-                fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace',
-                color: isRunning ? 'primary.main' : 'text.secondary',
-                transition: 'all 0.3s ease',
+                ...typography.timer,
+                fontSize: '4.5rem',
+                color: isRunning ? 'text.primary' : 'text.secondary',
+                transition: `color ${motion.base} ${motion.easeOut}`,
               }}
             >
               {formatClock(countdown.remainingSeconds)}
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
-              <AccessTime fontSize="small" sx={{ color: 'text.secondary', fontSize: '0.875rem' }} />
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Ends at {expectedEnd.format('h:mm A')}
-              </Typography>
-            </Box>
-          </Box>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1.5 }}>
+              Ends {endsAt}
+            </Typography>
+          </>
         )}
       </CircularTimerRing>
 
-      {/* Controls */}
-      <Fade in={showControls || !isActive || isPaused}>
-        <Box sx={{ mt: 6, display: 'flex', gap: 2, alignItems: 'center' }}>
-          {!isActive && (
+      <ControlRow
+        primary={
+          isRunning ? (
+            <Tooltip title="Pause">
+              <IconButton
+                aria-label="Pause"
+                onClick={actions.pause}
+                sx={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: '50%',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  color: 'text.primary',
+                }}
+              >
+                <Pause />
+              </IconButton>
+            </Tooltip>
+          ) : (
             <Button
               variant="contained"
               size="large"
               startIcon={<PlayArrow />}
-              onClick={() => actions.start(minutes * 60)}
-              sx={{ px: 4, py: 1.5 }}
+              onClick={isPaused ? actions.resume : () => actions.start(minutes * 60)}
             >
-              Start {minutes}m Timer
+              {isPaused ? 'Resume' : 'Start timer'}
             </Button>
-          )}
-
-          {isPaused && (
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={<PlayArrow />}
-              onClick={actions.resume}
-              sx={{ px: 4, py: 1.5 }}
-            >
-              Resume
-            </Button>
-          )}
-
-          {isRunning && (
-            <IconButton
-              aria-label="Pause"
-              onClick={actions.pause}
-              sx={{
-                width: 56,
-                height: 56,
-                border: '1px solid',
-                borderColor: 'primary.main',
-              }}
-            >
-              <Pause />
-            </IconButton>
-          )}
-
-          {isActive && (
+          )
+        }
+        secondary={
+          isActive && (
             <Tooltip title="Reset">
-              <IconButton onClick={actions.reset} size="small" sx={{ color: 'error.main' }}>
+              <IconButton
+                aria-label="Reset"
+                onClick={actions.reset}
+                sx={{ color: 'text.secondary' }}
+              >
                 <RestartAlt />
               </IconButton>
             </Tooltip>
-          )}
-        </Box>
-      </Fade>
+          )
+        }
+      />
 
-      {/* Quick Presets */}
-      <Fade in={!isActive}>
-        <Box sx={{ mt: 4, display: 'flex', gap: 1 }}>
-          {[1, 5, 10, 15, 30, 60].map((preset) => (
-            <Button
-              key={preset}
-              variant={minutes === preset ? 'contained' : 'text'}
-              size="small"
-              onClick={() => setMinutes(preset)}
-              sx={{
-                minWidth: 48,
-                color: minutes === preset ? undefined : 'text.secondary',
-              }}
-            >
-              {preset}m
-            </Button>
+      <Box sx={{ mt: 3, visibility: isActive ? 'hidden' : 'visible' }} aria-hidden={isActive}>
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          aria-label="Timer length"
+          value={minutes}
+          onChange={(_, value: number | null) => value && setMinutes(value)}
+        >
+          {PRESETS.map((preset) => (
+            <ToggleButton key={preset} value={preset} sx={{ px: 1.75 }}>
+              {preset} min
+            </ToggleButton>
           ))}
-        </Box>
-      </Fade>
+        </ToggleButtonGroup>
+      </Box>
     </Box>
   );
 };

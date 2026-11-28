@@ -1,6 +1,6 @@
 import { createTheme, type Theme } from '@mui/material/styles';
 import type { AppSettings } from '@/features/timer/types';
-import { blur, colorScheme, motion, radius, typography, type ColorScheme } from './tokens';
+import { colorScheme, motion, radius, typography, type ColorScheme } from './tokens';
 
 declare module '@mui/material/styles' {
   interface Theme {
@@ -12,19 +12,18 @@ declare module '@mui/material/styles' {
   }
 }
 
-const transition = `all ${motion.base} ${motion.easeInOut}`;
+const transition = ['background-color', 'border-color', 'color', 'box-shadow', 'opacity']
+  .map((p) => `${p} ${motion.fast} ${motion.easeOut}`)
+  .join(', ');
 
-/**
- * The MUI theme for a visual style (`deepFocus` or `aerogel`) and colour mode
- * (light, dark, or following the system's `prefersDark`), generated from the
- * design tokens.
- */
-export function buildAppTheme(
-  settings: Pick<AppSettings, 'theme' | 'uiTheme'>,
-  prefersDark: boolean,
-): Theme {
-  const dark = settings.theme === 'dark' || (settings.theme === 'system' && prefersDark);
-  const s = colorScheme(settings.uiTheme || 'deepFocus', dark);
+/** Whether the theme setting resolves to dark, given the system's preference. */
+export function isDarkTheme(theme: AppSettings['theme'], prefersDark: boolean): boolean {
+  return theme === 'dark' || (theme === 'system' && prefersDark);
+}
+
+/** The MUI theme for the light or dark scheme, generated from the design tokens. */
+export function buildAppTheme(settings: Pick<AppSettings, 'theme'>, prefersDark: boolean): Theme {
+  const s = colorScheme(isDarkTheme(settings.theme, prefersDark));
 
   return createTheme({
     tokens: s,
@@ -38,34 +37,46 @@ export function buildAppTheme(
       success: { main: s.success },
       error: { main: s.error },
       warning: { main: s.warning },
+      action: { hover: s.overlay.hover },
     },
     typography: {
       fontFamily: typography.fontFamily,
       ...typography.scale,
+      h1: { ...typography.scale.h1, fontFamily: typography.displayFamily },
+      h2: { ...typography.scale.h2, fontFamily: typography.displayFamily },
+      h3: { ...typography.scale.h3, fontFamily: typography.displayFamily },
       button: { ...typography.scale.button, textTransform: 'none' },
       caption: { ...typography.scale.caption, color: s.text.secondary },
     },
     shape: { borderRadius: radius.md },
+    transitions: {
+      easing: {
+        easeOut: motion.easeOut,
+        easeInOut: motion.easeOut,
+        easeIn: motion.easeOut,
+        sharp: motion.easeOut,
+      },
+    },
     components: {
+      MuiButtonBase: { defaultProps: { disableRipple: true } },
       MuiButton: {
+        defaultProps: { disableElevation: true },
         styleOverrides: {
           root: {
             textTransform: 'none',
             borderRadius: radius.md,
-            fontWeight: 500,
-            boxShadow: 'none',
+            fontWeight: 600,
             transition,
           },
-          contained: { boxShadow: 'none', '&:hover': { boxShadow: 'none' } },
-          outlined: s.outlinedButton
-            ? {
-                borderColor: s.outlinedButton.border,
-                '&:hover': {
-                  borderColor: s.outlinedButton.hoverBorder,
-                  backgroundColor: s.outlinedButton.hoverFill,
-                },
-              }
-            : {},
+          // Primary actions are pills; text and outlined buttons stay quiet rectangles.
+          contained: { borderRadius: radius.pill, paddingInline: 22 },
+          outlined: {
+            borderColor: s.outlinedButton.border,
+            '&:hover': {
+              borderColor: s.outlinedButton.hoverBorder,
+              backgroundColor: s.outlinedButton.hoverFill,
+            },
+          },
         },
       },
       MuiPaper: {
@@ -73,7 +84,6 @@ export function buildAppTheme(
           root: {
             backgroundImage: 'none',
             backgroundColor: s.surface.paper,
-            backdropFilter: blur.panel,
             border: `1px solid ${s.line.default}`,
             boxShadow: s.shadow.card,
           },
@@ -85,6 +95,23 @@ export function buildAppTheme(
             borderRadius: radius.md,
             transition,
             '&:hover': { backgroundColor: s.overlay.hover },
+          },
+        },
+      },
+      MuiToggleButton: {
+        styleOverrides: {
+          root: {
+            textTransform: 'none',
+            fontWeight: 600,
+            color: s.text.secondary,
+            borderColor: s.line.default,
+            transition,
+            '&:hover': { backgroundColor: s.overlay.hover },
+            '&.Mui-selected': {
+              color: s.text.primary,
+              backgroundColor: s.surface.card,
+              '&:hover': { backgroundColor: s.surface.card },
+            },
           },
         },
       },
@@ -112,16 +139,17 @@ export function buildAppTheme(
       },
       MuiLinearProgress: {
         styleOverrides: {
-          root: { backgroundColor: s.overlay.track },
-          bar: { backgroundColor: s.primary.main },
+          root: { backgroundColor: s.overlay.track, borderRadius: radius.pill },
+          bar: { backgroundColor: s.primary.main, borderRadius: radius.pill },
         },
       },
       MuiDialog: {
         styleOverrides: {
           paper: {
             backgroundColor: s.surface.raised,
-            backdropFilter: blur.raised,
             border: `1px solid ${s.line.raised}`,
+            borderRadius: radius.lg,
+            boxShadow: s.shadow.raised,
           },
         },
       },
@@ -129,13 +157,34 @@ export function buildAppTheme(
         styleOverrides: {
           paper: {
             backgroundColor: s.surface.raised,
-            backdropFilter: blur.raised,
+            border: 'none',
             borderLeft: `1px solid ${s.line.default}`,
+            borderRadius: 0,
+            boxShadow: s.shadow.raised,
+          },
+        },
+      },
+      MuiTooltip: {
+        styleOverrides: {
+          tooltip: {
+            backgroundColor: s.text.primary,
+            color: s.surface.page,
+            fontSize: typography.scale.caption.fontSize,
+            fontWeight: 500,
+            borderRadius: radius.sm,
           },
         },
       },
       MuiTabs: { styleOverrides: { indicator: { backgroundColor: s.primary.main } } },
-      MuiTab: { styleOverrides: { root: { '&.Mui-selected': { color: s.primary.main } } } },
+      MuiTab: {
+        styleOverrides: {
+          root: {
+            textTransform: 'none',
+            fontWeight: 600,
+            '&.Mui-selected': { color: s.text.primary },
+          },
+        },
+      },
     },
   });
 }

@@ -1,5 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Typography, Button, IconButton, Tooltip, Fade } from '@mui/material';
+import React, { useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  Button,
+  IconButton,
+  Tooltip,
+  ToggleButton,
+  ToggleButtonGroup,
+} from '@mui/material';
 import {
   PlayArrow,
   Pause,
@@ -9,13 +17,13 @@ import {
   SkipNext,
   CheckCircleOutlined,
   FastForward,
-  AccessTime,
 } from '@mui/icons-material';
-import dayjs from 'dayjs';
 import { CircularTimerRing } from './CircularTimerRing';
-import { AppSettings } from '@/features/timer/types';
+import { AppSettings, formatTime } from '@/features/timer/types';
 import { useFocusTimerContext } from '@/features/timer/FocusTimerContext';
-import { formatClock } from '@/features/timer/engine/format';
+import { focusSummary, formatClock } from '@/features/timer/engine/format';
+import { motion, typography } from '@/theme/tokens';
+import { ControlRow, REVEAL, revealStyles } from './ControlRow';
 
 interface ZenFocusTimerProps {
   onOpenSettings: () => void;
@@ -33,35 +41,16 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
   onRunningStateChange,
   hideTopControls = false,
 }) => {
-  const [showControls, setShowControls] = useState(false);
   const timer = useFocusTimerContext();
-  const { plannedMinutes: totalDuration, setPlannedMinutes: setTotalDuration } = timer;
+  const { plannedMinutes, setPlannedMinutes } = timer;
   const { isRunning, isPaused, isComplete, isBreak, hasSession, actions } = timer;
-  const isActive = isRunning;
 
   useEffect(() => {
     onRunningStateChange?.(isRunning);
   }, [isRunning, onRunningStateChange]);
 
-  const startSession = () => {
-    actions.start(totalDuration, settings);
-    setShowControls(true);
-  };
+  const at = (ms: number) => formatTime(new Date(ms), settings.timeFormat);
 
-  const resetToIdle = () => {
-    actions.reset();
-    setShowControls(false);
-  };
-
-  const stopSession = () => {
-    actions.stop();
-    setShowControls(false);
-  };
-
-  const displayTime = formatClock(hasSession ? timer.remainingSeconds : totalDuration * 60);
-  const expectedEnd = dayjs(hasSession ? timer.segmentEndsAt : Date.now() + totalDuration * 60_000);
-  const planEnd = timer.segmentCount > 1 && hasSession ? dayjs(timer.planEndsAt) : null;
-  // Show completion screen when all sessions are done
   if (isComplete) {
     return (
       <Box
@@ -74,25 +63,24 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
           textAlign: 'center',
         }}
       >
-        <CheckCircleOutlined
-          sx={{
-            fontSize: 100,
-            color: 'success.main',
-            mb: 3,
-          }}
-        />
-        <Typography variant="h4" sx={{ fontWeight: 500, mb: 2 }}>
-          Session Complete!
+        <CheckCircleOutlined sx={{ fontSize: 48, color: 'success.main', mb: 2 }} />
+        <Typography variant="h4" component="h2" sx={{ mb: 1 }}>
+          Done.
         </Typography>
-        <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4, maxWidth: 300 }}>
-          Great work! You've successfully completed your focus session.
+        <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4 }}>
+          {focusSummary(timer.focusSecondsDone)}
         </Typography>
-        <Button variant="contained" size="large" onClick={resetToIdle} sx={{ px: 4, py: 1.5 }}>
-          Start New Session
+        <Button variant="contained" size="large" onClick={actions.reset}>
+          Start another session
         </Button>
       </Box>
     );
   }
+
+  const status = isPaused ? 'Paused' : isRunning ? (isBreak ? 'Break' : 'Focus') : 'Ready';
+  const accent = isBreak ? 'secondary.main' : 'primary.main';
+  const multiSegment = hasSession && timer.segmentCount > 1;
+  const presets = settings.quickPresets?.length ? settings.quickPresets : [15, 25, 30, 45, 60];
 
   return (
     <Box
@@ -101,155 +89,164 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        position: 'relative',
         py: 4,
+        ...revealStyles(isRunning),
       }}
-      onMouseEnter={() => setShowControls(true)}
-      onMouseLeave={() => !isPaused && setShowControls(false)}
     >
-      {/* Top Controls - Settings & History (hidden when in dashboard layout) */}
       {!hideTopControls && (
-        <Fade in={showControls || !isActive}>
-          <Box
-            sx={{
-              position: 'absolute',
-              top: 24,
-              right: 24,
-              display: 'flex',
-              gap: 1,
-            }}
-          >
-            <Tooltip title="History">
-              <IconButton onClick={onOpenHistory} size="small" sx={{ color: 'text.secondary' }}>
-                <History />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Settings">
-              <IconButton onClick={onOpenSettings} size="small" sx={{ color: 'text.secondary' }}>
-                <Settings />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        </Fade>
+        <Box
+          className={REVEAL}
+          // Anchored to the layout's corner (below any recovery banner), clear of the status line
+          sx={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: 0.5 }}
+        >
+          <Tooltip title="History">
+            <IconButton
+              aria-label="History"
+              onClick={onOpenHistory}
+              size="small"
+              sx={{ color: 'text.secondary' }}
+            >
+              <History fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Settings">
+            <IconButton
+              aria-label="Settings"
+              onClick={onOpenSettings}
+              size="small"
+              sx={{ color: 'text.secondary' }}
+            >
+              <Settings fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
       )}
 
-      {/* Session Type Label */}
       <Typography
-        variant="overline"
+        component="p"
+        aria-live="polite"
         sx={{
-          color: isBreak ? 'secondary.main' : 'primary.main',
-          letterSpacing: '0.2em',
+          ...typography.label,
           mb: 4,
-          opacity: isActive ? 1 : 0.5,
-          transition: 'all 0.3s ease',
+          display: 'flex',
+          gap: 1,
+          color: 'text.secondary',
         }}
       >
-        {isActive ? (isBreak ? 'BREAK' : 'FOCUS') : 'READY'}
-      </Typography>
-
-      {/* Circular Timer */}
-      <CircularTimerRing
-        progress={timer.progress}
-        size={300}
-        strokeWidth={6}
-        isRunning={isActive}
-        isBreak={isBreak}
-      >
-        <Typography
-          variant="h1"
+        <Box
+          component="span"
+          data-testid="timer-status"
           sx={{
-            fontSize: '4rem',
-            fontWeight: 200,
-            fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace',
-            color: isActive ? (isBreak ? 'secondary.main' : 'primary.main') : 'text.secondary',
-            transition: 'all 0.3s ease',
+            color: isRunning ? accent : 'text.secondary',
+            transition: `color ${motion.base} ${motion.easeOut}`,
           }}
         >
-          {displayTime}
-        </Typography>
-
-        {/* Expected End Time */}
-        <Box
-          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mt: 1 }}
-        >
-          <AccessTime fontSize="small" sx={{ color: 'text.secondary', fontSize: '0.875rem' }} />
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            {timer.segmentCount > 1 && hasSession ? 'Segment ends ' : 'Ends at '}
-            {expectedEnd.format('h:mm A')}
-          </Typography>
+          {status}
         </Box>
-        {/* Overall session plan end time */}
-        {planEnd && (
-          <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.25 }}>
-            Session ends at {planEnd.format('h:mm A')}
-          </Typography>
+        {multiSegment && (
+          <>
+            <span aria-hidden="true">·</span>
+            <span>
+              {timer.segmentIndex + 1} of {timer.segmentCount}
+            </span>
+          </>
         )}
+      </Typography>
 
-        {/* Session indicator */}
-        {timer.segmentCount > 1 && (
-          <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            {timer.segmentIndex + 1} / {timer.segmentCount}
+      <CircularTimerRing progress={timer.progress} size={300} strokeWidth={6} isBreak={isBreak}>
+        <Typography
+          variant="h1"
+          component="p"
+          role="timer"
+          sx={{
+            ...typography.timer,
+            fontSize: '4.5rem',
+            color: isRunning ? 'text.primary' : 'text.secondary',
+            transition: `color ${motion.base} ${motion.easeOut}`,
+          }}
+        >
+          {formatClock(hasSession ? timer.remainingSeconds : plannedMinutes * 60)}
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1.5 }}>
+          {multiSegment ? 'This part ends ' : 'Ends '}
+          {at(hasSession ? timer.segmentEndsAt : Date.now() + plannedMinutes * 60_000)}
+        </Typography>
+        {multiSegment && (
+          <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.25 }}>
+            Whole session ends {at(timer.planEndsAt)}
           </Typography>
         )}
       </CircularTimerRing>
 
-      {/* Controls */}
-      <Fade in={showControls || !isActive || isPaused}>
-        <Box sx={{ mt: 6, display: 'flex', gap: 2, alignItems: 'center' }}>
-          {!hasSession && (
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={<PlayArrow />}
-              onClick={startSession}
-              sx={{
-                px: 4,
-                py: 1.5,
-                fontSize: '1rem',
-              }}
-            >
-              Start {totalDuration}m Focus
-            </Button>
-          )}
-
-          {isPaused && (
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={<PlayArrow />}
-              onClick={actions.resume}
-              sx={{ px: 4, py: 1.5 }}
-            >
-              Resume
-            </Button>
-          )}
-
-          {isActive && (
-            <>
-              <IconButton
-                aria-label="Pause"
-                onClick={actions.pause}
-                sx={{
-                  width: 56,
-                  height: 56,
-                  border: '1px solid',
-                  borderColor: 'primary.main',
-                }}
+      <ControlRow
+        primary={
+          hasSession ? (
+            isPaused ? (
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<PlayArrow />}
+                onClick={actions.resume}
               >
-                <Pause />
-              </IconButton>
-
-              <Tooltip title="Skip to next">
-                <IconButton onClick={actions.skip} size="small" sx={{ color: 'text.secondary' }}>
-                  <SkipNext />
+                Resume
+              </Button>
+            ) : (
+              <Tooltip title="Pause (Space)">
+                <IconButton
+                  aria-label="Pause"
+                  onClick={actions.pause}
+                  sx={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: '50%',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    color: 'text.primary',
+                  }}
+                >
+                  <Pause />
                 </IconButton>
               </Tooltip>
-
-              {import.meta.env.DEV && (
-                <Tooltip title="Fast forward -30s (Test)">
+            )
+          ) : (
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<PlayArrow />}
+              onClick={() => actions.start(plannedMinutes, settings)}
+            >
+              Start focus
+            </Button>
+          )
+        }
+        secondary={
+          hasSession && (
+            <>
+              {isRunning && (
+                <Tooltip title="Skip to next">
                   <IconButton
+                    aria-label="Skip to next"
+                    onClick={actions.skip}
+                    sx={{ color: 'text.secondary' }}
+                  >
+                    <SkipNext />
+                  </IconButton>
+                </Tooltip>
+              )}
+              <Tooltip title="Stop session">
+                <IconButton
+                  aria-label="Stop session"
+                  onClick={actions.stop}
+                  sx={{ color: 'text.secondary' }}
+                >
+                  <Stop />
+                </IconButton>
+              </Tooltip>
+              {import.meta.env.DEV && isRunning && (
+                <Tooltip title="Fast forward 30 s (development)">
+                  <IconButton
+                    aria-label="Fast forward"
                     onClick={() => actions.fastForward()}
-                    size="small"
                     sx={{ color: 'warning.main' }}
                   >
                     <FastForward />
@@ -257,37 +254,26 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
                 </Tooltip>
               )}
             </>
-          )}
+          )
+        }
+      />
 
-          {(isActive || isPaused) && (
-            <Tooltip title="Stop session">
-              <IconButton onClick={stopSession} size="small" sx={{ color: 'error.main' }}>
-                <Stop />
-              </IconButton>
-            </Tooltip>
-          )}
-        </Box>
-      </Fade>
-
-      {/* Duration Quick Select (only when not active) */}
-      <Fade in={!isActive && !isPaused}>
-        <Box sx={{ mt: 4, display: 'flex', gap: 1 }}>
-          {(settings.quickPresets || [15, 25, 30, 45, 60]).map((preset) => (
-            <Button
-              key={preset}
-              variant={totalDuration === preset ? 'contained' : 'text'}
-              size="small"
-              onClick={() => setTotalDuration(preset)}
-              sx={{
-                minWidth: 48,
-                color: totalDuration === preset ? undefined : 'text.secondary',
-              }}
-            >
-              {preset}m
-            </Button>
+      {/* Kept in the layout during a session so the timer does not jump */}
+      <Box sx={{ mt: 3, visibility: hasSession ? 'hidden' : 'visible' }} aria-hidden={hasSession}>
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          aria-label="Session length"
+          value={plannedMinutes}
+          onChange={(_, minutes: number | null) => minutes && setPlannedMinutes(minutes)}
+        >
+          {presets.map((preset) => (
+            <ToggleButton key={preset} value={preset} sx={{ px: 1.75 }}>
+              {preset} min
+            </ToggleButton>
           ))}
-        </Box>
-      </Fade>
+        </ToggleButtonGroup>
+      </Box>
     </Box>
   );
 };

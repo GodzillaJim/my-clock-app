@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import {
   currentSegment,
+  focusSecondsDone,
   initialFocusState,
   isBreakSegment,
   planEndsAt,
@@ -128,6 +129,8 @@ export function useFocusTimer() {
     progress: progressPercent(state, now),
     segmentEndsAt: now + remaining * 1000,
     planEndsAt: planEndsAt(state, now),
+    /** Seconds of focus in the finished segments; the whole plan's once complete. */
+    focusSecondsDone: focusSecondsDone(state),
     actions,
   };
 }

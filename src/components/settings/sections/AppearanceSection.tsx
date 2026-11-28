@@ -9,114 +9,38 @@ import {
   Select,
   MenuItem,
   Divider,
-  Grid,
-  Card,
-  CardContent,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
+import type { AppSettings } from '@/features/timer/types';
 import type { SettingsSectionProps } from './types';
-import { colorScheme, type ColorScheme } from '@/theme/tokens';
 
-/** A style's two accents, as the preview swatch. */
-const swatch = (s: ColorScheme) =>
-  `linear-gradient(135deg, ${s.primary.main}, ${s.secondary.main})`;
+const THEMES: { value: AppSettings['theme']; label: string }[] = [
+  { value: 'system', label: 'Match Windows' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
 
-/** Theme, visual style and layout. */
+/** Theme, layout and tray behaviour. */
 export const AppearanceSection: React.FC<SettingsSectionProps> = ({ settings, onChange }) => {
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        Visual Style
+      <Typography variant="h6" id="theme-label" gutterBottom>
+        Theme
       </Typography>
-      <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-        Choose between two distinct UI themes
-      </Typography>
-
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <Card
-            onClick={() => onChange('uiTheme', 'deepFocus')}
-            sx={{
-              cursor: 'pointer',
-              border: settings.uiTheme === 'deepFocus' ? '2px solid' : '1px solid',
-              borderColor: settings.uiTheme === 'deepFocus' ? 'primary.main' : 'divider',
-              transition: 'all 0.2s ease',
-              '&:hover': { borderColor: 'primary.main' },
-            }}
-          >
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <Box
-                  sx={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: 1,
-                    background: swatch(colorScheme('deepFocus', true)),
-                  }}
-                />
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  Deep Focus
-                </Typography>
-              </Box>
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Clean dark theme. OLED-optimized for reduced eye strain.
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <Card
-            onClick={() => onChange('uiTheme', 'aerogel')}
-            sx={{
-              cursor: 'pointer',
-              border: settings.uiTheme === 'aerogel' ? '2px solid' : '1px solid',
-              borderColor: settings.uiTheme === 'aerogel' ? 'primary.main' : 'divider',
-              transition: 'all 0.2s ease',
-              '&:hover': { borderColor: 'primary.main' },
-            }}
-          >
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <Box
-                  sx={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: 1,
-                    background: swatch(colorScheme('aerogel', false)),
-                  }}
-                />
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                  Aerogel
-                </Typography>
-              </Box>
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Light, airy theme with glassmorphism and soft pastel tones.
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {settings.uiTheme === 'aerogel' && (
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle2" gutterBottom>
-            Color Mode
-          </Typography>
-          <FormControl sx={{ minWidth: 200 }}>
-            <Select
-              value={settings.theme}
-              onChange={(e) => onChange('theme', e.target.value as 'light' | 'dark' | 'system')}
-              size="small"
-            >
-              <MenuItem value="system">System Default</MenuItem>
-              <MenuItem value="light">Light</MenuItem>
-              <MenuItem value="dark">Dark</MenuItem>
-            </Select>
-          </FormControl>
-          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
-            Aerogel supports both light and dark modes
-          </Typography>
-        </Box>
-      )}
+      <ToggleButtonGroup
+        exclusive
+        size="small"
+        aria-labelledby="theme-label"
+        value={settings.theme}
+        onChange={(_, value: AppSettings['theme'] | null) => value && onChange('theme', value)}
+      >
+        {THEMES.map(({ value, label }) => (
+          <ToggleButton key={value} value={value} sx={{ px: 2 }}>
+            {label}
+          </ToggleButton>
+        ))}
+      </ToggleButtonGroup>
 
       <Divider sx={{ my: 3 }} />
 
@@ -124,7 +48,7 @@ export const AppearanceSection: React.FC<SettingsSectionProps> = ({ settings, on
         Layout
       </Typography>
       <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
-        Choose how the app interface is organized
+        How the timer and your day are arranged
       </Typography>
       <FormControl sx={{ minWidth: 300 }}>
         <Select

@@ -80,7 +80,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           )}
           {currentTool === 1 && (
             <Box sx={{ width: '100%', maxWidth: 500 }}>
-              <ZenCountdownTimer />
+              <ZenCountdownTimer timeFormat={settings.timeFormat} />
             </Box>
           )}
           {currentTool === 2 && (
