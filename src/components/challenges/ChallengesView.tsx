@@ -138,7 +138,7 @@ export const ChallengesView: React.FC = () => {
               {selectedChallenge.name}
             </Typography>
             {selectedChallenge.description && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
                 {selectedChallenge.description}
               </Typography>
             )}
@@ -148,34 +148,34 @@ export const ChallengesView: React.FC = () => {
         {/* Stats Row */}
         <Box sx={{ display: 'flex', gap: 3, mb: 4, flexWrap: 'wrap' }}>
           <Box sx={{ textAlign: 'center', minWidth: 80 }}>
-            <Typography variant="h4" color="success.main" fontWeight={600}>
+            <Typography variant="h4" sx={{ color: 'success.main', fontWeight: 600 }}>
               {selectedChallenge.completedDays}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
               Completed
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'center', minWidth: 80 }}>
-            <Typography variant="h4" color="error.main" fontWeight={600}>
+            <Typography variant="h4" sx={{ color: 'error.main', fontWeight: 600 }}>
               {selectedChallenge.failedDays}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
               Failed
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'center', minWidth: 80 }}>
-            <Typography variant="h4" color="warning.main" fontWeight={600}>
+            <Typography variant="h4" sx={{ color: 'warning.main', fontWeight: 600 }}>
               {selectedChallenge.currentStreak}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
               Current Streak
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'center', minWidth: 80 }}>
-            <Typography variant="h4" color="primary.main" fontWeight={600}>
+            <Typography variant="h4" sx={{ color: 'primary.main', fontWeight: 600 }}>
               {selectedChallenge.longestStreak}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
               Best Streak
             </Typography>
           </Box>
@@ -186,7 +186,7 @@ export const ChallengesView: React.FC = () => {
           <Typography variant="subtitle2" gutterBottom>
             Progress Calendar
           </Typography>
-          <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 2 }}>
             Click on a day to mark it as completed or failed
           </Typography>
 
@@ -240,8 +240,8 @@ export const ChallengesView: React.FC = () => {
 
         <Typography
           variant="caption"
-          color="text.secondary"
-          sx={{ mt: 2, display: 'block', textAlign: 'center' }}
+
+          sx={{ color: 'text.secondary', mt: 2, display: 'block', textAlign: 'center' }}
         >
           {dayjs(selectedChallenge.startDate).format('MMM D')} -{' '}
           {dayjs(selectedChallenge.endDate).format('MMM D, YYYY')}
@@ -281,7 +281,7 @@ export const ChallengesView: React.FC = () => {
       {/* Content */}
       {loading ? (
         <Box sx={{ textAlign: 'center', py: 4 }}>
-          <Typography color="text.secondary">Loading challenges...</Typography>
+          <Typography sx={{ color: 'text.secondary' }}>Loading challenges...</Typography>
         </Box>
       ) : filteredChallenges.length === 0 ? (
         <Alert severity="info" sx={{ mt: 2 }}>

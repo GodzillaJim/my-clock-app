@@ -145,7 +145,7 @@ test/                 # e2e tests (Playwright driving Electron) and main-process
 
 ## Tech stack
 
-Electron 45 · React 19 · TypeScript (strict) · MUI 6 · Vite 8 · better-sqlite3 · Vitest + Testing Library ·
+Electron 45 · React 19 · TypeScript (strict) · MUI 9 · Vite 8 · better-sqlite3 · Vitest + Testing Library ·
 Playwright (Electron e2e) · knip · electron-builder (NSIS)
 
 ## Contributing

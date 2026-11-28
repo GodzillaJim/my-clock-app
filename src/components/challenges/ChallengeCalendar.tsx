@@ -101,18 +101,17 @@ export const ChallengeCalendar: React.FC<ChallengeCalendarProps> = ({
                   key={day.date}
                   title={
                     <Box>
-                      <Typography variant="caption" display="block">
+                      <Typography variant="caption" sx={{ display: 'block' }}>
                         {dayjs(day.date).format('MMM D, YYYY')}
                       </Typography>
                       <Typography
                         variant="caption"
-                        display="block"
-                        sx={{ textTransform: 'capitalize' }}
+                        sx={{ display: 'block', textTransform: 'capitalize' }}
                       >
                         Status: {day.status}
                       </Typography>
                       {day.note && (
-                        <Typography variant="caption" display="block">
+                        <Typography variant="caption" sx={{ display: 'block' }}>
                           Note: {day.note}
                         </Typography>
                       )}
@@ -163,7 +162,7 @@ export const ChallengeCalendar: React.FC<ChallengeCalendarProps> = ({
                   backgroundColor: getStatusColor(status),
                 }}
               />
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                 {label}
               </Typography>
             </Box>

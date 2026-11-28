@@ -177,7 +177,7 @@ export const CreateChallengeDialog: React.FC<CreateChallengeDialogProps> = ({
             </Box>
 
             <Box sx={{ p: 2, backgroundColor: 'action.hover', borderRadius: 2 }}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 Challenge will run for <strong>{getDurationDays()} days</strong> from{' '}
                 <strong>{startDate.format('MMM D')}</strong> to{' '}
                 <strong>{getEndDate().format('MMM D, YYYY')}</strong>

@@ -57,8 +57,9 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
           {challenge.description && (
             <Typography
               variant="body2"
-              color="text.secondary"
+
               sx={{
+                color: 'text.secondary',
                 mt: 0.5,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -95,10 +96,10 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
 
       <Box sx={{ mb: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             Progress
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             {challenge.completedDays} / {challenge.days.length} days
           </Typography>
         </Box>
@@ -117,12 +118,12 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
           </Box>
         </Tooltip>
         {challenge.status === ChallengeStatus.ACTIVE && daysRemaining >= 0 && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             {daysRemaining} days remaining
           </Typography>
         )}
         {challenge.status === ChallengeStatus.ACTIVE && daysRemaining < 0 && (
-          <Typography variant="body2" color="warning.main">
+          <Typography variant="body2" sx={{ color: 'warning.main' }}>
             Challenge ended - mark remaining days
           </Typography>
         )}

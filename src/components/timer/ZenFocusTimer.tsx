@@ -7,7 +7,7 @@ import {
   Settings,
   History,
   SkipNext,
-  CheckCircleOutline,
+  CheckCircleOutlined,
   FastForward,
   AccessTime,
 } from '@mui/icons-material';
@@ -767,7 +767,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
           textAlign: 'center',
         }}
       >
-        <CheckCircleOutline
+        <CheckCircleOutlined
           sx={{
             fontSize: 100,
             color: 'success.main',
