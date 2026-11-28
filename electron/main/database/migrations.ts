@@ -264,28 +264,7 @@ export function migrateLegacyData(db: Database.Database): void {
       }
     }
 
-    // 6. Migrate feedback
-    const feedbackRaw = readJsonFile(path.join(dataDir, 'focus_sessions_feedback.json'));
-    if (feedbackRaw) {
-      const items = JSON.parse(feedbackRaw);
-      const insertFeedback = db.prepare(`
-        INSERT OR IGNORE INTO feedback (id, type, title, description, severity, category, timestamp, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-
-      for (const f of items) {
-        insertFeedback.run(
-          f.id,
-          f.type,
-          f.title,
-          f.description,
-          f.severity,
-          f.category,
-          new Date(f.timestamp).toISOString(),
-          f.status || 'open',
-        );
-      }
-    }
+    // Feedback (focus_sessions_feedback.json) is no longer imported: the feature was removed (ADR 0007)
 
     // 7. Migrate lifetime stats
     const statsRaw = readJsonFile(path.join(dataDir, 'focus_sessions_lifetime_stats.json'));

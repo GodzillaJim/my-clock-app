@@ -23,7 +23,9 @@ import { runMigrations, migrateLegacyData } from './database/migrations';
 import { registerDatabaseHandlers } from './database/ipcHandlers';
 import { handle } from './ipc';
 import { crashAction, recordReload } from './crashRecovery';
-import { createLogger, initLogging } from './logger';
+import { createLogger, initLogging, logFilePath } from './logger';
+import { buildIssueUrl } from './reportProblem';
+import pkg from '../../package.json';
 
 const log = createLogger('main');
 
@@ -362,7 +364,7 @@ function watchRendererHealth(window: BrowserWindow) {
         type: 'error',
         title: 'Focus Sessions',
         message: 'Focus Sessions keeps crashing.',
-        detail: `Your progress is saved. The log is at ${path.join(app.getPath('userData'), 'logs', 'main.log')}.`,
+        detail: `Your progress is saved. The log is at ${logFilePath()}.`,
         buttons: ['Reload', 'Quit'],
         defaultId: 0,
         cancelId: 1,
@@ -442,6 +444,18 @@ handle('update-tray-status', (status) => {
 
   // Also update window title
   updateWindowTitle(status);
+});
+
+// Report a problem: show the log file and open a pre-filled GitHub issue to attach it to
+handle('app:reportProblem', async () => {
+  shell.showItemInFolder(logFilePath());
+  await shell.openExternal(
+    buildIssueUrl(pkg.bugs.url, {
+      appVersion: app.getVersion(),
+      electronVersion: process.versions.electron,
+      osVersion: os.release(),
+    }),
+  );
 });
 
 handle('session-notification', ({ title, body }) => {

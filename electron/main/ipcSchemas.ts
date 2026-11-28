@@ -114,30 +114,6 @@ const challenge = z.object({
   longestStreak: count,
 });
 
-const feedbackType = z.enum(['bug', 'feature-request', 'issue', 'general']);
-const feedbackStatus = z.enum(['open', 'in-progress', 'resolved', 'dismissed']);
-const feedbackSeverity = z.enum(['low', 'medium', 'high', 'critical']);
-
-const feedbackItem = z.object({
-  id,
-  type: feedbackType,
-  title: z.string().min(1).max(500),
-  description: text,
-  severity: feedbackSeverity,
-  category: z.string().max(200),
-  timestamp: date,
-  status: feedbackStatus,
-  userAgent: z.string().max(1000).optional(),
-  appVersion: z.string().max(100).optional(),
-  sessionContext: z
-    .object({
-      timerState: z.string().max(100).optional(),
-      sessionType: z.string().max(100).optional(),
-      currentSession: z.boolean().optional(),
-    })
-    .optional(),
-});
-
 /**
  * Key-value documents are stored as opaque JSON and never reach SQL, so only
  * their outer shape is checked; the renderer owns (and migrates) their fields.
@@ -157,6 +133,7 @@ export const ipcArgSchemas: ArgSchemas = {
   'minimize-to-tray': none,
   'show-window': none,
   'update-tray-status': one(z.string().max(200)),
+  'app:reportProblem': none,
   'session-notification': one(z.object({ title: z.string().max(200), body: z.string().max(1000) })),
 
   'db:sessions:save': one(sessionRecord),
@@ -181,21 +158,6 @@ export const ipcArgSchemas: ArgSchemas = {
   'db:challenges:getById': one(id),
   'db:challenges:save': one(challenge),
   'db:challenges:delete': one(id),
-
-  'db:feedback:getAll': z.tuple([
-    z
-      .object({
-        type: feedbackType.optional(),
-        status: feedbackStatus.optional(),
-        severity: feedbackSeverity.optional(),
-        limit: z.number().int().positive().max(10_000).optional(),
-      })
-      .optional(),
-  ]),
-  'db:feedback:save': one(feedbackItem),
-  'db:feedback:update': z.tuple([id, z.object({ status: feedbackStatus.optional() })]),
-  'db:feedback:delete': one(id),
-  'db:feedback:getStats': none,
 
   'db:kv:get': one(z.enum(['app_state', 'lifetime_stats'])),
   'db:kv:set': z.union([

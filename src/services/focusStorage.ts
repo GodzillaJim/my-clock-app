@@ -16,7 +16,6 @@ import {
   LifetimeStats,
   PeriodSummary,
 } from '@/features/timer/types';
-import { FeedbackFilters, FeedbackItem, FeedbackStats } from '@/types/feedback';
 import { createStorageService } from './storage';
 import { createLogger } from '@/services/logger';
 
@@ -29,7 +28,6 @@ class FocusStorageService {
   private dailyHistoryStorage = createStorageService<DailyHistory[]>(
     'focus_sessions_daily_history',
   );
-  private feedbackStorage = createStorageService<FeedbackItem[]>('focus_sessions_feedback');
   private challengeStorage = createStorageService<Challenge[]>('focus_sessions_challenges');
   private plansStorage = createStorageService<SessionPlan[]>('focus_sessions_plans');
   private lifetimeStatsStorage = createStorageService<LifetimeStats>(
@@ -865,146 +863,6 @@ class FocusStorageService {
       last7Days: emptyPeriod,
       last30Days: emptyPeriod,
     };
-  }
-
-  // ============================================
-  // Feedback Methods
-  // ============================================
-
-  async addFeedback(feedback: Omit<FeedbackItem, 'id' | 'timestamp' | 'status'>): Promise<void> {
-    const newFeedback: FeedbackItem = {
-      ...feedback,
-      id: crypto.randomUUID(),
-      timestamp: new Date(),
-      status: 'open',
-    };
-    try {
-      if (this.useDb) {
-        await this.db.feedback.save(newFeedback);
-      } else {
-        const feedbacks = (await this.feedbackStorage.load()) || [];
-        feedbacks.push(newFeedback);
-        await this.feedbackStorage.save(feedbacks);
-      }
-    } catch (error) {
-      log.error('Failed to add feedback:', error);
-      throw error;
-    }
-  }
-
-  async getFeedback(filters?: FeedbackFilters): Promise<FeedbackItem[]> {
-    try {
-      if (this.useDb) {
-        return await this.db.feedback.getAll(filters);
-      }
-      const feedbacks = (await this.feedbackStorage.load()) || [];
-      let filtered = feedbacks.map((f) => ({ ...f, timestamp: new Date(f.timestamp) }));
-      if (filters?.type) filtered = filtered.filter((f) => f.type === filters.type);
-      if (filters?.status) filtered = filtered.filter((f) => f.status === filters.status);
-      if (filters?.severity) filtered = filtered.filter((f) => f.severity === filters.severity);
-      filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      if (filters?.limit) filtered = filtered.slice(0, filters.limit);
-      return filtered;
-    } catch (error) {
-      log.error('Failed to get feedback:', error);
-      return [];
-    }
-  }
-
-  async updateFeedback(id: string, updates: Partial<Pick<FeedbackItem, 'status'>>): Promise<void> {
-    try {
-      if (this.useDb) {
-        await this.db.feedback.update(id, updates);
-      } else {
-        const feedbacks = (await this.feedbackStorage.load()) || [];
-        const index = feedbacks.findIndex((f) => f.id === id);
-        if (index >= 0) {
-          feedbacks[index] = { ...feedbacks[index], ...updates };
-          await this.feedbackStorage.save(feedbacks);
-        }
-      }
-    } catch (error) {
-      log.error('Failed to update feedback:', error);
-      throw error;
-    }
-  }
-
-  async deleteFeedback(id: string): Promise<void> {
-    try {
-      if (this.useDb) {
-        await this.db.feedback.delete(id);
-      } else {
-        const feedbacks = (await this.feedbackStorage.load()) || [];
-        await this.feedbackStorage.save(feedbacks.filter((f) => f.id !== id));
-      }
-    } catch (error) {
-      log.error('Failed to delete feedback:', error);
-      throw error;
-    }
-  }
-
-  async getFeedbackStats(): Promise<FeedbackStats> {
-    try {
-      if (this.useDb) {
-        return await this.db.feedback.getStats();
-      }
-    } catch (error) {
-      log.error('Failed to get feedback stats:', error);
-    }
-    const feedbacks = (await this.feedbackStorage.load()) || [];
-    return {
-      total: feedbacks.length,
-      open: feedbacks.filter((f) => f.status === 'open').length,
-      resolved: feedbacks.filter((f) => f.status === 'resolved').length,
-      inProgress: feedbacks.filter((f) => f.status === 'in-progress').length,
-      byType: {
-        bug: feedbacks.filter((f) => f.type === 'bug').length,
-        'feature-request': feedbacks.filter((f) => f.type === 'feature-request').length,
-        issue: feedbacks.filter((f) => f.type === 'issue').length,
-        general: feedbacks.filter((f) => f.type === 'general').length,
-      },
-      bySeverity: {
-        low: feedbacks.filter((f) => f.severity === 'low').length,
-        medium: feedbacks.filter((f) => f.severity === 'medium').length,
-        high: feedbacks.filter((f) => f.severity === 'high').length,
-        critical: feedbacks.filter((f) => f.severity === 'critical').length,
-      },
-    };
-  }
-
-  async updateFeedbackStatus(
-    id: string,
-    status: 'open' | 'in-progress' | 'resolved' | 'dismissed',
-  ): Promise<void> {
-    return this.updateFeedback(id, { status });
-  }
-
-  async exportFeedback(format: 'csv' | 'json'): Promise<string> {
-    const feedbacks = await this.getFeedback();
-    if (format === 'json') {
-      return JSON.stringify(feedbacks, null, 2);
-    }
-    const headers = [
-      'id',
-      'type',
-      'title',
-      'description',
-      'severity',
-      'category',
-      'timestamp',
-      'status',
-    ];
-    const rows = feedbacks.map((f) => [
-      f.id,
-      f.type,
-      f.title,
-      f.description,
-      f.severity,
-      f.category,
-      new Date(f.timestamp).toISOString(),
-      f.status,
-    ]);
-    return [headers, ...rows].map((row) => row.join(',')).join('\n');
   }
 
   // ============================================

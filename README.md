@@ -35,7 +35,7 @@ Built with Electron, React and TypeScript, with all data stored locally in SQLit
 
 - Countdown timer and stopwatch
 - Challenges: multi-day goals tracked on a calendar
-- In-app feedback log with CSV export
+- _Report a problem_ (settings or sidebar) opens a pre-filled GitHub issue and shows the log file to attach
 
 **Look and feel**
 
@@ -46,7 +46,7 @@ Built with Electron, React and TypeScript, with all data stored locally in SQLit
 - Global shortcuts, from any app: **Ctrl+Shift+Alt+T** brings the window to the front,
   **Ctrl+Shift+Alt+S** starts (or resumes) a focus session
 - In-app shortcuts: **Space** starts, pauses and resumes the focus timer, **Ctrl+1–4** switch tool,
-  **Ctrl+S** settings, **Ctrl+H** history, **Ctrl+F** feedback, **Esc** closes dialogs
+  **Ctrl+S** settings, **Ctrl+H** history, **Esc** closes dialogs
 - Switching tools or layouts never interrupts a running session
 
 **Known gaps** (tracked on the roadmap): no auto-update or signed installer yet (milestone M5).
@@ -142,7 +142,6 @@ src/
     history/          # history view: timeline, heatmap, trends
     challenges/       # challenges view, calendar, create dialog
     settings/         # settings dialog
-    feedback/         # feedback form and manager
   features/timer/     # timer engine (pure state machines in engine/), React hooks, domain types
   services/           # storage, notifications, sounds, crash-recovery snapshots
   __tests__/          # unit tests (Vitest + Testing Library)

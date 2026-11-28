@@ -54,7 +54,7 @@ describe('IPC argument schemas', () => {
     expect(valid('db:plans:save', [plan])).toBe(true);
     expect(valid('db:sessions:getHistory', [])).toBe(true);
     expect(valid('db:sessions:getHistory', [50])).toBe(true);
-    expect(valid('db:feedback:getAll', [{ status: 'open', limit: 10 }])).toBe(true);
+    expect(valid('app:reportProblem', [])).toBe(true);
     expect(valid('db:kv:set', ['app_state', { version: '1.0.0' }])).toBe(true);
     expect(valid('show-window', [])).toBe(true);
   });
@@ -71,7 +71,8 @@ describe('IPC argument schemas', () => {
     expect(valid('db:sessions:save', [{ ...session, plannedDuration: '1500' }])).toBe(false);
     expect(valid('db:sessions:save', [{ ...session, id: '' }])).toBe(false);
     expect(valid('db:sessions:getByDate', ['28/11/2026'])).toBe(false);
-    expect(valid('db:feedback:getAll', [{ severity: 'urgent' }])).toBe(false);
+    // The renderer cannot pick the URL that Report a problem opens
+    expect(valid('app:reportProblem', ['https://example.com/'])).toBe(false);
     expect(valid('db:sessions:getHistory', [-1])).toBe(false);
   });
 

@@ -8,7 +8,10 @@ import { isTrustedSender } from './security';
  * Application logger. Writes to `<userData>/logs/main.log` (rotated to
  * `main.old.log` at 5 MB) and, in development, to the terminal.
  */
-log.transports.file.resolvePathFn = () => path.join(app.getPath('userData'), 'logs', 'main.log');
+/** Where the current log file lives. */
+export const logFilePath = () => path.join(app.getPath('userData'), 'logs', 'main.log');
+
+log.transports.file.resolvePathFn = logFilePath;
 log.transports.file.maxSize = 5 * 1024 * 1024;
 log.transports.file.level = 'info';
 log.transports.console.level = app.isPackaged ? false : 'debug';

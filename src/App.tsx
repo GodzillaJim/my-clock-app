@@ -8,8 +8,6 @@ import { ZenCountdownTimer } from './components/timer/ZenCountdownTimer';
 import { ZenStopwatch } from './components/timer/ZenStopwatch';
 import { HistoryView } from './components/history/HistoryView';
 import { FocusSettings } from './components/settings/FocusSettings';
-import { FeedbackForm } from './components/feedback/FeedbackForm';
-import { FeedbackManager } from './components/feedback/FeedbackManager';
 import { AppSettings, DEFAULT_SETTINGS, SessionPlan } from './features/timer/types';
 import { focusStorage } from './services/focusStorage';
 import { notificationService } from './services/notificationService';
@@ -17,6 +15,7 @@ import { useRecovery } from './features/timer/hooks/useRecovery';
 import { RecoveryBanner } from './components/timer/RecoveryBanner';
 import { useFocusTimerContext } from './features/timer/FocusTimerContext';
 import { isTimerSpace } from './features/timer/isTimerSpace';
+import { reportProblem } from './services/reportProblem';
 import './App.css';
 import { createLogger } from '@/services/logger';
 
@@ -26,8 +25,6 @@ const App: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const [feedbackManagerOpen, setFeedbackManagerOpen] = useState(false);
   const [currentTool, setCurrentTool] = useState(0);
   const [theme, setTheme] = useState(createTheme());
   const { recoveryInfo, dismiss: dismissRecovery, resume: resumeRecovery } = useRecovery();
@@ -470,8 +467,6 @@ const App: React.FC = () => {
       case 'escape':
         setSettingsOpen(false);
         setHistoryOpen(false);
-        setFeedbackOpen(false);
-        setFeedbackManagerOpen(false);
         break;
       case 's':
         if (event.ctrlKey || event.metaKey) {
@@ -483,12 +478,6 @@ const App: React.FC = () => {
         if (event.ctrlKey || event.metaKey) {
           event.preventDefault();
           setHistoryOpen(true);
-        }
-        break;
-      case 'f':
-        if (event.ctrlKey || event.metaKey) {
-          event.preventDefault();
-          setFeedbackOpen(true);
         }
         break;
       case '1':
@@ -552,7 +541,7 @@ const App: React.FC = () => {
             settings={settings}
             onOpenSettings={() => setSettingsOpen(true)}
             onOpenHistory={() => setHistoryOpen(true)}
-            onOpenFeedback={() => setFeedbackOpen(true)}
+            onReportProblem={reportProblem}
             initialTool={currentTool}
             onToolChange={setCurrentTool}
           />
@@ -594,18 +583,7 @@ const App: React.FC = () => {
           onClose={() => setSettingsOpen(false)}
           settings={settings}
           onSettingsChange={handleSettingsChange}
-          onOpenFeedbackManager={() => setFeedbackManagerOpen(true)}
         />
-
-        <FeedbackForm
-          open={feedbackOpen}
-          onClose={() => setFeedbackOpen(false)}
-          onSubmit={async (feedback) => {
-            await focusStorage.addFeedback(feedback);
-          }}
-        />
-
-        <FeedbackManager open={feedbackManagerOpen} onClose={() => setFeedbackManagerOpen(false)} />
       </Box>
     </ThemeProvider>
   );
