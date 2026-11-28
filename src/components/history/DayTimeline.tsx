@@ -23,7 +23,9 @@ const HOUR = 60 * 60 * 1000;
 
 const isResumable = (plan: SessionPlan): boolean =>
   plan.status !== 'completed' &&
-  plan.segments.some(s => s.status === 'pending' || s.status === 'in_progress' || s.status === 'interrupted');
+  plan.segments.some(
+    (s) => s.status === 'pending' || s.status === 'in_progress' || s.status === 'interrupted',
+  );
 
 const segStart = (s: SessionPlanSegment): number | null =>
   s.actualStartTime ?? (s.status !== 'pending' ? s.expectedStartTime : null);
@@ -43,7 +45,12 @@ interface Block {
   planIdx: number;
 }
 
-export const DayTimeline: React.FC<DayTimelineProps> = ({ dateLabel, plans, settings, onResumePlan }) => {
+export const DayTimeline: React.FC<DayTimelineProps> = ({
+  dateLabel,
+  plans,
+  settings,
+  onResumePlan,
+}) => {
   const theme = useTheme();
 
   const { blocks, axisStart, axisEnd, ticks } = useMemo(() => {
@@ -62,8 +69,8 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ dateLabel, plans, sett
       return { blocks: bl, axisStart: 0, axisEnd: 0, ticks: [] as number[] };
     }
 
-    const minStart = Math.min(...bl.map(b => b.start));
-    const maxEnd = Math.max(...bl.map(b => b.end));
+    const minStart = Math.min(...bl.map((b) => b.start));
+    const maxEnd = Math.max(...bl.map((b) => b.end));
     const aStart = Math.floor(minStart / HOUR) * HOUR;
     let aEnd = Math.ceil(maxEnd / HOUR) * HOUR;
     if (aEnd - aStart < HOUR) aEnd = aStart + HOUR;
@@ -86,8 +93,12 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ dateLabel, plans, sett
     plans.forEach((plan) => {
       plan.segments.forEach((seg) => {
         totalSegs += 1;
-        if (seg.status === 'completed' || seg.status === 'skipped' || seg.status === 'interrupted') doneSegs += 1;
-        if (seg.type === SessionType.FOCUS && (seg.status === 'completed' || seg.status === 'interrupted')) {
+        if (seg.status === 'completed' || seg.status === 'skipped' || seg.status === 'interrupted')
+          doneSegs += 1;
+        if (
+          seg.type === SessionType.FOCUS &&
+          (seg.status === 'completed' || seg.status === 'interrupted')
+        ) {
           focusSeconds += seg.actualDuration || 0;
         }
         const s = seg.actualStartTime;
@@ -103,7 +114,8 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ dateLabel, plans, sett
   const blockColor = (b: Block): string => {
     if (b.status === 'interrupted') return theme.palette.error.main;
     if (b.status === 'skipped') return alpha(theme.palette.warning.main, 0.55);
-    const base = b.type === SessionType.FOCUS ? theme.palette.primary.main : theme.palette.secondary.main;
+    const base =
+      b.type === SessionType.FOCUS ? theme.palette.primary.main : theme.palette.secondary.main;
     return b.type === SessionType.FOCUS ? base : alpha(base, 0.55);
   };
 
@@ -112,8 +124,12 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ dateLabel, plans, sett
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', mb: 0.5 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{dateLabel}</Typography>
+      <Box
+        sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', mb: 0.5 }}
+      >
+        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+          {dateLabel}
+        </Typography>
         {summary.firstStart != null && summary.lastEnd != null && (
           <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: MONO }}>
             {formatTime(new Date(summary.firstStart), settings.timeFormat)}
@@ -128,8 +144,11 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ dateLabel, plans, sett
         <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
           <Box component="span" sx={{ color: 'primary.main', fontWeight: 700, fontFamily: MONO }}>
             {formatDurationFromSeconds(summary.focusSeconds)}
-          </Box>{' '}focus
-          <Box component="span" sx={{ mx: 1, opacity: 0.4 }}>·</Box>
+          </Box>{' '}
+          focus
+          <Box component="span" sx={{ mx: 1, opacity: 0.4 }}>
+            ·
+          </Box>
           {summary.doneSegs}/{summary.totalSegs} segments
         </Typography>
       ) : null}
@@ -142,7 +161,10 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ dateLabel, plans, sett
               position: 'relative',
               height: 60,
               borderRadius: 1.5,
-              backgroundColor: alpha(theme.palette.text.primary, theme.palette.mode === 'dark' ? 0.04 : 0.03),
+              backgroundColor: alpha(
+                theme.palette.text.primary,
+                theme.palette.mode === 'dark' ? 0.04 : 0.03,
+              ),
               overflow: 'hidden',
             }}
           >
@@ -220,8 +242,9 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ dateLabel, plans, sett
       {resumablePlans.length > 0 && (
         <Box sx={{ mt: 1 }}>
           {resumablePlans.map((plan) => {
-            const done = plan.segments.filter(s => s.status === 'completed').length;
-            const startedAt = plan.segments.find(s => s.actualStartTime)?.actualStartTime ?? plan.createdAt;
+            const done = plan.segments.filter((s) => s.status === 'completed').length;
+            const startedAt =
+              plan.segments.find((s) => s.actualStartTime)?.actualStartTime ?? plan.createdAt;
             return (
               <Box
                 key={plan.id}
@@ -244,8 +267,12 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ dateLabel, plans, sett
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       Unfinished session
                     </Typography>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: MONO }}>
-                      started {formatTime(new Date(startedAt), settings.timeFormat)} · {done}/{plan.segments.length} done
+                    <Typography
+                      variant="caption"
+                      sx={{ color: 'text.secondary', fontFamily: MONO }}
+                    >
+                      started {formatTime(new Date(startedAt), settings.timeFormat)} · {done}/
+                      {plan.segments.length} done
                     </Typography>
                   </Box>
                   <Chip

@@ -1,8 +1,8 @@
-import { fileURLToPath } from 'node:url'
-import { defineWorkspace } from 'vitest/config'
+import { fileURLToPath } from 'node:url';
+import { defineWorkspace } from 'vitest/config';
 
-const root = fileURLToPath(new URL('.', import.meta.url))
-const src = fileURLToPath(new URL('./src', import.meta.url))
+const root = fileURLToPath(new URL('.', import.meta.url));
+const src = fileURLToPath(new URL('./src', import.meta.url));
 
 export default defineWorkspace([
   {
@@ -20,8 +20,14 @@ export default defineWorkspace([
           web: {
             enabled: true,
             include: [
-              'react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime',
-              '@emotion/react', '@emotion/styled', '@mui/material', '@mui/icons-material',
+              'react',
+              'react-dom',
+              'react/jsx-runtime',
+              'react/jsx-dev-runtime',
+              '@emotion/react',
+              '@emotion/styled',
+              '@mui/material',
+              '@mui/icons-material',
             ],
           },
         },
@@ -40,4 +46,4 @@ export default defineWorkspace([
       fileParallelism: false,
     },
   },
-])
+]);

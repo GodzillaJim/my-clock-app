@@ -9,13 +9,7 @@ import {
   Chip,
   LinearProgress,
 } from '@mui/material';
-import {
-  Warning,
-  Close,
-  ExpandMore,
-  ExpandLess,
-  PlayArrow,
-} from '@mui/icons-material';
+import { Warning, Close, ExpandMore, ExpandLess, PlayArrow } from '@mui/icons-material';
 import { RecoveryInfo } from '@/features/timer/hooks/useRecovery';
 import { SessionType } from '@/features/timer/types';
 
@@ -25,12 +19,15 @@ interface RecoveryBannerProps {
   onResume: () => void;
 }
 
-export const RecoveryBanner: React.FC<RecoveryBannerProps> = ({ recovery, onDismiss, onResume }) => {
+export const RecoveryBanner: React.FC<RecoveryBannerProps> = ({
+  recovery,
+  onDismiss,
+  onResume,
+}) => {
   const [expanded, setExpanded] = useState(false);
 
-  const progress = recovery.totalSegments > 0
-    ? (recovery.completedSegments / recovery.totalSegments) * 100
-    : 0;
+  const progress =
+    recovery.totalSegments > 0 ? (recovery.completedSegments / recovery.totalSegments) * 100 : 0;
 
   return (
     <Alert
@@ -39,8 +36,13 @@ export const RecoveryBanner: React.FC<RecoveryBannerProps> = ({ recovery, onDism
       action={
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
           {recovery.remainingSegments > 0 && (
-            <Button color="inherit" size="small" onClick={onResume} startIcon={<PlayArrow />}
-              sx={{ fontWeight: 600 }}>
+            <Button
+              color="inherit"
+              size="small"
+              onClick={onResume}
+              startIcon={<PlayArrow />}
+              sx={{ fontWeight: 600 }}
+            >
               Resume
             </Button>
           )}
@@ -53,12 +55,15 @@ export const RecoveryBanner: React.FC<RecoveryBannerProps> = ({ recovery, onDism
     >
       <AlertTitle>Session Interrupted</AlertTitle>
       <Typography variant="body2">
-        Your last session was interrupted at {recovery.interruptedAtFormatted}.
-        You completed {recovery.completedSegments}/{recovery.totalSegments} segments
-        ({recovery.completedTimeFormatted} of focus).
+        Your last session was interrupted at {recovery.interruptedAtFormatted}. You completed{' '}
+        {recovery.completedSegments}/{recovery.totalSegments} segments (
+        {recovery.completedTimeFormatted} of focus).
         {recovery.remainingSegments > 0 && (
-          <> {recovery.remainingSegments} segments ({recovery.remainingTimeFormatted}) remained.
-          The session was planned to end at {recovery.plannedEndFormatted}.</>
+          <>
+            {' '}
+            {recovery.remainingSegments} segments ({recovery.remainingTimeFormatted}) remained. The
+            session was planned to end at {recovery.plannedEndFormatted}.
+          </>
         )}
       </Typography>
 
@@ -104,9 +109,13 @@ export const RecoveryBanner: React.FC<RecoveryBannerProps> = ({ recovery, onDism
                 label={seg.status}
                 size="small"
                 color={
-                  seg.status === 'completed' ? 'success' :
-                  seg.status === 'interrupted' ? 'error' :
-                  seg.status === 'skipped' ? 'warning' : 'default'
+                  seg.status === 'completed'
+                    ? 'success'
+                    : seg.status === 'interrupted'
+                      ? 'error'
+                      : seg.status === 'skipped'
+                        ? 'warning'
+                        : 'default'
                 }
                 variant="filled"
                 sx={{ minWidth: 80 }}

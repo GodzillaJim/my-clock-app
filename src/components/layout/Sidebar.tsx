@@ -1,10 +1,5 @@
 import React from 'react';
-import {
-  Box,
-  IconButton,
-  Tooltip,
-  Divider,
-} from '@mui/material';
+import { Box, IconButton, Tooltip, Divider } from '@mui/material';
 import {
   Timer as TimerIcon,
   AccessAlarm,
@@ -69,8 +64,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 height: 44,
                 borderRadius: 2,
                 color: currentTool === tool.index ? 'primary.main' : 'text.secondary',
-                backgroundColor: currentTool === tool.index ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-                border: currentTool === tool.index ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid transparent',
+                backgroundColor:
+                  currentTool === tool.index ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                border:
+                  currentTool === tool.index
+                    ? '1px solid rgba(255, 255, 255, 0.15)'
+                    : '1px solid transparent',
                 transition: 'all 0.2s ease',
                 '&:hover': {
                   backgroundColor: 'rgba(255, 255, 255, 0.08)',

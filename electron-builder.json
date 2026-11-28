@@ -4,17 +4,12 @@
   "productName": "Focus Sessions",
   "copyright": "Copyright © 2025-2026 Jimna Njoroge",
   "asar": true,
-  "asarUnpack": [
-    "node_modules/better-sqlite3/**"
-  ],
+  "asarUnpack": ["node_modules/better-sqlite3/**"],
   "directories": {
     "output": "release/${version}",
     "buildResources": "build"
   },
-  "files": [
-    "dist-electron",
-    "dist"
-  ],
+  "files": ["dist-electron", "dist"],
   "extraResources": [
     {
       "from": "build/hour_glass.ico",
@@ -30,15 +25,11 @@
     "target": [
       {
         "target": "nsis",
-        "arch": [
-          "x64"
-        ]
+        "arch": ["x64"]
       },
       {
         "target": "portable",
-        "arch": [
-          "x64"
-        ]
+        "arch": ["x64"]
       }
     ],
     "artifactName": "${productName}_${version}.${ext}",

@@ -1,8 +1,8 @@
-import js from '@eslint/js'
-import tseslint from 'typescript-eslint'
-import reactHooks from 'eslint-plugin-react-hooks'
-import jsxA11y from 'eslint-plugin-jsx-a11y'
-import globals from 'globals'
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import reactHooks from 'eslint-plugin-react-hooks';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
+import globals from 'globals';
 
 export default tseslint.config(
   { ignores: ['dist', 'dist-electron', 'release', 'coverage', 'node_modules'] },
@@ -23,7 +23,13 @@ export default tseslint.config(
 
   // Main process, preload, tests and tooling
   {
-    files: ['electron/**/*.ts', 'test/**/*.ts', '*.config.{js,ts}', 'vitest.workspace.ts', '.vscode/**/*.mjs'],
+    files: [
+      'electron/**/*.ts',
+      'test/**/*.ts',
+      '*.config.{js,ts}',
+      'vitest.workspace.ts',
+      '.vscode/**/*.mjs',
+    ],
     languageOptions: { globals: globals.node },
   },
   {
@@ -35,7 +41,10 @@ export default tseslint.config(
     rules: {
       // Tracked separately in #37 (eliminate `any`)
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' },
+      ],
     },
   },
-)
+);

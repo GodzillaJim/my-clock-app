@@ -2,15 +2,16 @@
 
 :root {
   /* Deep Focus Colors - Clean dark palette */
-  --df-bg: #0A0A0C;
-  --df-primary: #60A5FA;
-  --df-secondary: #A78BFA;
+  --df-bg: #0a0a0c;
+  --df-primary: #60a5fa;
+  --df-secondary: #a78bfa;
   --df-surface: rgba(24, 24, 28, 0.9);
 }
 
 /* Subtle pulse animation for active timers (no glow) */
 @keyframes pulse-ring {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -20,7 +21,8 @@
 
 /* Subtle breathing animation for text */
 @keyframes breathe {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {

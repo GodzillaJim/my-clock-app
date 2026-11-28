@@ -12,6 +12,7 @@ Built with Electron, React and TypeScript, with all data stored locally in SQLit
 ## Features
 
 **Focus runs**
+
 - Choose a total length (quick presets, configurable) and start; the run is split into focus and break
   segments using your focus/break durations
 - Pause, resume, skip to the next segment, or stop; the timer shows when the current segment and the whole
@@ -20,28 +21,32 @@ Built with Electron, React and TypeScript, with all data stored locally in SQLit
   and Windows system notifications
 
 **Crash recovery**
+
 - The active run is snapshotted every 5 seconds; if the app or PC goes down mid-session, the next launch
   offers to **Resume** the remaining segments or **Dismiss** the run, which is kept in history as interrupted
 
 **History and insights**
+
 - Day timeline of every run and segment, focus heatmap, momentum header and rhythm trends
 - Streaks, average day start/end times and focus totals, computed from your local history
 - Sessions, plans and daily history are kept for 90 days
 
 **More tools**
+
 - Countdown timer and stopwatch
 - Challenges: multi-day goals tracked on a calendar
 - In-app feedback log with CSV export
 
 **Look and feel**
-- Three layouts: *Zen* (centered timer), *Dashboard* (sidebar + stats), *Command Center* (all-in-one with timeline)
-- Two visual styles: *Deep Focus* (dark, OLED-friendly) and *Aerogel* (glassy pastels, light, dark or
+
+- Three layouts: _Zen_ (centered timer), _Dashboard_ (sidebar + stats), _Command Center_ (all-in-one with timeline)
+- Two visual styles: _Deep Focus_ (dark, OLED-friendly) and _Aerogel_ (glassy pastels, light, dark or
   following the system theme)
 - Lives in the system tray; **Ctrl+Shift+Alt+T** brings the window to the front from anywhere
 - In-app shortcuts: **Ctrl+1–4** switch tool, **Ctrl+S** settings, **Ctrl+H** history, **Ctrl+F** feedback,
   **Esc** closes dialogs
 
-**Known gaps** (tracked on the roadmap): the tray's *Start Focus Session* item, **Ctrl+Shift+S** and
+**Known gaps** (tracked on the roadmap): the tray's _Start Focus Session_ item, **Ctrl+Shift+S** and
 **Space** don't control the timer yet ([#82](https://github.com/GodzillaJim/my-clock-app/issues/82)); there's
 no auto-update or signed installer yet (milestone M5).
 
@@ -86,19 +91,19 @@ never touches your own Focus Sessions data, and works while the app is open.
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Run the app in development with hot reload |
-| `npm run check` | Typecheck, lint, knip, all tests and production build — run before every push |
-| `npm run typecheck` | TypeScript type check |
-| `npm run lint` | ESLint with zero warnings allowed |
-| `npm run knip` | Find unused files, dependencies and exports |
-| `npm test` | Unit tests, then e2e tests |
-| `npm run test:unit` | Unit tests only (jsdom) — fast, no build |
-| `npm run test:e2e` | Build in test mode, then e2e tests against the real Electron app |
-| `npm run build` | Typecheck, build and package for Windows |
-| `npm run dist` | Same as `build`, never publishes |
-| `npm run preview` | Preview the renderer build in a browser |
+| Command             | Description                                                                   |
+| ------------------- | ----------------------------------------------------------------------------- |
+| `npm run dev`       | Run the app in development with hot reload                                    |
+| `npm run check`     | Typecheck, lint, knip, all tests and production build — run before every push |
+| `npm run typecheck` | TypeScript type check                                                         |
+| `npm run lint`      | ESLint with zero warnings allowed                                             |
+| `npm run knip`      | Find unused files, dependencies and exports                                   |
+| `npm test`          | Unit tests, then e2e tests                                                    |
+| `npm run test:unit` | Unit tests only (jsdom) — fast, no build                                      |
+| `npm run test:e2e`  | Build in test mode, then e2e tests against the real Electron app              |
+| `npm run build`     | Typecheck, build and package for Windows                                      |
+| `npm run dist`      | Same as `build`, never publishes                                              |
+| `npm run preview`   | Preview the renderer build in a browser                                       |
 
 ## Project structure
 

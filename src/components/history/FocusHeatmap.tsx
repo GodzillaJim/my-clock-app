@@ -104,7 +104,15 @@ export const FocusHeatmap: React.FC<FocusHeatmapProps> = ({
 
       <Box sx={{ display: 'flex', gap: `${GAP}px` }}>
         {/* Weekday labels */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: `${GAP}px`, width: 30, flexShrink: 0 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: `${GAP}px`,
+            width: 30,
+            flexShrink: 0,
+          }}
+        >
           {WEEKDAY_LABELS.map((label, i) => (
             <Box key={i} sx={{ height: CELL, display: 'flex', alignItems: 'center' }}>
               <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.62rem' }}>
@@ -128,7 +136,11 @@ export const FocusHeatmap: React.FC<FocusHeatmapProps> = ({
                 const level = levelFor(seconds);
                 const isSelected = key === selectedDate;
                 const isToday = key === todayKey;
-                const label = day.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                const label = day.toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                });
 
                 return (
                   <Tooltip
@@ -137,7 +149,9 @@ export const FocusHeatmap: React.FC<FocusHeatmapProps> = ({
                     title={
                       <Box sx={{ textAlign: 'center', py: 0.25 }}>
                         <div style={{ fontWeight: 600 }}>{label}</div>
-                        <div>{seconds > 0 ? `${formatDurationFromSeconds(seconds)} focus` : 'No focus'}</div>
+                        <div>
+                          {seconds > 0 ? `${formatDurationFromSeconds(seconds)} focus` : 'No focus'}
+                        </div>
                       </Box>
                     }
                   >
@@ -170,13 +184,22 @@ export const FocusHeatmap: React.FC<FocusHeatmapProps> = ({
 
       {/* Legend */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5, pl: '34px' }}>
-        <Typography variant="caption" sx={{ color: 'text.secondary', mr: 0.5, fontSize: '0.65rem' }}>
+        <Typography
+          variant="caption"
+          sx={{ color: 'text.secondary', mr: 0.5, fontSize: '0.65rem' }}
+        >
           Less
         </Typography>
         {[0, 1, 2, 3, 4].map((lvl) => (
-          <Box key={lvl} sx={{ width: 11, height: 11, borderRadius: '2px', backgroundColor: cellColor(lvl) }} />
+          <Box
+            key={lvl}
+            sx={{ width: 11, height: 11, borderRadius: '2px', backgroundColor: cellColor(lvl) }}
+          />
         ))}
-        <Typography variant="caption" sx={{ color: 'text.secondary', ml: 0.5, fontSize: '0.65rem' }}>
+        <Typography
+          variant="caption"
+          sx={{ color: 'text.secondary', ml: 0.5, fontSize: '0.65rem' }}
+        >
           More
         </Typography>
       </Box>

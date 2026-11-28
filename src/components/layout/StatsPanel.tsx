@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
-} from '@mui/material';
+import { Box, Typography, Paper } from '@mui/material';
 import {
   Timer as TimerIcon,
   LocalFireDepartment,
@@ -20,7 +16,13 @@ interface StatCardProps {
   color?: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ icon, label, value, subtext, color = 'primary.main' }) => (
+const StatCard: React.FC<StatCardProps> = ({
+  icon,
+  label,
+  value,
+  subtext,
+  color = 'primary.main',
+}) => (
   <Paper
     sx={{
       p: 2,
@@ -178,10 +180,7 @@ export const StatsPanel: React.FC = () => {
         >
           "The secret of getting ahead is getting started."
         </Typography>
-        <Typography
-          variant="caption"
-          sx={{ color: 'primary.main', display: 'block', mt: 1 }}
-        >
+        <Typography variant="caption" sx={{ color: 'primary.main', display: 'block', mt: 1 }}>
           — Mark Twain
         </Typography>
       </Paper>

@@ -1,4 +1,9 @@
-import { ActiveSessionSnapshot, ActivePlanSnapshot, SNAPSHOT_KEY, PLAN_SNAPSHOT_KEY } from '@/types/Persistence';
+import {
+  ActiveSessionSnapshot,
+  ActivePlanSnapshot,
+  SNAPSHOT_KEY,
+  PLAN_SNAPSHOT_KEY,
+} from '@/types/Persistence';
 import { SessionPlan } from '@/features/timer/types';
 
 const hasDb = () => !!window.electronAPI?.db;
@@ -37,9 +42,9 @@ export const persistenceService = {
     if (hasDb()) {
       // Fire-and-forget IPC — better-sqlite3 is synchronous on the main process,
       // so data is fsync'd to disk before the IPC response returns
-      window.electronAPI!.db.snapshot.save(plan).catch(err =>
-        console.error('Failed to save plan snapshot to SQLite:', err)
-      );
+      window
+        .electronAPI!.db.snapshot.save(plan)
+        .catch((err) => console.error('Failed to save plan snapshot to SQLite:', err));
       return;
     }
     try {
@@ -73,11 +78,15 @@ export const persistenceService = {
 
   clearPlanSnapshot: (): void => {
     if (hasDb()) {
-      window.electronAPI!.db.snapshot.clear().catch(err =>
-        console.error('Failed to clear plan snapshot from SQLite:', err)
-      );
+      window
+        .electronAPI!.db.snapshot.clear()
+        .catch((err) => console.error('Failed to clear plan snapshot from SQLite:', err));
       // Also clear localStorage in case there's a stale entry from pre-migration
-      try { localStorage.removeItem(PLAN_SNAPSHOT_KEY); } catch { /* ignore */ }
+      try {
+        localStorage.removeItem(PLAN_SNAPSHOT_KEY);
+      } catch {
+        /* ignore */
+      }
       return;
     }
     try {
@@ -85,5 +94,5 @@ export const persistenceService = {
     } catch (error) {
       console.error('Failed to clear plan snapshot:', error);
     }
-  }
+  },
 };

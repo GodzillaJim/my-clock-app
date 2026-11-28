@@ -39,7 +39,7 @@ import {
   ThumbDown,
   CheckCircle,
   Cancel,
-  Schedule
+  Schedule,
 } from '@mui/icons-material';
 import { FeedbackItem } from '@/types/feedback';
 import { focusStorage } from '@/services/focusStorage';
@@ -66,37 +66,57 @@ function TabPanel(props: TabPanelProps) {
 
 const getTypeIcon = (type: FeedbackItem['type']) => {
   switch (type) {
-    case 'bug': return <BugReport />;
-    case 'feature-request': return <Lightbulb />;
-    case 'issue': return <Warning />;
-    case 'general': return <ThumbDown />;
+    case 'bug':
+      return <BugReport />;
+    case 'feature-request':
+      return <Lightbulb />;
+    case 'issue':
+      return <Warning />;
+    case 'general':
+      return <ThumbDown />;
   }
 };
 
 const getStatusIcon = (status: FeedbackItem['status']) => {
   switch (status) {
-    case 'open': return <Schedule color="warning" />;
-    case 'in-progress': return <Schedule color="info" />;
-    case 'resolved': return <CheckCircle color="success" />;
-    case 'dismissed': return <Cancel color="disabled" />;
+    case 'open':
+      return <Schedule color="warning" />;
+    case 'in-progress':
+      return <Schedule color="info" />;
+    case 'resolved':
+      return <CheckCircle color="success" />;
+    case 'dismissed':
+      return <Cancel color="disabled" />;
   }
 };
 
-const getSeverityColor = (severity: FeedbackItem['severity']): 'default' | 'success' | 'warning' | 'error' => {
+const getSeverityColor = (
+  severity: FeedbackItem['severity'],
+): 'default' | 'success' | 'warning' | 'error' => {
   switch (severity) {
-    case 'low': return 'success';
-    case 'medium': return 'default';
-    case 'high': return 'warning';
-    case 'critical': return 'error';
+    case 'low':
+      return 'success';
+    case 'medium':
+      return 'default';
+    case 'high':
+      return 'warning';
+    case 'critical':
+      return 'error';
   }
 };
 
-const getTypeColor = (type: FeedbackItem['type']): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
+const getTypeColor = (
+  type: FeedbackItem['type'],
+): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
   switch (type) {
-    case 'bug': return 'error';
-    case 'feature-request': return 'info';
-    case 'issue': return 'warning';
-    case 'general': return 'default';
+    case 'bug':
+      return 'error';
+    case 'feature-request':
+      return 'info';
+    case 'issue':
+      return 'warning';
+    case 'general':
+      return 'default';
   }
 };
 
@@ -112,12 +132,12 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
     open: 0,
     resolved: 0,
     byType: { bug: 0, 'feature-request': 0, issue: 0, general: 0 },
-    bySeverity: { low: 0, medium: 0, high: 0, critical: 0 }
+    bySeverity: { low: 0, medium: 0, high: 0, critical: 0 },
   });
   const [filters, setFilters] = useState({
     status: 'all' as FeedbackItem['status'] | 'all',
     type: 'all' as FeedbackItem['type'] | 'all',
-    severity: 'all' as FeedbackItem['severity'] | 'all'
+    severity: 'all' as FeedbackItem['severity'] | 'all',
   });
 
   useEffect(() => {
@@ -137,7 +157,7 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
     try {
       const [allFeedback, feedbackStats] = await Promise.all([
         focusStorage.getFeedback(),
-        focusStorage.getFeedbackStats()
+        focusStorage.getFeedbackStats(),
       ]);
       setFeedback(allFeedback);
       setStats(feedbackStats);
@@ -152,13 +172,13 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
     let filtered = [...feedback];
 
     if (filters.status !== 'all') {
-      filtered = filtered.filter(f => f.status === filters.status);
+      filtered = filtered.filter((f) => f.status === filters.status);
     }
     if (filters.type !== 'all') {
-      filtered = filtered.filter(f => f.type === filters.type);
+      filtered = filtered.filter((f) => f.type === filters.type);
     }
     if (filters.severity !== 'all') {
-      filtered = filtered.filter(f => f.severity === filters.severity);
+      filtered = filtered.filter((f) => f.severity === filters.severity);
     }
 
     setFilteredFeedback(filtered);
@@ -217,17 +237,21 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography>Open:</Typography>
-                  <Typography variant="h6" color="warning.main">{stats.open}</Typography>
+                  <Typography variant="h6" color="warning.main">
+                    {stats.open}
+                  </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography>Resolved:</Typography>
-                  <Typography variant="h6" color="success.main">{stats.resolved}</Typography>
+                  <Typography variant="h6" color="success.main">
+                    {stats.resolved}
+                  </Typography>
                 </Box>
               </Stack>
             </CardContent>
           </Card>
         </Grid>
-        
+
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
@@ -236,7 +260,10 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
               </Typography>
               <Stack spacing={1}>
                 {Object.entries(stats.byType).map(([type, count]) => (
-                  <Box key={type} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box
+                    key={type}
+                    sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       {getTypeIcon(type as FeedbackItem['type'])}
                       <Typography>{type}</Typography>
@@ -281,7 +308,7 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
           <Select
             value={filters.status}
             label="Status"
-            onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value as any }))}
+            onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value as any }))}
           >
             <MenuItem value="all">All</MenuItem>
             <MenuItem value="open">Open</MenuItem>
@@ -296,7 +323,7 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
           <Select
             value={filters.type}
             label="Type"
-            onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value as any }))}
+            onChange={(e) => setFilters((prev) => ({ ...prev, type: e.target.value as any }))}
           >
             <MenuItem value="all">All</MenuItem>
             <MenuItem value="bug">Bug</MenuItem>
@@ -311,7 +338,7 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
           <Select
             value={filters.severity}
             label="Severity"
-            onChange={(e) => setFilters(prev => ({ ...prev, severity: e.target.value as any }))}
+            onChange={(e) => setFilters((prev) => ({ ...prev, severity: e.target.value as any }))}
           >
             <MenuItem value="all">All</MenuItem>
             <MenuItem value="low">Low</MenuItem>
@@ -348,11 +375,15 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} align="center">Loading...</TableCell>
+                <TableCell colSpan={7} align="center">
+                  Loading...
+                </TableCell>
               </TableRow>
             ) : filteredFeedback.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align="center">No feedback items found</TableCell>
+                <TableCell colSpan={7} align="center">
+                  No feedback items found
+                </TableCell>
               </TableRow>
             ) : (
               filteredFeedback.map((item) => (
@@ -367,7 +398,10 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                    >
                       {item.title}
                     </Typography>
                   </TableCell>
@@ -387,9 +421,7 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
                   </TableCell>
                   <TableCell>{item.category}</TableCell>
                   <TableCell>
-                    <Typography variant="body2">
-                      {item.timestamp.toLocaleDateString()}
-                    </Typography>
+                    <Typography variant="body2">{item.timestamp.toLocaleDateString()}</Typography>
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 1 }}>
@@ -450,16 +482,14 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
                   color={getSeverityColor(selectedFeedback.severity)}
                   size="small"
                 />
-                <Chip
-                  label={selectedFeedback.status}
-                  variant="outlined"
-                  size="small"
-                />
+                <Chip label={selectedFeedback.status} variant="outlined" size="small" />
               </Box>
             </Box>
 
             <Box>
-              <Typography variant="subtitle2" gutterBottom>Description:</Typography>
+              <Typography variant="subtitle2" gutterBottom>
+                Description:
+              </Typography>
               <Paper sx={{ p: 2, backgroundColor: 'grey.50' }}>
                 <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
                   {selectedFeedback.description}
@@ -490,7 +520,9 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
             )}
 
             <Box>
-              <Typography variant="subtitle2" gutterBottom>Change Status:</Typography>
+              <Typography variant="subtitle2" gutterBottom>
+                Change Status:
+              </Typography>
               <Stack direction="row" spacing={1}>
                 <Button
                   size="small"
@@ -549,11 +581,11 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
               <Tab label={`Feedback Items (${filteredFeedback.length})`} />
             </Tabs>
           </Box>
-          
+
           <TabPanel value={tabValue} index={0}>
             {renderOverviewTab()}
           </TabPanel>
-          
+
           <TabPanel value={tabValue} index={1}>
             {renderFeedbackTab()}
           </TabPanel>

@@ -12,7 +12,7 @@ export const createStorageService = <T>(key: string): StorageService<T> => {
       if (!isElectron) {
         try {
           const data = localStorage.getItem(key);
-          return data ? JSON.parse(data) as T : null;
+          return data ? (JSON.parse(data) as T) : null;
         } catch (error) {
           console.error('LocalStorage load failed:', error);
           return null;
@@ -22,13 +22,13 @@ export const createStorageService = <T>(key: string): StorageService<T> => {
       try {
         const filePath = await window.electronAPI!.getStoragePath(key);
         const data = await window.electronAPI!.storageRead(filePath);
-        return data ? JSON.parse(data) as T : null;
+        return data ? (JSON.parse(data) as T) : null;
       } catch (error) {
         console.error('File storage load failed:', error);
         return null;
       }
     },
-    
+
     save: async (data: T) => {
       if (!isElectron) {
         try {
@@ -47,7 +47,7 @@ export const createStorageService = <T>(key: string): StorageService<T> => {
         throw error;
       }
     },
-  
+
     clear: async () => {
       if (!isElectron) {
         try {
@@ -57,13 +57,13 @@ export const createStorageService = <T>(key: string): StorageService<T> => {
         }
         return;
       }
-      
+
       try {
         const filePath = await window.electronAPI!.getStoragePath(key);
         await window.electronAPI!.storageDelete(filePath);
       } catch (error) {
         console.error('File storage clear failed:', error);
       }
-    }
+    },
   };
 };

@@ -12,12 +12,26 @@ interface RhythmTrendsProps {
 
 const MONO = 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace';
 
-const Fact: React.FC<{ label: string; value: string; color?: string }> = ({ label, value, color }) => (
+const Fact: React.FC<{ label: string; value: string; color?: string }> = ({
+  label,
+  value,
+  color,
+}) => (
   <Box>
-    <Typography variant="caption" sx={{ color: 'text.secondary', letterSpacing: '0.08em', display: 'block' }}>
+    <Typography
+      variant="caption"
+      sx={{ color: 'text.secondary', letterSpacing: '0.08em', display: 'block' }}
+    >
       {label}
     </Typography>
-    <Typography sx={{ fontFamily: MONO, fontWeight: 600, fontSize: '1.05rem', color: color || 'text.primary' }}>
+    <Typography
+      sx={{
+        fontFamily: MONO,
+        fontWeight: 600,
+        fontSize: '1.05rem',
+        color: color || 'text.primary',
+      }}
+    >
       {value}
     </Typography>
   </Box>
@@ -25,7 +39,7 @@ const Fact: React.FC<{ label: string; value: string; color?: string }> = ({ labe
 
 const Sparkbars: React.FC<{ series: { date: string; seconds: number }[] }> = ({ series }) => {
   const theme = useTheme();
-  const max = Math.max(1, ...series.map(d => d.seconds));
+  const max = Math.max(1, ...series.map((d) => d.seconds));
   const W = 100;
   const H = 30;
   const n = series.length || 1;
@@ -34,7 +48,11 @@ const Sparkbars: React.FC<{ series: { date: string; seconds: number }[] }> = ({ 
 
   return (
     <Box sx={{ width: '100%' }}>
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: '100%', height: 64, display: 'block' }}>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="none"
+        style={{ width: '100%', height: 64, display: 'block' }}
+      >
         {series.map((d, i) => {
           const h = d.seconds > 0 ? Math.max(1.2, (d.seconds / max) * H) : 0;
           const x = i * (W / n);
@@ -69,9 +87,14 @@ export const RhythmTrends: React.FC<RhythmTrendsProps> = ({ stats, series }) => 
     const total = series.reduce((sum, d) => sum + d.seconds, 0);
     let best = series[0];
     for (const d of series) if (!best || d.seconds > best.seconds) best = d;
-    const bestLabel = best && best.seconds > 0
-      ? new Date(`${best.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-      : '—';
+    const bestLabel =
+      best && best.seconds > 0
+        ? new Date(`${best.date}T00:00:00`).toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+          })
+        : '—';
     return { periodTotal: total, bestDayLabel: bestLabel };
   }, [series]);
 
@@ -125,9 +148,15 @@ export const RhythmTrends: React.FC<RhythmTrendsProps> = ({ stats, series }) => 
       >
         <Fact label="AVG START" value={stats.averageDayStartTime} />
         <Fact label="AVG END" value={stats.averageDayEndTime} />
-        <Fact label="AVG / DAY" value={formatDurationFromSeconds(stats.averageDailyFocusTime)} color={theme.palette.primary.main} />
+        <Fact
+          label="AVG / DAY"
+          value={formatDurationFromSeconds(stats.averageDailyFocusTime)}
+          color={theme.palette.primary.main}
+        />
         <Tooltip title="Your most focused day in the last 30" arrow>
-          <Box><Fact label="BEST DAY" value={bestDayLabel} /></Box>
+          <Box>
+            <Fact label="BEST DAY" value={bestDayLabel} />
+          </Box>
         </Tooltip>
       </Box>
 
@@ -140,7 +169,11 @@ export const RhythmTrends: React.FC<RhythmTrendsProps> = ({ stats, series }) => 
           pt: 2.5,
         }}
       >
-        <Fact label="LIFETIME FOCUS" value={formatDurationFromSeconds(stats.totalFocusTime)} color={theme.palette.primary.main} />
+        <Fact
+          label="LIFETIME FOCUS"
+          value={formatDurationFromSeconds(stats.totalFocusTime)}
+          color={theme.palette.primary.main}
+        />
         <Fact label="DAYS ACTIVE" value={String(stats.totalDaysActive)} />
         <Fact
           label="LONGEST STREAK"

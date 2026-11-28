@@ -1,19 +1,9 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": [
-    "electron/main/index.ts",
-    "electron/preload/index.ts"
-  ],
-  "project": [
-    "src/**/*.{ts,tsx}",
-    "electron/**/*.ts",
-    "test/**/*.ts"
-  ],
+  "entry": ["electron/main/index.ts", "electron/preload/index.ts"],
+  "project": ["src/**/*.{ts,tsx}", "electron/**/*.ts", "test/**/*.ts"],
   "vitest": {
-    "config": [
-      "vitest.config.ts",
-      "vitest.workspace.ts"
-    ],
+    "config": ["vitest.config.ts", "vitest.workspace.ts"],
     "entry": [
       "src/**/*.test.{ts,tsx}",
       "src/__tests__/setup.ts",
