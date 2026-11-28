@@ -13,8 +13,8 @@ import {
 } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import { CircularTimerRing } from './CircularTimerRing';
-import { AppSettings, SessionPlan } from '@/features/timer/types';
-import { useFocusTimer } from '@/features/timer/hooks/useFocusTimer';
+import { AppSettings } from '@/features/timer/types';
+import { useFocusTimerContext } from '@/features/timer/FocusTimerContext';
 import { formatClock } from '@/features/timer/engine/format';
 
 interface ZenFocusTimerProps {
@@ -23,40 +23,25 @@ interface ZenFocusTimerProps {
   settings: AppSettings;
   onRunningStateChange?: (isRunning: boolean) => void;
   hideTopControls?: boolean;
-  resumePlan?: SessionPlan | null;
-  onResumeConsumed?: () => void;
 }
 
-/** View for the focus timer; all timing and bookkeeping lives in `useFocusTimer`. */
+/** View for the focus timer; the timer itself is the app-wide `FocusTimerProvider`. */
 export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
   onOpenSettings,
   onOpenHistory,
   settings,
   onRunningStateChange,
   hideTopControls = false,
-  resumePlan,
-  onResumeConsumed,
 }) => {
-  const [totalDuration, setTotalDuration] = useState(settings.focusDuration);
   const [showControls, setShowControls] = useState(false);
-  const timer = useFocusTimer();
+  const timer = useFocusTimerContext();
+  const { plannedMinutes: totalDuration, setPlannedMinutes: setTotalDuration } = timer;
   const { isRunning, isPaused, isComplete, isBreak, hasSession, actions } = timer;
   const isActive = isRunning;
 
   useEffect(() => {
     onRunningStateChange?.(isRunning);
   }, [isRunning, onRunningStateChange]);
-
-  // Resume a plan handed in from History or the recovery banner
-  useEffect(() => {
-    if (resumePlan && timer.phase === 'idle') {
-      actions.resumePlan(resumePlan);
-      setShowControls(true);
-      onResumeConsumed?.();
-    }
-    // Trigger only when a new plan is handed in; the guard reads the phase at that moment.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resumePlan]);
 
   const startSession = () => {
     actions.start(totalDuration, settings);

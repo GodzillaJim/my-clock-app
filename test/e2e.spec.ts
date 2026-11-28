@@ -212,6 +212,42 @@ if (process.platform === 'linux') {
       await page.getByText('READY', { exact: true }).waitFor({ timeout: 10000 });
     }, 30000);
 
+    test('tray Start, the global shortcut and Space control the timer', async () => {
+      const send = (channel: string) =>
+        electronApp.evaluate(
+          ({ BrowserWindow }, ch) => BrowserWindow.getAllWindows()[0].webContents.send(ch),
+          channel,
+        );
+      const label = (text: string) => page.getByText(text, { exact: true });
+
+      // Tray "Start Focus Session" starts a session
+      await send('tray-start-session');
+      await label('FOCUS').waitFor({ timeout: 10000 });
+
+      // Space (with nothing focused) pauses and resumes it
+      await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+      await page.keyboard.press('Space');
+      await page.getByRole('button', { name: 'Resume' }).waitFor({ timeout: 10000 });
+      await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+      await page.keyboard.press('Space');
+      await label('FOCUS').waitFor({ timeout: 10000 });
+
+      // Switching tools does not drop the running session
+      await page.keyboard.press('Control+3');
+      await page.getByRole('button', { name: /^start$/i }).waitFor({ timeout: 10000 });
+      await page.keyboard.press('Control+1');
+      await label('FOCUS').waitFor({ timeout: 10000 });
+
+      // The global shortcut resumes a paused session
+      await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+      await page.keyboard.press('Space');
+      await page.getByRole('button', { name: 'Resume' }).waitFor({ timeout: 10000 });
+      await send('global-shortcut-start-session');
+      await label('FOCUS').waitFor({ timeout: 10000 });
+
+      await page.getByRole('button', { name: 'Stop session' }).first().click();
+      await label('READY').waitFor({ timeout: 10000 });
+    }, 30000);
     test('opens settings and history from the tray menu', async () => {
       const send = (channel: string) =>
         electronApp.evaluate(

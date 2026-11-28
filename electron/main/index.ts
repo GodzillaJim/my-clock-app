@@ -263,7 +263,9 @@ function setupGlobalShortcuts() {
     }
   });
 
-  globalShortcut.register('CommandOrControl+Shift+S', () => {
+  // Ctrl+Shift+Alt+S rather than Ctrl+Shift+S: a global shortcut captures the chord in every
+  // other app, and Ctrl+Shift+S is Save As almost everywhere.
+  globalShortcut.register('CommandOrControl+Shift+Alt+S', () => {
     if (win) {
       win.webContents.send('global-shortcut-start-session');
     }

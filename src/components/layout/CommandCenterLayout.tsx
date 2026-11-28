@@ -12,9 +12,9 @@ import {
   AccessTime,
 } from '@mui/icons-material';
 import { CircularTimerRing } from '../timer/CircularTimerRing';
-import { AppSettings, SessionRecord, SessionType, SessionPlan } from '@/features/timer/types';
+import { AppSettings, SessionRecord, SessionType } from '@/features/timer/types';
 import { focusStorage } from '@/services/focusStorage';
-import { useFocusTimer } from '@/features/timer/hooks/useFocusTimer';
+import { useFocusTimerContext } from '@/features/timer/FocusTimerContext';
 import { formatClock } from '@/features/timer/engine/format';
 import dayjs from 'dayjs';
 import { createLogger } from '@/services/logger';
@@ -25,22 +25,18 @@ interface CommandCenterLayoutProps {
   settings: AppSettings;
   onOpenSettings: () => void;
   onOpenHistory: () => void;
-  resumePlan?: SessionPlan | null;
-  onResumeConsumed?: () => void;
 }
 
-/** Command Center layout; the timer itself is `useFocusTimer`, shared with the Zen view. */
+/** Command Center layout; the timer itself is the app-wide `FocusTimerProvider`. */
 export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
   settings,
   onOpenSettings,
   onOpenHistory,
-  resumePlan,
-  onResumeConsumed,
 }) => {
-  const [totalDuration, setTotalDuration] = useState(settings.focusDuration);
   const [recentSessions, setRecentSessions] = useState<SessionRecord[]>([]);
   const [todayStats, setTodayStats] = useState({ focusTime: 0, completed: 0 });
-  const timer = useFocusTimer();
+  const timer = useFocusTimerContext();
+  const { plannedMinutes: totalDuration, setPlannedMinutes: setTotalDuration } = timer;
   const { isRunning, isPaused, isComplete, isBreak, actions } = timer;
   const isActive = timer.hasSession;
 
@@ -63,16 +59,6 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
   useEffect(() => {
     if (timer.phase === 'idle' || timer.phase === 'complete') void loadStats();
   }, [timer.phase]);
-
-  // Resume a plan handed in from History or the recovery banner
-  useEffect(() => {
-    if (resumePlan && timer.phase === 'idle') {
-      actions.resumePlan(resumePlan);
-      onResumeConsumed?.();
-    }
-    // Trigger only when a new plan is handed in; the guard reads the phase at that moment.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resumePlan]);
 
   const startSession = () => actions.start(totalDuration, settings);
   const displayTime = formatClock(isActive ? timer.remainingSeconds : totalDuration * 60);
