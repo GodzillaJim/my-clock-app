@@ -12,7 +12,7 @@ interface DashboardLayoutProps {
   settings: AppSettings;
   onOpenSettings: () => void;
   onOpenHistory: () => void;
-  onOpenFeedback: () => void;
+  onReportProblem: () => void;
   initialTool?: number;
   onToolChange?: (tool: number) => void;
 }
@@ -21,7 +21,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   settings,
   onOpenSettings,
   onOpenHistory,
-  onOpenFeedback,
+  onReportProblem,
   initialTool = 0,
   onToolChange,
 }) => {
@@ -46,7 +46,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         onToolChange={handleToolChange}
         onOpenSettings={onOpenSettings}
         onOpenHistory={onOpenHistory}
-        onOpenFeedback={onOpenFeedback}
+        onReportProblem={onReportProblem}
       />
 
       {/* Main Content Area */}

@@ -39,6 +39,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '@/features/timer/types';
 import { focusStorage } from '@/services/focusStorage';
 import { notificationService } from '@/services/notificationService';
 import { SOUND_OPTIONS } from '@/services/sounds';
+import { reportProblem } from '@/services/reportProblem';
 import { createLogger } from '@/services/logger';
 
 const log = createLogger('FocusSettings');
@@ -48,7 +49,6 @@ interface FocusSettingsProps {
   onClose: () => void;
   settings: AppSettings;
   onSettingsChange: (settings: AppSettings) => void;
-  onOpenFeedbackManager?: () => void;
 }
 
 interface TabPanelProps {
@@ -74,7 +74,6 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
   onClose,
   settings,
   onSettingsChange,
-  onOpenFeedbackManager,
 }) => {
   const [localSettings, setLocalSettings] = useState<AppSettings>(settings);
   const [activeTab, setActiveTab] = useState(0);
@@ -759,11 +758,9 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
         <Button onClick={handleReset} color="warning">
           Reset to Defaults
         </Button>
-        {onOpenFeedbackManager && (
-          <Button onClick={onOpenFeedbackManager} variant="outlined">
-            Manage Feedback
-          </Button>
-        )}
+        <Button onClick={reportProblem} variant="outlined">
+          Report a problem
+        </Button>
         <Box sx={{ flex: 1 }} />
         {saveError && (
           <Alert severity="error" sx={{ mr: 2 }}>

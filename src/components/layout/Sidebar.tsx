@@ -6,7 +6,7 @@ import {
   DateRange,
   Settings,
   History,
-  Feedback,
+  BugReportOutlined,
   EmojiEvents,
 } from '@mui/icons-material';
 
@@ -15,7 +15,7 @@ interface SidebarProps {
   onToolChange: (tool: number) => void;
   onOpenSettings: () => void;
   onOpenHistory: () => void;
-  onOpenFeedback: () => void;
+  onReportProblem: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -23,7 +23,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToolChange,
   onOpenSettings,
   onOpenHistory,
-  onOpenFeedback,
+  onReportProblem,
 }) => {
   const tools = [
     { icon: <DateRange />, label: 'Focus', index: 0 },
@@ -35,7 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const actions = [
     { icon: <History />, label: 'History', onClick: onOpenHistory },
     { icon: <Settings />, label: 'Settings', onClick: onOpenSettings },
-    { icon: <Feedback />, label: 'Feedback', onClick: onOpenFeedback },
+    { icon: <BugReportOutlined />, label: 'Report a problem', onClick: onReportProblem },
   ];
 
   return (

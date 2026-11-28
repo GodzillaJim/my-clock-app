@@ -15,12 +15,6 @@ import type {
   SessionPlan,
   SessionRecord,
 } from '../../src/features/timer/types';
-import type {
-  FeedbackFilters,
-  FeedbackItem,
-  FeedbackStats,
-  FeedbackUpdate,
-} from '../../src/types/feedback';
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
@@ -53,6 +47,7 @@ export interface InvokeChannels {
   'show-window': { args: []; result: void };
   'update-tray-status': { args: [status: string]; result: void };
   'session-notification': { args: [notification: SessionNotificationPayload]; result: void };
+  'app:reportProblem': { args: []; result: void };
 
   // Sessions
   'db:sessions:save': { args: [session: SessionRecord]; result: void };
@@ -80,13 +75,6 @@ export interface InvokeChannels {
   'db:challenges:getById': { args: [id: string]; result: Challenge | null };
   'db:challenges:save': { args: [challenge: Challenge]; result: void };
   'db:challenges:delete': { args: [id: string]; result: void };
-
-  // Feedback
-  'db:feedback:getAll': { args: [filters?: FeedbackFilters]; result: FeedbackItem[] };
-  'db:feedback:save': { args: [item: FeedbackItem]; result: void };
-  'db:feedback:update': { args: [id: string, updates: FeedbackUpdate]; result: void };
-  'db:feedback:delete': { args: [id: string]; result: void };
-  'db:feedback:getStats': { args: []; result: FeedbackStats };
 
   // Key-value documents
   'db:kv:get': { args: [key: KvKey]; result: KvValues[KvKey] | null };
@@ -126,6 +114,7 @@ export interface ElectronAPI {
   showWindow: Invoker<'show-window'>;
   updateTrayStatus: Invoker<'update-tray-status'>;
   sessionNotification: Invoker<'session-notification'>;
+  reportProblem: Invoker<'app:reportProblem'>;
 
   onTrayStartSession: Subscriber;
   onTrayOpenSettings: Subscriber;
@@ -159,13 +148,6 @@ export interface ElectronAPI {
       getById: Invoker<'db:challenges:getById'>;
       save: Invoker<'db:challenges:save'>;
       delete: Invoker<'db:challenges:delete'>;
-    };
-    feedback: {
-      getAll: Invoker<'db:feedback:getAll'>;
-      save: Invoker<'db:feedback:save'>;
-      update: Invoker<'db:feedback:update'>;
-      delete: Invoker<'db:feedback:delete'>;
-      getStats: Invoker<'db:feedback:getStats'>;
     };
     kv: {
       get: <K extends KvKey>(key: K) => Promise<KvValues[K] | null>;

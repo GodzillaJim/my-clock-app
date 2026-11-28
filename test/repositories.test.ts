@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { up as createSchema } from '../electron/main/database/migrations/001_initial_schema';
 import * as sessionRepo from '../electron/main/database/repositories/sessionRepo';
 import * as planRepo from '../electron/main/database/repositories/planRepo';
-import * as feedbackRepo from '../electron/main/database/repositories/feedbackRepo';
 import * as kvRepo from '../electron/main/database/repositories/kvRepo';
 import {
   CompletionStatus,
@@ -95,42 +94,6 @@ describe('planRepo', () => {
     expect(updated?.totalElapsed).toBe(1500);
     expect(updated?.segments).toEqual(plan.segments);
     expect(planRepo.update(db, 'missing', { status: 'completed' })).toBeNull();
-  });
-});
-
-describe('feedbackRepo', () => {
-  it('filters feedback and counts it by status, type and severity', () => {
-    const base = {
-      description: 'd',
-      category: 'c',
-      timestamp: new Date(now),
-    };
-    feedbackRepo.insert(db, {
-      ...base,
-      id: 'f1',
-      type: 'bug',
-      title: 'Crash',
-      severity: 'high',
-      status: 'open',
-    });
-    feedbackRepo.insert(db, {
-      ...base,
-      id: 'f2',
-      type: 'general',
-      title: 'Nice',
-      severity: 'low',
-      status: 'resolved',
-    });
-
-    expect(feedbackRepo.getAll(db, { status: 'open' }).map((f) => f.id)).toEqual(['f1']);
-    expect(feedbackRepo.getStats(db)).toEqual({
-      total: 2,
-      open: 1,
-      resolved: 1,
-      inProgress: 0,
-      byType: { bug: 1, 'feature-request': 0, issue: 0, general: 1 },
-      bySeverity: { low: 1, medium: 0, high: 1, critical: 0 },
-    });
   });
 });
 

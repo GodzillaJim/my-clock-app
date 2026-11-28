@@ -100,7 +100,7 @@ _Exit criteria: One storage path, a typed IPC contract, a pure tested timer engi
 - [ ] [#47](https://github.com/GodzillaJim/my-clock-app/issues/47) break up oversized components
 - [x] [#50](https://github.com/GodzillaJim/my-clock-app/issues/50) error boundaries and process crash handling
 - [x] [#51](https://github.com/GodzillaJim/my-clock-app/issues/51) architecture decision records ([docs/adr](docs/adr/README.md))
-- [ ] [#101](https://github.com/GodzillaJim/my-clock-app/issues/101) replace Feedback with a Report a problem link
+- [x] [#101](https://github.com/GodzillaJim/my-clock-app/issues/101) replace Feedback with a Report a problem link
 
 ### Decisions
 

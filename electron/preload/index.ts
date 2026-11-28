@@ -35,6 +35,7 @@ const api: ElectronAPI = {
   showWindow: invoke('show-window'),
   updateTrayStatus: invoke('update-tray-status'),
   sessionNotification: invoke('session-notification'),
+  reportProblem: invoke('app:reportProblem'),
 
   // Tray and global-shortcut events
   onTrayStartSession: subscribe('tray-start-session'),
@@ -70,13 +71,6 @@ const api: ElectronAPI = {
       getById: invoke('db:challenges:getById'),
       save: invoke('db:challenges:save'),
       delete: invoke('db:challenges:delete'),
-    },
-    feedback: {
-      getAll: invoke('db:feedback:getAll'),
-      save: invoke('db:feedback:save'),
-      update: invoke('db:feedback:update'),
-      delete: invoke('db:feedback:delete'),
-      getStats: invoke('db:feedback:getStats'),
     },
     kv: {
       // The channel carries a union of keys; the key decides the value's type

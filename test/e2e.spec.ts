@@ -111,6 +111,7 @@ if (process.platform === 'linux') {
           'onTrayOpenHistory',
           'onTrayOpenSettings',
           'onTrayStartSession',
+          'reportProblem',
           'sessionNotification',
           'showWindow',
           'updateTrayStatus',
@@ -248,6 +249,37 @@ if (process.platform === 'linux') {
       await page.getByRole('button', { name: 'Stop session' }).first().click();
       await label('READY').waitFor({ timeout: 10000 });
     }, 30000);
+    test('Report a problem opens a pre-filled issue and reveals the log', async () => {
+      // Stub the shell in main so the test never opens a real browser or Explorer
+      const stubbed = await electronApp.evaluate(({ shell }) => {
+        const g = globalThis as unknown as { __shellCalls: string[][] };
+        g.__shellCalls = [];
+        const open = async (url: string) => {
+          g.__shellCalls.push(['open', url]);
+        };
+        const reveal = (p: string) => {
+          g.__shellCalls.push(['reveal', p]);
+        };
+        try {
+          Object.assign(shell, { openExternal: open, showItemInFolder: reveal });
+        } catch {
+          return false;
+        }
+        return shell.openExternal === open && shell.showItemInFolder === reveal;
+      });
+      expect(stubbed).toBe(true);
+
+      await page.evaluate(() => (window as unknown as ProbeWindow).electronAPI.reportProblem());
+      const calls = await electronApp.evaluate(
+        () => (globalThis as unknown as { __shellCalls: string[][] }).__shellCalls,
+      );
+
+      const reveal = calls.find(([kind]) => kind === 'reveal')!;
+      expect(path.resolve(reveal[1])).toBe(path.resolve(userDataDir, 'logs', 'main.log'));
+      const url = new URL(calls.find(([kind]) => kind === 'open')![1]);
+      expect(url.href).toMatch(/^https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/new\?/);
+      expect(url.searchParams.get('body')).toMatch(/Focus Sessions \d+\.\d+\.\d+ · Electron/);
+    });
     test('opens settings and history from the tray menu', async () => {
       const send = (channel: string) =>
         electronApp.evaluate(
