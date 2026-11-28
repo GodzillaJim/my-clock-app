@@ -1,12 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
-import {
-  Box,
-  Typography,
-  Button,
-  IconButton,
-  Tooltip,
-  Fade,
-} from "@mui/material";
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Box, Typography, Button, IconButton, Tooltip, Fade } from '@mui/material';
 import {
   PlayArrow,
   Pause,
@@ -17,22 +10,30 @@ import {
   CheckCircleOutline,
   FastForward,
   AccessTime,
-} from "@mui/icons-material";
-import { useTimer } from "react-timer-hook";
-import dayjs from "dayjs";
-import duration from "dayjs/plugin/duration";
-import { CircularTimerRing } from "./CircularTimerRing";
-import { AppSettings, CompletionStatus, SessionType, SessionRecord, SessionPlan, SessionPlanSegment, SegmentStatus } from "@/features/timer/types";
-import { notificationService } from "@/services/notificationService";
-import { focusStorage as focusStorageService } from "@/services/focusStorage";
-import { persistenceService } from "@/services/persistenceService";
-import { v4 as uuidv4 } from "uuid";
-import { useTickSound } from "@/features/timer/hooks/useTickSound";
+} from '@mui/icons-material';
+import { useTimer } from 'react-timer-hook';
+import dayjs from 'dayjs';
+import duration from 'dayjs/plugin/duration';
+import { CircularTimerRing } from './CircularTimerRing';
+import {
+  AppSettings,
+  CompletionStatus,
+  SessionType,
+  SessionRecord,
+  SessionPlan,
+  SessionPlanSegment,
+  SegmentStatus,
+} from '@/features/timer/types';
+import { notificationService } from '@/services/notificationService';
+import { focusStorage as focusStorageService } from '@/services/focusStorage';
+import { persistenceService } from '@/services/persistenceService';
+import { v4 as uuidv4 } from 'uuid';
+import { useTickSound } from '@/features/timer/hooks/useTickSound';
 
 dayjs.extend(duration);
 
 interface SimpleSession {
-  type: "focus" | "break";
+  type: 'focus' | 'break';
   duration: number;
   startTime: Date;
   endTime: Date;
@@ -41,7 +42,7 @@ interface SimpleSession {
 const generateSessions = (
   totalMinutes: number,
   settings: AppSettings,
-  planStartTime: Date = new Date()
+  planStartTime: Date = new Date(),
 ): SimpleSession[] => {
   const totalSeconds = totalMinutes * 60;
   const sessions: SimpleSession[] = [];
@@ -55,14 +56,14 @@ const generateSessions = (
       const currentFocusDuration = Math.min(focusDuration, remainingTime);
       const startTime = new Date(currentTime);
       const endTime = new Date(currentTime + currentFocusDuration * 1000);
-      sessions.push({ type: "focus", duration: currentFocusDuration, startTime, endTime });
+      sessions.push({ type: 'focus', duration: currentFocusDuration, startTime, endTime });
       remainingTime -= currentFocusDuration;
       currentTime = endTime.getTime();
     } else {
       const currentBreakDuration = Math.min(breakDuration, remainingTime);
       const startTime = new Date(currentTime);
       const endTime = new Date(currentTime + currentBreakDuration * 1000);
-      sessions.push({ type: "break", duration: currentBreakDuration, startTime, endTime });
+      sessions.push({ type: 'break', duration: currentBreakDuration, startTime, endTime });
       remainingTime -= currentBreakDuration;
       currentTime = endTime.getTime();
     }
@@ -70,10 +71,7 @@ const generateSessions = (
   return sessions;
 };
 
-const buildSessionPlan = (
-  sessions: SimpleSession[],
-  settings: AppSettings
-): SessionPlan => {
+const buildSessionPlan = (sessions: SimpleSession[], settings: AppSettings): SessionPlan => {
   const now = Date.now();
   const segments: SessionPlanSegment[] = sessions.map((s, i) => ({
     id: uuidv4(),
@@ -102,9 +100,7 @@ const buildSessionPlan = (
       focusDuration: settings.focusDuration,
       shortBreakDuration: settings.shortBreakDuration,
     },
-    expectedEndTime: sessions.length > 0
-      ? sessions[sessions.length - 1].endTime.getTime()
-      : now,
+    expectedEndTime: sessions.length > 0 ? sessions[sessions.length - 1].endTime.getTime() : now,
     actualEndTime: null,
     interruptedAt: null,
     totalPlannedDuration: totalPlanned,
@@ -172,7 +168,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     plan: SessionPlan,
     segmentIndex: number,
     segmentUpdates: Partial<SessionPlanSegment>,
-    planUpdates?: Partial<SessionPlan>
+    planUpdates?: Partial<SessionPlan>,
   ): SessionPlan => {
     const updatedSegments = [...plan.segments];
     updatedSegments[segmentIndex] = { ...updatedSegments[segmentIndex], ...segmentUpdates };
@@ -190,9 +186,9 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     setCurrentPlan(updated);
     currentPlanRef.current = updated;
     persistenceService.savePlanSnapshot(updated);
-    focusStorageService.saveSessionPlan(updated).catch(err =>
-      console.error('Failed to persist plan:', err)
-    );
+    focusStorageService
+      .saveSessionPlan(updated)
+      .catch((err) => console.error('Failed to persist plan:', err));
     return updated;
   };
 
@@ -206,7 +202,10 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       }, 0);
       setNextSessionExpiry(null); // Reset the trigger
     }
-  }, [nextSessionExpiry]); // Removed restart from deps since it's stable
+    // Fires only when a new expiry is queued. `restart` from react-timer-hook is not
+    // referentially stable; depending on it would re-run this on every tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nextSessionExpiry]);
 
   const recordSession = async (status: CompletionStatus) => {
     const currentSession = sessions[currentSessionIndex];
@@ -231,7 +230,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     try {
       await focusStorageService.addSession(record);
     } catch (error) {
-      console.error("Failed to save session record:", error);
+      console.error('Failed to save session record:', error);
     }
   };
 
@@ -262,7 +261,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       };
 
       focusStorageService.addSession(record).catch((error) => {
-        console.error("Failed to save session record:", error);
+        console.error('Failed to save session record:', error);
       });
 
       // Update plan segment as completed
@@ -285,8 +284,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
             status: 'in_progress',
             actualStartTime: nowTs,
           };
-          const totalElapsed = updatedSegments.reduce((sum, s) =>
-            sum + (s.actualDuration || 0), 0);
+          const totalElapsed = updatedSegments.reduce((sum, s) => sum + (s.actualDuration || 0), 0);
           const updated: SessionPlan = {
             ...plan,
             segments: updatedSegments,
@@ -297,18 +295,20 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
           setCurrentPlan(updated);
           currentPlanRef.current = updated;
           persistenceService.savePlanSnapshot(updated);
-          focusStorageService.saveSessionPlan(updated).catch(err =>
-            console.error('Failed to persist plan:', err));
+          focusStorageService
+            .saveSessionPlan(updated)
+            .catch((err) => console.error('Failed to persist plan:', err));
         } else {
           // Last segment — plan is completed
-          const updated = updatePlanSegment(plan, currentIndex, segUpdates, {
+          updatePlanSegment(plan, currentIndex, segUpdates, {
             status: 'completed',
             actualEndTime: nowTs,
           });
           persistenceService.clearPlanSnapshot();
           // Recalculate lifetime stats
-          focusStorageService.recalculateLifetimeStats().catch(err =>
-            console.error('Failed to recalculate stats:', err));
+          focusStorageService
+            .recalculateLifetimeStats()
+            .catch((err) => console.error('Failed to recalculate stats:', err));
           setCurrentPlan(null);
           currentPlanRef.current = null;
         }
@@ -321,21 +321,21 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       setCurrentSessionIndex(nextIndex);
       setSessionStartTime(new Date()); // Track new session start
       const nextSession = currentSessions[nextIndex];
-      const newExpiry = dayjs().add(nextSession.duration, "second").toDate();
+      const newExpiry = dayjs().add(nextSession.duration, 'second').toDate();
       setNextSessionExpiry(newExpiry); // Trigger auto-start in useEffect
 
       notificationService.showNotification({
-        type: nextSession.type === "focus" ? "session_start" : "break_complete",
-        title: nextSession.type === "focus" ? "Focus Time!" : "Break Time!",
-        body: nextSession.type === "focus" ? "Time to focus." : "Take a short break.",
+        type: nextSession.type === 'focus' ? 'session_start' : 'break_complete',
+        title: nextSession.type === 'focus' ? 'Focus Time!' : 'Break Time!',
+        body: nextSession.type === 'focus' ? 'Time to focus.' : 'Take a short break.',
         timestamp: new Date(),
       });
     } else {
       pause(); // Stop the timer
       setIsComplete(true);
       notificationService.showNotification({
-        type: "session_complete",
-        title: "Session Complete!",
+        type: 'session_complete',
+        title: 'Session Complete!',
         body: "Great work! You've completed your focus session.",
         timestamp: new Date(),
       });
@@ -378,7 +378,8 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
           const updatedSegments = [...plan.segments];
           updatedSegments[segIdx] = { ...seg, elapsedAtLastUpdate: elapsed };
           const totalElapsed = updatedSegments.reduce((sum, s) => {
-            if (s.status === 'completed' || s.status === 'skipped') return sum + (s.actualDuration || 0);
+            if (s.status === 'completed' || s.status === 'skipped')
+              return sum + (s.actualDuration || 0);
             if (s.status === 'in_progress') return sum + elapsed;
             return sum;
           }, 0);
@@ -396,19 +397,19 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
   }, [isRunning, onRunningStateChange]);
 
   const currentSession = sessions[currentSessionIndex];
-  const sessionType = currentSession?.type || "focus";
-  const isBreak = sessionType === "break";
+  const sessionType = currentSession?.type || 'focus';
+  const isBreak = sessionType === 'break';
   const isActive = sessions.length > 0 && isRunning;
 
   const displayTime = useMemo(() => {
     const totalSeconds = hours * 3600 + minutes * 60 + seconds;
     if (totalSeconds <= 0 && !isRunning) {
-      return dayjs.duration(totalDuration, "minutes").format("mm:ss");
+      return dayjs.duration(totalDuration, 'minutes').format('mm:ss');
     }
     if (hours > 0) {
-      return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+      return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
-    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }, [hours, minutes, seconds, isRunning, totalDuration]);
 
   const calculateProgress = (): number => {
@@ -431,13 +432,13 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     plan.segments[0].actualStartTime = now.getTime();
     setCurrentPlan(plan);
     currentPlanRef.current = plan;
-    focusStorageService.saveSessionPlan(plan).catch(err =>
-      console.error('Failed to save initial plan:', err)
-    );
+    focusStorageService
+      .saveSessionPlan(plan)
+      .catch((err) => console.error('Failed to save initial plan:', err));
     persistenceService.savePlanSnapshot(plan);
 
     const firstSessionDuration = newSessions[0]?.duration || 0;
-    const newExpiryTimestamp = dayjs().add(firstSessionDuration, "second").toDate();
+    const newExpiryTimestamp = dayjs().add(firstSessionDuration, 'second').toDate();
     restart(newExpiryTimestamp, true); // Auto-start
     activeExpiryRef.current = newExpiryTimestamp;
 
@@ -445,8 +446,8 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     setShowControls(true);
 
     notificationService.showNotification({
-      type: "session_start",
-      title: "Focus Started",
+      type: 'session_start',
+      title: 'Focus Started',
       body: `${totalDuration} minute focus session begun.`,
       timestamp: new Date(),
     });
@@ -459,14 +460,17 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     // Find remaining segments: not-yet-run (pending), the one that was running
     // (in_progress), or the one cut short by the interruption (interrupted).
     const remaining = oldPlan.segments.filter(
-      s => s.status === 'pending' || s.status === 'in_progress' || s.status === 'interrupted'
+      (s) => s.status === 'pending' || s.status === 'in_progress' || s.status === 'interrupted',
     );
     if (remaining.length === 0) return;
 
     // For a partially-elapsed first segment, continue with the time that remained.
     const firstSeg = remaining[0];
     const firstIsPartial = firstSeg.status === 'in_progress' || firstSeg.status === 'interrupted';
-    const firstElapsedSoFar = Math.max(firstSeg.elapsedAtLastUpdate || 0, firstSeg.actualDuration || 0);
+    const firstElapsedSoFar = Math.max(
+      firstSeg.elapsedAtLastUpdate || 0,
+      firstSeg.actualDuration || 0,
+    );
     const firstDuration = firstIsPartial
       ? Math.max(1, firstSeg.plannedDuration - firstElapsedSoFar)
       : firstSeg.plannedDuration;
@@ -479,7 +483,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       const endTime = new Date(currentTime + dur * 1000);
       currentTime = endTime.getTime();
       return {
-        type: seg.type === SessionType.FOCUS ? 'focus' as const : 'break' as const,
+        type: seg.type === SessionType.FOCUS ? ('focus' as const) : ('break' as const),
         duration: dur,
         startTime,
         endTime,
@@ -532,9 +536,9 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     setIsComplete(false);
 
     // Persist
-    focusStorageService.saveSessionPlan(newPlan).catch(err =>
-      console.error('Failed to save resumed plan:', err)
-    );
+    focusStorageService
+      .saveSessionPlan(newPlan)
+      .catch((err) => console.error('Failed to save resumed plan:', err));
     persistenceService.savePlanSnapshot(newPlan);
 
     // Finalize the old plan: its remaining work has been carried into the new
@@ -542,7 +546,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     // being flagged resumable again (avoiding duplicate resumes). Any time
     // already elapsed on the interrupted segment is preserved so stats stay
     // accurate (the new plan only carries the *remaining* time).
-    const finalizedOldSegments = oldPlan.segments.map(s => {
+    const finalizedOldSegments = oldPlan.segments.map((s) => {
       if (s.status === 'pending' || s.status === 'in_progress' || s.status === 'interrupted') {
         const elapsed = Math.max(s.elapsedAtLastUpdate || 0, s.actualDuration || 0);
         return {
@@ -563,18 +567,18 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       totalElapsed: finalizedOldSegments.reduce((sum, s) => sum + (s.actualDuration || 0), 0),
       lastUpdated: nowTs,
     };
-    focusStorageService.saveSessionPlan(finalizedOld).catch(err =>
-      console.error('Failed to finalize old plan:', err)
-    );
+    focusStorageService
+      .saveSessionPlan(finalizedOld)
+      .catch((err) => console.error('Failed to finalize old plan:', err));
 
     // Start timer
-    const firstExpiry = dayjs().add(firstDuration, "second").toDate();
+    const firstExpiry = dayjs().add(firstDuration, 'second').toDate();
     restart(firstExpiry, true);
     activeExpiryRef.current = firstExpiry;
 
     notificationService.showNotification({
-      type: "session_start",
-      title: "Session Resumed",
+      type: 'session_start',
+      title: 'Session Resumed',
       body: `Resuming with ${remaining.length} segments (${Math.round(totalPlanned / 60)}m remaining).`,
       timestamp: new Date(),
     });
@@ -586,6 +590,8 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       resumeFromPlan(resumePlan);
       onResumeConsumed?.();
     }
+    // Trigger only when a new plan is handed in; the guards read current state at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resumePlan]);
 
   const pauseSession = () => {
@@ -608,10 +614,13 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       const now = Date.now();
       const updatedSegments = plan.segments.map((seg, idx) => {
         if (idx === plan.currentSegmentIndex) {
-          const elapsed = seg.actualStartTime
-            ? Math.round((now - seg.actualStartTime) / 1000)
-            : 0;
-          return { ...seg, status: 'interrupted' as SegmentStatus, actualEndTime: now, actualDuration: elapsed };
+          const elapsed = seg.actualStartTime ? Math.round((now - seg.actualStartTime) / 1000) : 0;
+          return {
+            ...seg,
+            status: 'interrupted' as SegmentStatus,
+            actualEndTime: now,
+            actualDuration: elapsed,
+          };
         }
         if (seg.status === 'pending') return seg; // leave pending as-is
         return seg;
@@ -627,14 +636,18 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       };
       setCurrentPlan(null);
       currentPlanRef.current = null;
-      focusStorageService.saveSessionPlan(abandoned).catch(err =>
-        console.error('Failed to save abandoned plan:', err));
+      focusStorageService
+        .saveSessionPlan(abandoned)
+        .catch((err) => console.error('Failed to save abandoned plan:', err));
       persistenceService.clearPlanSnapshot();
-      focusStorageService.recalculateLifetimeStats().catch(err =>
-        console.error('Failed to recalculate stats:', err));
+      focusStorageService
+        .recalculateLifetimeStats()
+        .catch((err) => console.error('Failed to recalculate stats:', err));
     }
 
-    const newExpiryTimestamp = dayjs().add(sessions[0]?.duration || 0, "second").toDate();
+    const newExpiryTimestamp = dayjs()
+      .add(sessions[0]?.duration || 0, 'second')
+      .toDate();
     restart(newExpiryTimestamp, false); // Don't auto-start
     activeExpiryRef.current = newExpiryTimestamp;
     pause(); // Stop the timer
@@ -655,42 +668,49 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       if (plan && currentSessionIndex < plan.segments.length) {
         const now = Date.now();
         const seg = plan.segments[currentSessionIndex];
-        const elapsed = seg.actualStartTime
-          ? Math.round((now - seg.actualStartTime) / 1000)
-          : 0;
+        const elapsed = seg.actualStartTime ? Math.round((now - seg.actualStartTime) / 1000) : 0;
         const nextIndex = currentSessionIndex + 1;
         const updatedSegments = [...plan.segments];
         updatedSegments[currentSessionIndex] = {
-          ...seg, status: 'skipped', actualEndTime: now, actualDuration: elapsed,
+          ...seg,
+          status: 'skipped',
+          actualEndTime: now,
+          actualDuration: elapsed,
         };
         if (nextIndex < updatedSegments.length) {
           updatedSegments[nextIndex] = {
-            ...updatedSegments[nextIndex], status: 'in_progress', actualStartTime: now,
+            ...updatedSegments[nextIndex],
+            status: 'in_progress',
+            actualStartTime: now,
           };
         }
         const totalElapsed = updatedSegments.reduce((sum, s) => sum + (s.actualDuration || 0), 0);
         const updated: SessionPlan = {
-          ...plan, segments: updatedSegments, currentSegmentIndex: nextIndex,
-          totalElapsed, lastUpdated: now,
+          ...plan,
+          segments: updatedSegments,
+          currentSegmentIndex: nextIndex,
+          totalElapsed,
+          lastUpdated: now,
         };
         setCurrentPlan(updated);
         currentPlanRef.current = updated;
         persistenceService.savePlanSnapshot(updated);
-        focusStorageService.saveSessionPlan(updated).catch(err =>
-          console.error('Failed to persist plan:', err));
+        focusStorageService
+          .saveSessionPlan(updated)
+          .catch((err) => console.error('Failed to persist plan:', err));
       }
 
       const nextIndex = currentSessionIndex + 1;
       setCurrentSessionIndex(nextIndex);
       setSessionStartTime(new Date());
       const nextSession = sessions[nextIndex];
-      const newExpiry = dayjs().add(nextSession.duration, "second").toDate();
+      const newExpiry = dayjs().add(nextSession.duration, 'second').toDate();
       setNextSessionExpiry(newExpiry); // Trigger auto-start in useEffect
 
       notificationService.showNotification({
-        type: nextSession.type === "focus" ? "session_start" : "break_complete",
-        title: nextSession.type === "focus" ? "Focus Time!" : "Break Time!",
-        body: nextSession.type === "focus" ? "Time to focus." : "Take a short break.",
+        type: nextSession.type === 'focus' ? 'session_start' : 'break_complete',
+        title: nextSession.type === 'focus' ? 'Focus Time!' : 'Break Time!',
+        body: nextSession.type === 'focus' ? 'Time to focus.' : 'Take a short break.',
         timestamp: new Date(),
       });
     }
@@ -706,7 +726,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     const newRemainingSeconds = Math.max(1, remainingSeconds - 30);
 
     // Calculate new expiry time
-    const newExpiry = dayjs().add(newRemainingSeconds, "second").toDate();
+    const newExpiry = dayjs().add(newRemainingSeconds, 'second').toDate();
     restart(newExpiry, true);
     activeExpiryRef.current = newExpiry;
   };
@@ -757,18 +777,10 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
         <Typography variant="h4" sx={{ fontWeight: 500, mb: 2 }}>
           Session Complete!
         </Typography>
-        <Typography
-          variant="body1"
-          sx={{ color: 'text.secondary', mb: 4, maxWidth: 300 }}
-        >
+        <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4, maxWidth: 300 }}>
           Great work! You've successfully completed your focus session.
         </Typography>
-        <Button
-          variant="contained"
-          size="large"
-          onClick={resetToIdle}
-          sx={{ px: 4, py: 1.5 }}
-        >
+        <Button variant="contained" size="large" onClick={resetToIdle} sx={{ px: 4, py: 1.5 }}>
           Start New Session
         </Button>
       </Box>
@@ -793,20 +805,20 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
         <Fade in={showControls || !isActive}>
           <Box
             sx={{
-              position: "absolute",
+              position: 'absolute',
               top: 24,
               right: 24,
-              display: "flex",
+              display: 'flex',
               gap: 1,
             }}
           >
             <Tooltip title="History">
-              <IconButton onClick={onOpenHistory} size="small" sx={{ color: "text.secondary" }}>
+              <IconButton onClick={onOpenHistory} size="small" sx={{ color: 'text.secondary' }}>
                 <History />
               </IconButton>
             </Tooltip>
             <Tooltip title="Settings">
-              <IconButton onClick={onOpenSettings} size="small" sx={{ color: "text.secondary" }}>
+              <IconButton onClick={onOpenSettings} size="small" sx={{ color: 'text.secondary' }}>
                 <Settings />
               </IconButton>
             </Tooltip>
@@ -818,14 +830,14 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       <Typography
         variant="overline"
         sx={{
-          color: isBreak ? "secondary.main" : "primary.main",
-          letterSpacing: "0.2em",
+          color: isBreak ? 'secondary.main' : 'primary.main',
+          letterSpacing: '0.2em',
           mb: 4,
           opacity: isActive ? 1 : 0.5,
-          transition: "all 0.3s ease",
+          transition: 'all 0.3s ease',
         }}
       >
-        {isActive ? (isBreak ? "BREAK" : "FOCUS") : "READY"}
+        {isActive ? (isBreak ? 'BREAK' : 'FOCUS') : 'READY'}
       </Typography>
 
       {/* Circular Timer */}
@@ -838,36 +850,33 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       >
         <Typography
           variant="h1"
-          className={isActive ? (isBreak ? "neon-text-secondary" : "neon-text") : ""}
+          className={isActive ? (isBreak ? 'neon-text-secondary' : 'neon-text') : ''}
           sx={{
-            fontSize: "4rem",
+            fontSize: '4rem',
             fontWeight: 200,
             fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace',
-            color: isActive ? (isBreak ? "secondary.main" : "primary.main") : "text.secondary",
-            transition: "all 0.3s ease",
+            color: isActive ? (isBreak ? 'secondary.main' : 'primary.main') : 'text.secondary',
+            transition: 'all 0.3s ease',
           }}
         >
           {displayTime}
         </Typography>
 
         {/* Expected End Time */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mt: 1 }}>
+        <Box
+          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, mt: 1 }}
+        >
           <AccessTime fontSize="small" sx={{ color: 'text.secondary', fontSize: '0.875rem' }} />
-          <Typography
-            variant="body2"
-            sx={{ color: 'text.secondary' }}
-          >
-            {sessions.length > 1 && (isActive || isPaused) ? 'Segment ends ' : 'Ends at '}{getExpectedEndTime().format('h:mm A')}
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            {sessions.length > 1 && (isActive || isPaused) ? 'Segment ends ' : 'Ends at '}
+            {getExpectedEndTime().format('h:mm A')}
           </Typography>
         </Box>
         {/* Overall session plan end time */}
         {(() => {
           const planEnd = getPlanEndTime();
           return planEnd && (isActive || isPaused) ? (
-            <Typography
-              variant="caption"
-              sx={{ color: 'text.secondary', mt: 0.25 }}
-            >
+            <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.25 }}>
               Session ends at {planEnd.format('h:mm A')}
             </Typography>
           ) : null;
@@ -875,10 +884,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
 
         {/* Session indicator */}
         {sessions.length > 1 && (
-          <Typography
-            variant="caption"
-            sx={{ color: "text.secondary", mt: 0.5 }}
-          >
+          <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5 }}>
             {currentSessionIndex + 1} / {sessions.length}
           </Typography>
         )}
@@ -886,7 +892,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
 
       {/* Controls */}
       <Fade in={showControls || !isActive || isPaused}>
-        <Box sx={{ mt: 6, display: "flex", gap: 2, alignItems: "center" }}>
+        <Box sx={{ mt: 6, display: 'flex', gap: 2, alignItems: 'center' }}>
           {!isRunning && sessions.length === 0 && (
             <Button
               variant="contained"
@@ -896,7 +902,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
               sx={{
                 px: 4,
                 py: 1.5,
-                fontSize: "1rem",
+                fontSize: '1rem',
               }}
             >
               Start {totalDuration}m Focus
@@ -922,30 +928,22 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
                 sx={{
                   width: 56,
                   height: 56,
-                  border: "1px solid",
-                  borderColor: "primary.main",
+                  border: '1px solid',
+                  borderColor: 'primary.main',
                 }}
               >
                 <Pause />
               </IconButton>
 
               <Tooltip title="Skip to next">
-                <IconButton
-                  onClick={skipToNext}
-                  size="small"
-                  sx={{ color: "text.secondary" }}
-                >
+                <IconButton onClick={skipToNext} size="small" sx={{ color: 'text.secondary' }}>
                   <SkipNext />
                 </IconButton>
               </Tooltip>
 
               {import.meta.env.DEV && (
                 <Tooltip title="Fast forward -30s (Test)">
-                  <IconButton
-                    onClick={fastForward}
-                    size="small"
-                    sx={{ color: "warning.main" }}
-                  >
+                  <IconButton onClick={fastForward} size="small" sx={{ color: 'warning.main' }}>
                     <FastForward />
                   </IconButton>
                 </Tooltip>
@@ -955,11 +953,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
 
           {(isActive || isPaused) && (
             <Tooltip title="Stop session">
-              <IconButton
-                onClick={stopSession}
-                size="small"
-                sx={{ color: "error.main" }}
-              >
+              <IconButton onClick={stopSession} size="small" sx={{ color: 'error.main' }}>
                 <Stop />
               </IconButton>
             </Tooltip>
@@ -969,16 +963,16 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
 
       {/* Duration Quick Select (only when not active) */}
       <Fade in={!isActive && !isPaused}>
-        <Box sx={{ mt: 4, display: "flex", gap: 1 }}>
+        <Box sx={{ mt: 4, display: 'flex', gap: 1 }}>
           {(settings.quickPresets || [15, 25, 30, 45, 60]).map((preset) => (
             <Button
               key={preset}
-              variant={totalDuration === preset ? "contained" : "text"}
+              variant={totalDuration === preset ? 'contained' : 'text'}
               size="small"
               onClick={() => setTotalDuration(preset)}
               sx={{
                 minWidth: 48,
-                color: totalDuration === preset ? undefined : "text.secondary",
+                color: totalDuration === preset ? undefined : 'text.secondary',
               }}
             >
               {preset}m

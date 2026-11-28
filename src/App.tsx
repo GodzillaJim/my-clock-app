@@ -15,7 +15,7 @@ import { focusStorage } from './services/focusStorage';
 import { notificationService } from './services/notificationService';
 import { useRecovery } from './features/timer/hooks/useRecovery';
 import { RecoveryBanner } from './components/timer/RecoveryBanner';
-import "./App.css";
+import './App.css';
 
 const App: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
@@ -46,14 +46,18 @@ const App: React.FC = () => {
   useEffect(() => {
     initializeApp();
     setupKeyboardShortcuts();
-    
+
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
+    // Mount-only: one-time init and listener registration; handleKeyDown only calls state setters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     updateTheme();
+    // updateTheme reads only settings.theme / settings.uiTheme, which are the deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.theme, settings.uiTheme]);
 
   const initializeApp = async () => {
@@ -65,7 +69,7 @@ const App: React.FC = () => {
       const appState = await focusStorage.getAppState();
       setSettings(appState.settings);
       notificationService.setSettings(appState.settings);
-      
+
       if (appState.settings.enableSystemNotifications) {
         await notificationService.requestPermission();
       }
@@ -75,7 +79,8 @@ const App: React.FC = () => {
   };
 
   const updateTheme = () => {
-    const isDarkMode = settings.theme === 'dark' ||
+    const isDarkMode =
+      settings.theme === 'dark' ||
       (settings.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     const uiTheme = settings.uiTheme || 'deepFocus';
 
@@ -83,56 +88,56 @@ const App: React.FC = () => {
     const deepFocusPalette = {
       background: {
         default: '#0A0A0C', // Near black
-        paper: 'rgba(24, 24, 28, 0.9)' // Dark surface
+        paper: 'rgba(24, 24, 28, 0.9)', // Dark surface
       },
       primary: {
         main: '#60A5FA', // Soft blue
         dark: '#3B82F6',
         light: '#93C5FD',
-        contrastText: '#000000'
+        contrastText: '#000000',
       },
       secondary: {
         main: '#A78BFA', // Soft purple
         dark: '#8B5CF6',
         light: '#C4B5FD',
-        contrastText: '#000000'
+        contrastText: '#000000',
       },
       text: {
         primary: '#F4F4F5',
-        secondary: '#A1A1AA'
+        secondary: '#A1A1AA',
       },
       divider: 'rgba(255, 255, 255, 0.08)',
       success: { main: '#4ADE80' },
       error: { main: '#F87171' },
-      warning: { main: '#FBBF24' }
+      warning: { main: '#FBBF24' },
     };
 
     // Aerogel Theme - Light, airy, glassmorphism with soft pastels
     const aerogelPalette = {
       background: {
         default: '#F8FAFC', // Soft white-blue
-        paper: 'rgba(255, 255, 255, 0.7)' // Frosted glass
+        paper: 'rgba(255, 255, 255, 0.7)', // Frosted glass
       },
       primary: {
         main: '#6366F1', // Soft indigo
         dark: '#4F46E5',
         light: '#818CF8',
-        contrastText: '#FFFFFF'
+        contrastText: '#FFFFFF',
       },
       secondary: {
         main: '#EC4899', // Soft pink
         dark: '#DB2777',
         light: '#F472B6',
-        contrastText: '#FFFFFF'
+        contrastText: '#FFFFFF',
       },
       text: {
         primary: '#1E293B',
-        secondary: '#64748B'
+        secondary: '#64748B',
       },
       divider: 'rgba(99, 102, 241, 0.15)',
       success: { main: '#10B981' },
       error: { main: '#EF4444' },
-      warning: { main: '#F59E0B' }
+      warning: { main: '#F59E0B' },
     };
 
     // Choose palette based on uiTheme and dark mode
@@ -151,13 +156,13 @@ const App: React.FC = () => {
           ...aerogelPalette,
           background: {
             default: '#0F172A',
-            paper: 'rgba(30, 41, 59, 0.8)'
+            paper: 'rgba(30, 41, 59, 0.8)',
           },
           text: {
             primary: '#F1F5F9',
-            secondary: '#94A3B8'
+            secondary: '#94A3B8',
           },
-          divider: 'rgba(99, 102, 241, 0.2)'
+          divider: 'rgba(99, 102, 241, 0.2)',
         };
         effectiveIsDark = true;
       } else {
@@ -179,53 +184,53 @@ const App: React.FC = () => {
           fontSize: '4rem',
           fontWeight: 300,
           lineHeight: 1.1,
-          letterSpacing: '-0.025em'
+          letterSpacing: '-0.025em',
         },
         h2: {
           fontSize: '2.5rem',
           fontWeight: 400,
           lineHeight: 1.2,
-          letterSpacing: '-0.025em'
+          letterSpacing: '-0.025em',
         },
         h3: {
           fontSize: '1.875rem',
           fontWeight: 500,
-          lineHeight: 1.3
+          lineHeight: 1.3,
         },
         h4: {
           fontSize: '1.5rem',
           fontWeight: 500,
-          lineHeight: 1.4
+          lineHeight: 1.4,
         },
         h5: {
           fontSize: '1.25rem',
           fontWeight: 500,
-          lineHeight: 1.5
+          lineHeight: 1.5,
         },
         h6: {
           fontSize: '1.125rem',
           fontWeight: 500,
-          lineHeight: 1.5
+          lineHeight: 1.5,
         },
         body1: {
           fontSize: '1rem',
-          lineHeight: 1.6
+          lineHeight: 1.6,
         },
         body2: {
           fontSize: '0.875rem',
-          lineHeight: 1.5
+          lineHeight: 1.5,
         },
         button: {
           fontSize: '0.875rem',
           fontWeight: 500,
           textTransform: 'none' as const,
-          letterSpacing: '0.01em'
+          letterSpacing: '0.01em',
         },
         caption: {
           fontSize: '0.75rem',
           lineHeight: 1.4,
-          color: activePalette.text.secondary
-        }
+          color: activePalette.text.secondary,
+        },
       },
       shape: {
         borderRadius: 12,
@@ -244,15 +249,15 @@ const App: React.FC = () => {
               boxShadow: 'none',
               '&:hover': {
                 boxShadow: 'none',
-              }
+              },
             },
             outlined: {
               borderColor: effectiveIsDark ? 'rgba(255, 255, 255, 0.2)' : undefined,
               '&:hover': {
                 borderColor: effectiveIsDark ? 'rgba(255, 255, 255, 0.4)' : undefined,
                 backgroundColor: effectiveIsDark ? 'rgba(255, 255, 255, 0.05)' : undefined,
-              }
-            }
+              },
+            },
           },
         },
         MuiPaper: {
@@ -270,9 +275,9 @@ const App: React.FC = () => {
                 : '1px solid rgba(99, 102, 241, 0.1)',
               boxShadow: effectiveIsDark
                 ? '0 4px 24px rgba(0, 0, 0, 0.4)'
-                : '0 4px 24px rgba(0, 0, 0, 0.08)'
-            }
-          }
+                : '0 4px 24px rgba(0, 0, 0, 0.08)',
+            },
+          },
         },
         MuiIconButton: {
           styleOverrides: {
@@ -283,62 +288,62 @@ const App: React.FC = () => {
                 backgroundColor: effectiveIsDark
                   ? 'rgba(255, 255, 255, 0.08)'
                   : 'rgba(99, 102, 241, 0.1)',
-              }
-            }
-          }
+              },
+            },
+          },
         },
         MuiChip: {
           styleOverrides: {
             root: {
               borderRadius: 8,
-              fontWeight: 500
-            }
-          }
+              fontWeight: 500,
+            },
+          },
         },
         MuiTextField: {
           styleOverrides: {
             root: {
               '& .MuiOutlinedInput-root': {
                 '&:focus-visible': {
-                  outline: 'none'
-                }
-              }
-            }
-          }
+                  outline: 'none',
+                },
+              },
+            },
+          },
         },
         MuiOutlinedInput: {
           styleOverrides: {
             root: {
               '&:focus-visible': {
-                outline: 'none'
+                outline: 'none',
               },
               '& input:focus-visible': {
-                outline: 'none'
+                outline: 'none',
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                 borderColor: isDeepFocus ? '#60A5FA' : '#6366F1',
-              }
+              },
             },
             notchedOutline: {
               borderColor: effectiveIsDark
                 ? 'rgba(255, 255, 255, 0.15)'
                 : 'rgba(99, 102, 241, 0.2)',
-            }
-          }
+            },
+          },
         },
         MuiInputBase: {
           styleOverrides: {
             root: {
               '&:focus-visible': {
-                outline: 'none'
-              }
+                outline: 'none',
+              },
             },
             input: {
               '&:focus-visible': {
-                outline: 'none'
-              }
-            }
-          }
+                outline: 'none',
+              },
+            },
+          },
         },
         MuiLinearProgress: {
           styleOverrides: {
@@ -349,8 +354,8 @@ const App: React.FC = () => {
             },
             bar: {
               backgroundColor: isDeepFocus ? '#60A5FA' : '#6366F1',
-            }
-          }
+            },
+          },
         },
         MuiDialog: {
           styleOverrides: {
@@ -364,8 +369,8 @@ const App: React.FC = () => {
               border: effectiveIsDark
                 ? '1px solid rgba(255, 255, 255, 0.1)'
                 : '1px solid rgba(99, 102, 241, 0.15)',
-            }
-          }
+            },
+          },
         },
         MuiDrawer: {
           styleOverrides: {
@@ -379,24 +384,24 @@ const App: React.FC = () => {
               borderLeft: effectiveIsDark
                 ? '1px solid rgba(255, 255, 255, 0.08)'
                 : '1px solid rgba(99, 102, 241, 0.1)',
-            }
-          }
+            },
+          },
         },
         MuiTabs: {
           styleOverrides: {
             indicator: {
               backgroundColor: isDeepFocus ? '#60A5FA' : '#6366F1',
-            }
-          }
+            },
+          },
         },
         MuiTab: {
           styleOverrides: {
             root: {
               '&.Mui-selected': {
                 color: isDeepFocus ? '#60A5FA' : '#6366F1',
-              }
-            }
-          }
+              },
+            },
+          },
         },
       },
     });
@@ -406,14 +411,19 @@ const App: React.FC = () => {
 
   const handleSettingsChange = (newSettings: AppSettings) => {
     console.log('App: handleSettingsChange called with:', newSettings);
-    console.log('App: Current quickPresets:', settings.quickPresets, '-> New quickPresets:', newSettings.quickPresets);
+    console.log(
+      'App: Current quickPresets:',
+      settings.quickPresets,
+      '-> New quickPresets:',
+      newSettings.quickPresets,
+    );
     setSettings(newSettings);
     notificationService.setSettings(newSettings);
   };
 
   const setupKeyboardShortcuts = () => {
     document.addEventListener('keydown', handleKeyDown);
-    
+
     // Setup Electron IPC listeners for tray and global shortcuts
     try {
       if (window.electronAPI) {
@@ -421,15 +431,15 @@ const App: React.FC = () => {
           // This would trigger the start session functionality
           // We'll need to expose this through a ref or context
         });
-        
+
         window.electronAPI.onTrayOpenSettings(() => {
           setSettingsOpen(true);
         });
-        
+
         window.electronAPI.onTrayOpenHistory(() => {
           setHistoryOpen(true);
         });
-        
+
         window.electronAPI.onGlobalShortcutStartSession(() => {
           // This would trigger the start session functionality
         });
@@ -440,26 +450,19 @@ const App: React.FC = () => {
   };
 
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.target instanceof HTMLInputElement || 
-        event.target instanceof HTMLTextAreaElement) {
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
       return;
     }
 
+    // Registered once on mount, so only state setters may be used here (state values would be stale).
+    // Space-to-start/pause is not wired yet (#82); it must not preventDefault, or Space stops
+    // activating focused buttons.
     switch (event.key.toLowerCase()) {
-      case ' ':
-        event.preventDefault();
-        // Start/pause functionality would be handled by the timer component
-        break;
       case 'escape':
-        if (settingsOpen) {
-          setSettingsOpen(false);
-        } else if (historyOpen) {
-          setHistoryOpen(false);
-        } else if (feedbackOpen) {
-          setFeedbackOpen(false);
-        } else if (feedbackManagerOpen) {
-          setFeedbackManagerOpen(false);
-        }
+        setSettingsOpen(false);
+        setHistoryOpen(false);
+        setFeedbackOpen(false);
+        setFeedbackManagerOpen(false);
         break;
       case 's':
         if (event.ctrlKey || event.metaKey) {
@@ -519,7 +522,11 @@ const App: React.FC = () => {
       >
         {/* Recovery banner for interrupted sessions */}
         {recoveryInfo && (
-          <RecoveryBanner recovery={recoveryInfo} onDismiss={dismissRecovery} onResume={handleResume} />
+          <RecoveryBanner
+            recovery={recoveryInfo}
+            onDismiss={dismissRecovery}
+            onResume={handleResume}
+          />
         )}
 
         {/* Render layout based on settings */}
@@ -595,10 +602,7 @@ const App: React.FC = () => {
           }}
         />
 
-        <FeedbackManager
-          open={feedbackManagerOpen}
-          onClose={() => setFeedbackManagerOpen(false)}
-        />
+        <FeedbackManager open={feedbackManagerOpen} onClose={() => setFeedbackManagerOpen(false)} />
       </Box>
     </ThemeProvider>
   );

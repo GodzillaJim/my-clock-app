@@ -1,17 +1,6 @@
 import React from 'react';
-import {
-  Paper,
-  Box,
-  Typography,
-  Chip,
-  LinearProgress,
-  IconButton,
-  Tooltip,
-} from '@mui/material';
-import {
-  LocalFireDepartment,
-  MoreVert,
-} from '@mui/icons-material';
+import { Paper, Box, Typography, Chip, LinearProgress, IconButton, Tooltip } from '@mui/material';
+import { LocalFireDepartment, MoreVert } from '@mui/icons-material';
 import { Challenge, ChallengeStatus } from '@/features/timer/types';
 import dayjs from 'dayjs';
 
@@ -26,18 +15,22 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
   onClick,
   onMenuClick,
 }) => {
-  const progress = challenge.days.length > 0
-    ? (challenge.completedDays / challenge.days.length) * 100
-    : 0;
+  const progress =
+    challenge.days.length > 0 ? (challenge.completedDays / challenge.days.length) * 100 : 0;
   const daysRemaining = dayjs(challenge.endDate).diff(dayjs(), 'day');
 
   const getStatusColor = (): 'primary' | 'success' | 'error' | 'warning' | 'default' => {
     switch (challenge.status) {
-      case ChallengeStatus.ACTIVE: return 'primary';
-      case ChallengeStatus.COMPLETED: return 'success';
-      case ChallengeStatus.FAILED: return 'error';
-      case ChallengeStatus.PAUSED: return 'warning';
-      default: return 'default';
+      case ChallengeStatus.ACTIVE:
+        return 'primary';
+      case ChallengeStatus.COMPLETED:
+        return 'success';
+      case ChallengeStatus.FAILED:
+        return 'error';
+      case ChallengeStatus.PAUSED:
+        return 'warning';
+      default:
+        return 'default';
     }
   };
 
@@ -54,7 +47,9 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
       }}
       onClick={onClick}
     >
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+      <Box
+        sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}
+      >
         <Box sx={{ flex: 1, mr: 1 }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
             {challenge.name}
@@ -118,9 +113,7 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
         <Tooltip title="Current streak">
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <LocalFireDepartment fontSize="small" color="warning" />
-            <Typography variant="body2">
-              {challenge.currentStreak} day streak
-            </Typography>
+            <Typography variant="body2">{challenge.currentStreak} day streak</Typography>
           </Box>
         </Tooltip>
         {challenge.status === ChallengeStatus.ACTIVE && daysRemaining >= 0 && (

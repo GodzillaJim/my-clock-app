@@ -36,3 +36,6 @@ yarn.lock
 
 # Per-machine Claude Code settings
 .claude/settings.local.json
+
+# Coverage reports
+/coverage/

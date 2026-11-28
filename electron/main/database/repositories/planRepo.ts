@@ -2,11 +2,17 @@ import type Database from 'better-sqlite3';
 import { retentionCutoff } from '../retention';
 
 const TYPE_TO_DB: Record<string, string> = {
-  FOCUS: 'focus', SHORT_BREAK: 'shortBreak', LONG_BREAK: 'longBreak',
-  focus: 'focus', shortBreak: 'shortBreak', longBreak: 'longBreak',
+  FOCUS: 'focus',
+  SHORT_BREAK: 'shortBreak',
+  LONG_BREAK: 'longBreak',
+  focus: 'focus',
+  shortBreak: 'shortBreak',
+  longBreak: 'longBreak',
 };
 const DB_TO_TYPE: Record<string, string> = {
-  focus: 'FOCUS', shortBreak: 'SHORT_BREAK', longBreak: 'LONG_BREAK',
+  focus: 'FOCUS',
+  shortBreak: 'SHORT_BREAK',
+  longBreak: 'LONG_BREAK',
 };
 
 function fromDbPlan(planRow: any, segmentRows: any[]): any {
@@ -22,7 +28,7 @@ function fromDbPlan(planRow: any, segmentRows: any[]): any {
     totalPlannedDuration: planRow.total_planned_duration,
     totalElapsed: planRow.total_elapsed,
     lastUpdated: planRow.last_updated,
-    segments: segmentRows.map(seg => ({
+    segments: segmentRows.map((seg) => ({
       id: seg.id,
       index: seg.idx,
       type: DB_TO_TYPE[seg.type] || seg.type,
@@ -41,14 +47,24 @@ function fromDbPlan(planRow: any, segmentRows: any[]): any {
 
 export function saveWithSegments(db: Database.Database, plan: any): void {
   const saveTx = db.transaction(() => {
-    db.prepare(`
+    db.prepare(
+      `
       INSERT OR REPLACE INTO session_plans (id, created_at, status, current_segment_index, settings,
         expected_end_time, actual_end_time, interrupted_at, total_planned_duration, total_elapsed, last_updated)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      plan.id, plan.createdAt, plan.status, plan.currentSegmentIndex,
-      JSON.stringify(plan.settings), plan.expectedEndTime, plan.actualEndTime || null,
-      plan.interruptedAt || null, plan.totalPlannedDuration, plan.totalElapsed, plan.lastUpdated
+    `,
+    ).run(
+      plan.id,
+      plan.createdAt,
+      plan.status,
+      plan.currentSegmentIndex,
+      JSON.stringify(plan.settings),
+      plan.expectedEndTime,
+      plan.actualEndTime || null,
+      plan.interruptedAt || null,
+      plan.totalPlannedDuration,
+      plan.totalElapsed,
+      plan.lastUpdated,
     );
 
     // Delete existing segments and re-insert
@@ -62,17 +78,27 @@ export function saveWithSegments(db: Database.Database, plan: any): void {
 
     for (const seg of plan.segments || []) {
       insertSeg.run(
-        seg.id, plan.id, seg.index, TYPE_TO_DB[seg.type] || seg.type || 'focus',
-        seg.plannedDuration, seg.actualDuration || null,
-        seg.expectedStartTime, seg.expectedEndTime,
-        seg.actualStartTime || null, seg.actualEndTime || null,
-        seg.status || 'pending', seg.pausedTime || 0, seg.elapsedAtLastUpdate || 0
+        seg.id,
+        plan.id,
+        seg.index,
+        TYPE_TO_DB[seg.type] || seg.type || 'focus',
+        seg.plannedDuration,
+        seg.actualDuration || null,
+        seg.expectedStartTime,
+        seg.expectedEndTime,
+        seg.actualStartTime || null,
+        seg.actualEndTime || null,
+        seg.status || 'pending',
+        seg.pausedTime || 0,
+        seg.elapsedAtLastUpdate || 0,
       );
     }
 
     // Enforce date-based retention
     const { timestamp: cutoff } = retentionCutoff();
-    db.prepare('DELETE FROM plan_segments WHERE plan_id IN (SELECT id FROM session_plans WHERE created_at < ?)').run(cutoff);
+    db.prepare(
+      'DELETE FROM plan_segments WHERE plan_id IN (SELECT id FROM session_plans WHERE created_at < ?)',
+    ).run(cutoff);
     db.prepare('DELETE FROM session_plans WHERE created_at < ?').run(cutoff);
   });
   saveTx();
@@ -81,23 +107,25 @@ export function saveWithSegments(db: Database.Database, plan: any): void {
 export function get(db: Database.Database, id: string): any | null {
   const planRow = db.prepare('SELECT * FROM session_plans WHERE id = ?').get(id);
   if (!planRow) return null;
-  const segmentRows = db.prepare(
-    'SELECT * FROM plan_segments WHERE plan_id = ? ORDER BY idx ASC'
-  ).all(id);
+  const segmentRows = db
+    .prepare('SELECT * FROM plan_segments WHERE plan_id = ? ORDER BY idx ASC')
+    .all(id);
   return fromDbPlan(planRow, segmentRows);
 }
 
 export function getByDateRange(db: Database.Database, startDate: string, endDate: string): any[] {
   const start = new Date(`${startDate}T00:00:00`).getTime();
   const end = new Date(`${endDate}T23:59:59.999`).getTime();
-  const planRows = db.prepare(
-    'SELECT * FROM session_plans WHERE created_at >= ? AND created_at <= ? ORDER BY created_at ASC'
-  ).all(start, end);
+  const planRows = db
+    .prepare(
+      'SELECT * FROM session_plans WHERE created_at >= ? AND created_at <= ? ORDER BY created_at ASC',
+    )
+    .all(start, end);
 
   return planRows.map((planRow: any) => {
-    const segmentRows = db.prepare(
-      'SELECT * FROM plan_segments WHERE plan_id = ? ORDER BY idx ASC'
-    ).all(planRow.id);
+    const segmentRows = db
+      .prepare('SELECT * FROM plan_segments WHERE plan_id = ? ORDER BY idx ASC')
+      .all(planRow.id);
     return fromDbPlan(planRow, segmentRows);
   });
 }
@@ -115,7 +143,11 @@ export function update(db: Database.Database, id: string, updates: any): any | n
   return get(db, id);
 }
 
-export function updateSegment(db: Database.Database, segmentId: string, updates: Record<string, any>): void {
+export function updateSegment(
+  db: Database.Database,
+  segmentId: string,
+  updates: Record<string, any>,
+): void {
   const setClauses: string[] = [];
   const values: any[] = [];
 

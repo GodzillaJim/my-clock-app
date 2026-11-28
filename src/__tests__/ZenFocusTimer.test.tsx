@@ -23,7 +23,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/services/focusStorage', () => ({ focusStorage: mocks.focusStorage }));
 vi.mock('@/services/persistenceService', () => ({ persistenceService: mocks.persistenceService }));
-vi.mock('@/services/notificationService', () => ({ notificationService: mocks.notificationService }));
+vi.mock('@/services/notificationService', () => ({
+  notificationService: mocks.notificationService,
+}));
 
 const baseSettings: AppSettings = {
   ...DEFAULT_SETTINGS,
@@ -32,14 +34,17 @@ const baseSettings: AppSettings = {
   quickPresets: [15, 25, 50],
 };
 
-const renderTimer = (settings: AppSettings = baseSettings, props: Partial<React.ComponentProps<typeof ZenFocusTimer>> = {}) =>
+const renderTimer = (
+  settings: AppSettings = baseSettings,
+  props: Partial<React.ComponentProps<typeof ZenFocusTimer>> = {},
+) =>
   render(
     <ZenFocusTimer
       onOpenSettings={() => {}}
       onOpenHistory={() => {}}
       settings={settings}
       {...props}
-    />
+    />,
   );
 
 /** Advance fake time and flush the React updates it triggers. */
@@ -109,7 +114,7 @@ describe('ZenFocusTimer', () => {
     });
     expect(mocks.persistenceService.savePlanSnapshot).toHaveBeenCalledWith(plan);
     expect(mocks.notificationService.showNotification).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'session_start', title: 'Focus Started' })
+      expect.objectContaining({ type: 'session_start', title: 'Focus Started' }),
     );
   });
 
@@ -136,10 +141,10 @@ describe('ZenFocusTimer', () => {
     expect(screen.getByText(/^04:5[89]$/)).toBeInTheDocument();
 
     expect(mocks.focusStorage.addSession).toHaveBeenCalledWith(
-      expect.objectContaining({ type: SessionType.FOCUS, sessionNumber: 1 })
+      expect.objectContaining({ type: SessionType.FOCUS, sessionNumber: 1 }),
     );
     expect(mocks.notificationService.showNotification).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'break_complete', title: 'Break Time!' })
+      expect.objectContaining({ type: 'break_complete', title: 'Break Time!' }),
     );
 
     const plan = lastSavedPlan();
@@ -199,7 +204,7 @@ describe('ZenFocusTimer', () => {
     expect(plan.segments[0].status).toBe('interrupted');
     expect(mocks.persistenceService.clearPlanSnapshot).toHaveBeenCalled();
     expect(mocks.focusStorage.addSession).toHaveBeenCalledWith(
-      expect.objectContaining({ completionStatus: 'interrupted' })
+      expect.objectContaining({ completionStatus: 'interrupted' }),
     );
 
     expect(screen.getByText('READY')).toBeInTheDocument();
@@ -231,7 +236,7 @@ describe('ZenFocusTimer', () => {
     expect(mocks.persistenceService.clearPlanSnapshot).toHaveBeenCalled();
     expect(mocks.focusStorage.recalculateLifetimeStats).toHaveBeenCalled();
     expect(mocks.notificationService.showNotification).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'session_complete' })
+      expect.objectContaining({ type: 'session_complete' }),
     );
 
     fireEvent.click(screen.getByRole('button', { name: /start new session/i }));
@@ -248,18 +253,32 @@ describe('ZenFocusTimer', () => {
       settings: { focusDuration: 25, shortBreakDuration: 5 },
       segments: [
         {
-          id: 'seg-0', index: 0, type: SessionType.FOCUS,
-          plannedDuration: 25 * 60, actualDuration: null,
-          expectedStartTime: start, expectedEndTime: start + 25 * 60 * 1000,
-          actualStartTime: start, actualEndTime: null,
-          status: 'interrupted', pausedTime: 0, elapsedAtLastUpdate: 10 * 60,
+          id: 'seg-0',
+          index: 0,
+          type: SessionType.FOCUS,
+          plannedDuration: 25 * 60,
+          actualDuration: null,
+          expectedStartTime: start,
+          expectedEndTime: start + 25 * 60 * 1000,
+          actualStartTime: start,
+          actualEndTime: null,
+          status: 'interrupted',
+          pausedTime: 0,
+          elapsedAtLastUpdate: 10 * 60,
         },
         {
-          id: 'seg-1', index: 1, type: SessionType.SHORT_BREAK,
-          plannedDuration: 5 * 60, actualDuration: null,
-          expectedStartTime: start + 25 * 60 * 1000, expectedEndTime: start + 30 * 60 * 1000,
-          actualStartTime: null, actualEndTime: null,
-          status: 'pending', pausedTime: 0, elapsedAtLastUpdate: 0,
+          id: 'seg-1',
+          index: 1,
+          type: SessionType.SHORT_BREAK,
+          plannedDuration: 5 * 60,
+          actualDuration: null,
+          expectedStartTime: start + 25 * 60 * 1000,
+          expectedEndTime: start + 30 * 60 * 1000,
+          actualStartTime: null,
+          actualEndTime: null,
+          status: 'pending',
+          pausedTime: 0,
+          elapsedAtLastUpdate: 0,
         },
       ],
       expectedEndTime: start + 30 * 60 * 1000,
@@ -280,10 +299,12 @@ describe('ZenFocusTimer', () => {
     // 15 minutes of focus remained; one second has elapsed since resuming
     expect(screen.getByText('14:59')).toBeInTheDocument();
 
-    const saved = (mocks.focusStorage.saveSessionPlan.mock.calls as unknown as [SessionPlan][]).map(c => c[0]);
-    const oldFinal = saved.find(p => p.id === 'old-plan')!;
-    expect(oldFinal.segments.map(s => s.status)).toEqual(['skipped', 'skipped']);
-    const resumed = saved.find(p => p.id !== 'old-plan')!;
-    expect(resumed.segments.map(s => s.plannedDuration)).toEqual([15 * 60, 5 * 60]);
+    const saved = (mocks.focusStorage.saveSessionPlan.mock.calls as unknown as [SessionPlan][]).map(
+      (c) => c[0],
+    );
+    const oldFinal = saved.find((p) => p.id === 'old-plan')!;
+    expect(oldFinal.segments.map((s) => s.status)).toEqual(['skipped', 'skipped']);
+    const resumed = saved.find((p) => p.id !== 'old-plan')!;
+    expect(resumed.segments.map((s) => s.plannedDuration)).toEqual([15 * 60, 5 * 60]);
   });
 });

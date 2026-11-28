@@ -10,9 +10,7 @@ interface Migration {
   up: (db: Database.Database) => void;
 }
 
-const migrations: Migration[] = [
-  { version: 1, description: 'Initial schema', up: migration001 },
-];
+const migrations: Migration[] = [{ version: 1, description: 'Initial schema', up: migration001 }];
 
 export function runMigrations(db: Database.Database): void {
   // Ensure schema_version table exists
@@ -24,9 +22,9 @@ export function runMigrations(db: Database.Database): void {
     );
   `);
 
-  const currentVersion = db.prepare(
-    'SELECT MAX(version) as version FROM schema_version'
-  ).get() as { version: number | null };
+  const currentVersion = db.prepare('SELECT MAX(version) as version FROM schema_version').get() as {
+    version: number | null;
+  };
 
   const appliedVersion = currentVersion?.version || 0;
 
@@ -35,9 +33,10 @@ export function runMigrations(db: Database.Database): void {
       console.log(`Applying migration ${migration.version}: ${migration.description}`);
       db.transaction(() => {
         migration.up(db);
-        db.prepare(
-          'INSERT INTO schema_version (version, description) VALUES (?, ?)'
-        ).run(migration.version, migration.description);
+        db.prepare('INSERT INTO schema_version (version, description) VALUES (?, ?)').run(
+          migration.version,
+          migration.description,
+        );
       })();
       console.log(`Migration ${migration.version} applied successfully`);
     }
@@ -46,9 +45,8 @@ export function runMigrations(db: Database.Database): void {
 
 export function migrateLegacyData(db: Database.Database): void {
   // Check if already migrated
-  const status = db.prepare(
-    "SELECT value FROM kv_store WHERE key = 'migration_status'"
-  ).get() as { value: string } | undefined;
+  const status = db.prepare("SELECT value FROM kv_store WHERE key = 'migration_status'").get() as
+    { value: string } | undefined;
 
   if (status) {
     const parsed = JSON.parse(status.value);
@@ -60,9 +58,11 @@ export function migrateLegacyData(db: Database.Database): void {
 
   if (!fs.existsSync(dataDir)) {
     // No legacy data to migrate, mark as done
-    db.prepare(
-      'INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES (?, ?, ?)'
-    ).run('migration_status', JSON.stringify({ completed: true, timestamp: Date.now(), source: 'no_legacy_data' }), Date.now());
+    db.prepare('INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES (?, ?, ?)').run(
+      'migration_status',
+      JSON.stringify({ completed: true, timestamp: Date.now(), source: 'no_legacy_data' }),
+      Date.now(),
+    );
     return;
   }
 
@@ -80,9 +80,11 @@ export function migrateLegacyData(db: Database.Database): void {
     // 1. Migrate AppState
     const appStateRaw = readJsonFile(path.join(dataDir, 'focus_sessions_app_state.json'));
     if (appStateRaw) {
-      db.prepare(
-        'INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES (?, ?, ?)'
-      ).run('app_state', appStateRaw, Date.now());
+      db.prepare('INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES (?, ?, ?)').run(
+        'app_state',
+        appStateRaw,
+        Date.now(),
+      );
     }
 
     // 2. Migrate sessions
@@ -96,8 +98,16 @@ export function migrateLegacyData(db: Database.Database): void {
       `);
 
       for (const s of sessions) {
-        const typeMap: Record<string, string> = { FOCUS: 'focus', SHORT_BREAK: 'shortBreak', LONG_BREAK: 'longBreak' };
-        const statusMap: Record<string, string> = { COMPLETED: 'completed', INTERRUPTED: 'interrupted', SKIPPED: 'skipped' };
+        const typeMap: Record<string, string> = {
+          FOCUS: 'focus',
+          SHORT_BREAK: 'shortBreak',
+          LONG_BREAK: 'longBreak',
+        };
+        const statusMap: Record<string, string> = {
+          COMPLETED: 'completed',
+          INTERRUPTED: 'interrupted',
+          SKIPPED: 'skipped',
+        };
         const startDate = new Date(s.startTime).toISOString().split('T')[0];
         insertSession.run(
           s.id,
@@ -111,7 +121,7 @@ export function migrateLegacyData(db: Database.Database): void {
           statusMap[s.completionStatus] || s.completionStatus || 'completed',
           s.remainingTime || 0,
           null,
-          startDate
+          startDate,
         );
       }
     }
@@ -145,7 +155,7 @@ export function migrateLegacyData(db: Database.Database): void {
           JSON.stringify(h.sessionPlanIds || []),
           h.totalPlannedTime || 0,
           h.totalActualTime || 0,
-          h.completionRate || 0
+          h.completionRate || 0,
         );
       }
     }
@@ -165,22 +175,42 @@ export function migrateLegacyData(db: Database.Database): void {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
-      const typeMap: Record<string, string> = { FOCUS: 'focus', SHORT_BREAK: 'shortBreak', LONG_BREAK: 'longBreak' };
+      const typeMap: Record<string, string> = {
+        FOCUS: 'focus',
+        SHORT_BREAK: 'shortBreak',
+        LONG_BREAK: 'longBreak',
+      };
 
       for (const p of plans) {
         insertPlan.run(
-          p.id, p.createdAt, p.status, p.currentSegmentIndex,
-          JSON.stringify(p.settings), p.expectedEndTime, p.actualEndTime || null,
-          p.interruptedAt || null, p.totalPlannedDuration, p.totalElapsed, p.lastUpdated
+          p.id,
+          p.createdAt,
+          p.status,
+          p.currentSegmentIndex,
+          JSON.stringify(p.settings),
+          p.expectedEndTime,
+          p.actualEndTime || null,
+          p.interruptedAt || null,
+          p.totalPlannedDuration,
+          p.totalElapsed,
+          p.lastUpdated,
         );
         if (p.segments) {
           for (const seg of p.segments) {
             insertSegment.run(
-              seg.id, p.id, seg.index, typeMap[seg.type] || seg.type || 'focus',
-              seg.plannedDuration, seg.actualDuration || null,
-              seg.expectedStartTime, seg.expectedEndTime,
-              seg.actualStartTime || null, seg.actualEndTime || null,
-              seg.status || 'pending', seg.pausedTime || 0, seg.elapsedAtLastUpdate || 0
+              seg.id,
+              p.id,
+              seg.index,
+              typeMap[seg.type] || seg.type || 'focus',
+              seg.plannedDuration,
+              seg.actualDuration || null,
+              seg.expectedStartTime,
+              seg.expectedEndTime,
+              seg.actualStartTime || null,
+              seg.actualEndTime || null,
+              seg.status || 'pending',
+              seg.pausedTime || 0,
+              seg.elapsedAtLastUpdate || 0,
             );
           }
         }
@@ -203,16 +233,28 @@ export function migrateLegacyData(db: Database.Database): void {
 
       for (const c of challenges) {
         insertChallenge.run(
-          c.id, c.name, c.description || null, c.startDate, c.endDate,
-          c.durationDays, c.status,
-          new Date(c.createdAt).toISOString(), new Date(c.updatedAt).toISOString(),
-          c.completedDays || 0, c.failedDays || 0, c.currentStreak || 0, c.longestStreak || 0
+          c.id,
+          c.name,
+          c.description || null,
+          c.startDate,
+          c.endDate,
+          c.durationDays,
+          c.status,
+          new Date(c.createdAt).toISOString(),
+          new Date(c.updatedAt).toISOString(),
+          c.completedDays || 0,
+          c.failedDays || 0,
+          c.currentStreak || 0,
+          c.longestStreak || 0,
         );
         if (c.days) {
           for (const d of c.days) {
             insertDay.run(
-              c.id, d.date, d.status || 'pending', d.note || null,
-              d.markedAt ? new Date(d.markedAt).toISOString() : null
+              c.id,
+              d.date,
+              d.status || 'pending',
+              d.note || null,
+              d.markedAt ? new Date(d.markedAt).toISOString() : null,
             );
           }
         }
@@ -230,8 +272,14 @@ export function migrateLegacyData(db: Database.Database): void {
 
       for (const f of items) {
         insertFeedback.run(
-          f.id, f.type, f.title, f.description, f.severity, f.category,
-          new Date(f.timestamp).toISOString(), f.status || 'open'
+          f.id,
+          f.type,
+          f.title,
+          f.description,
+          f.severity,
+          f.category,
+          new Date(f.timestamp).toISOString(),
+          f.status || 'open',
         );
       }
     }
@@ -239,19 +287,23 @@ export function migrateLegacyData(db: Database.Database): void {
     // 7. Migrate lifetime stats
     const statsRaw = readJsonFile(path.join(dataDir, 'focus_sessions_lifetime_stats.json'));
     if (statsRaw) {
-      db.prepare(
-        'INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES (?, ?, ?)'
-      ).run('lifetime_stats', statsRaw, Date.now());
+      db.prepare('INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES (?, ?, ?)').run(
+        'lifetime_stats',
+        statsRaw,
+        Date.now(),
+      );
     }
 
     // Mark migration complete
-    db.prepare(
-      'INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES (?, ?, ?)'
-    ).run('migration_status', JSON.stringify({
-      completed: true,
-      timestamp: Date.now(),
-      source: 'legacy_json_files'
-    }), Date.now());
+    db.prepare('INSERT OR REPLACE INTO kv_store (key, value, updated_at) VALUES (?, ?, ?)').run(
+      'migration_status',
+      JSON.stringify({
+        completed: true,
+        timestamp: Date.now(),
+        source: 'legacy_json_files',
+      }),
+      Date.now(),
+    );
   })();
 
   // Rename legacy data directory (preserve as backup)

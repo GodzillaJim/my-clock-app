@@ -101,9 +101,12 @@ export function registerDatabaseHandlers(db: Database.Database): void {
     challengeRepo.deleteById(db, id);
   });
 
-  ipcMain.handle('db:challenges:markDay', (_, challengeId: string, date: string, status: string, note?: string) => {
-    challengeRepo.markDay(db, challengeId, date, status, note);
-  });
+  ipcMain.handle(
+    'db:challenges:markDay',
+    (_, challengeId: string, date: string, status: string, note?: string) => {
+      challengeRepo.markDay(db, challengeId, date, status, note);
+    },
+  );
 
   // Feedback
   ipcMain.handle('db:feedback:getAll', (_, filters?: any) => {

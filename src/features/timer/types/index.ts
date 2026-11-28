@@ -9,13 +9,13 @@ export enum TimerState {
   IDLE = 'idle',
   RUNNING = 'running',
   PAUSED = 'paused',
-  COMPLETED = 'completed'
+  COMPLETED = 'completed',
 }
 
 export enum CompletionStatus {
   COMPLETED = 'completed',
   INTERRUPTED = 'interrupted',
-  SKIPPED = 'skipped'
+  SKIPPED = 'skipped',
 }
 
 // Session with enhanced tracking capabilities
@@ -46,12 +46,12 @@ export interface DailyHistory {
   createdAt: Date;
   updatedAt: Date;
   // Enhanced record-keeping fields
-  dayStartTime: number | null;    // timestamp of first session start
-  dayEndTime: number | null;      // timestamp of last session end
-  sessionPlanIds: string[];       // IDs of SessionPlans that ran this day
-  totalPlannedTime: number;       // seconds, total planned across all plans
-  totalActualTime: number;        // seconds, total actual across all plans
-  completionRate: number;         // 0-1, completed segments / total segments
+  dayStartTime: number | null; // timestamp of first session start
+  dayEndTime: number | null; // timestamp of last session end
+  sessionPlanIds: string[]; // IDs of SessionPlans that ran this day
+  totalPlannedTime: number; // seconds, total planned across all plans
+  totalActualTime: number; // seconds, total actual across all plans
+  completionRate: number; // 0-1, completed segments / total segments
 }
 
 // Application settings
@@ -61,12 +61,12 @@ export interface AppSettings {
   shortBreakDuration: number; // minutes
   resumeStrategy: 'elapsed' | 'pause'; // How to handle time when app was closed
   quickPresets: number[]; // Quick duration presets in minutes
-  
+
   // Display Settings
   timeFormat: '12h' | '24h';
   showSessionStartTime: boolean;
   showSessionEndTime: boolean;
-  
+
   // Notification Settings
   enableAudioNotifications: boolean;
   enableVisualNotifications: boolean;
@@ -75,17 +75,17 @@ export interface AppSettings {
   sessionCompleteSound: string;
   breakCompleteSound: string;
   enableTickSound: boolean;
-  
+
   // Behavior Settings
   autoStartBreaks: boolean;
   autoStartNextSession: boolean;
   minimizeToSystemTray: boolean;
-  
+
   // UI Settings
   theme: 'light' | 'dark' | 'system';
   uiTheme: 'deepFocus' | 'aerogel'; // Visual style theme
   layout: 'zen' | 'dashboard' | 'commandCenter'; // UI layout style
-  
+
   // Data Settings
   autoResetDaily: boolean;
   exportFormat: 'csv' | 'json';
@@ -154,7 +154,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   uiTheme: 'deepFocus',
   layout: 'zen',
   autoResetDaily: true,
-  exportFormat: 'csv'
+  exportFormat: 'csv',
 };
 
 // Format seconds directly (used by updated session records now in seconds)
@@ -171,7 +171,7 @@ export const formatTime = (date: Date, format: '12h' | '24h'): string => {
   return date.toLocaleTimeString('en-US', {
     hour12: format === '12h',
     hour: 'numeric',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 };
 
@@ -187,18 +187,18 @@ export enum ChallengeStatus {
   ACTIVE = 'active',
   COMPLETED = 'completed',
   FAILED = 'failed',
-  PAUSED = 'paused'
+  PAUSED = 'paused',
 }
 
 export enum ChallengeDayStatus {
   PENDING = 'pending',
   COMPLETED = 'completed',
   FAILED = 'failed',
-  SKIPPED = 'skipped'
+  SKIPPED = 'skipped',
 }
 
 export interface ChallengeDay {
-  date: string;                    // YYYY-MM-DD format
+  date: string; // YYYY-MM-DD format
   status: ChallengeDayStatus;
   note?: string;
   markedAt?: Date;
@@ -208,8 +208,8 @@ export interface Challenge {
   readonly id: string;
   name: string;
   description?: string;
-  startDate: string;               // YYYY-MM-DD format
-  endDate: string;                 // YYYY-MM-DD format
+  startDate: string; // YYYY-MM-DD format
+  endDate: string; // YYYY-MM-DD format
   durationDays: number;
   status: ChallengeStatus;
   days: ChallengeDay[];
@@ -232,7 +232,7 @@ export const createChallengeDays = (startDate: string, endDate: string): Challen
   while (current <= end) {
     days.push({
       date: current.toISOString().split('T')[0],
-      status: ChallengeDayStatus.PENDING
+      status: ChallengeDayStatus.PENDING,
     });
     current.setDate(current.getDate() + 1);
   }
@@ -251,40 +251,40 @@ export interface SessionPlanSegment {
   id: string;
   index: number;
   type: SessionType;
-  plannedDuration: number;       // seconds
+  plannedDuration: number; // seconds
   actualDuration: number | null; // seconds, filled on completion
-  expectedStartTime: number;     // timestamp
-  expectedEndTime: number;       // timestamp
+  expectedStartTime: number; // timestamp
+  expectedEndTime: number; // timestamp
   actualStartTime: number | null;
   actualEndTime: number | null;
   status: SegmentStatus;
-  pausedTime: number;            // total ms spent paused
-  elapsedAtLastUpdate: number;   // seconds elapsed (for crash recovery)
+  pausedTime: number; // total ms spent paused
+  elapsedAtLastUpdate: number; // seconds elapsed (for crash recovery)
 }
 
 export interface SessionPlan {
   id: string;
-  createdAt: number;             // timestamp
+  createdAt: number; // timestamp
   status: SessionPlanStatus;
   segments: SessionPlanSegment[];
-  currentSegmentIndex: number;   // -1 if not started
+  currentSegmentIndex: number; // -1 if not started
   settings: {
-    focusDuration: number;       // minutes
-    shortBreakDuration: number;  // minutes
+    focusDuration: number; // minutes
+    shortBreakDuration: number; // minutes
   };
-  expectedEndTime: number;       // timestamp
+  expectedEndTime: number; // timestamp
   actualEndTime: number | null;
   interruptedAt: number | null;
-  totalPlannedDuration: number;  // seconds
-  totalElapsed: number;          // seconds
-  lastUpdated: number;           // timestamp
+  totalPlannedDuration: number; // seconds
+  totalElapsed: number; // seconds
+  lastUpdated: number; // timestamp
 }
 
 export interface PeriodSummary {
-  totalFocusTime: number;        // seconds
+  totalFocusTime: number; // seconds
   totalSessions: number;
   averageDailyFocusTime: number; // seconds
-  completionRate: number;        // 0-1
+  completionRate: number; // 0-1
   daysActive: number;
 }
 
@@ -292,11 +292,11 @@ export interface LifetimeStats {
   lastUpdated: number;
   totalDaysActive: number;
   totalSessions: number;
-  totalFocusTime: number;        // seconds
-  totalBreakTime: number;        // seconds
+  totalFocusTime: number; // seconds
+  totalBreakTime: number; // seconds
 
-  averageDayStartTime: string;   // "HH:mm"
-  averageDayEndTime: string;     // "HH:mm"
+  averageDayStartTime: string; // "HH:mm"
+  averageDayEndTime: string; // "HH:mm"
   averageDailyFocusTime: number; // seconds
   averageDailySessionCount: number;
   averageSessionDuration: number; // seconds

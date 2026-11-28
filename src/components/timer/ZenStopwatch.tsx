@@ -1,19 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  IconButton,
-  Tooltip,
-  Fade,
-  Chip,
-} from '@mui/material';
-import {
-  PlayArrow,
-  Pause,
-  RestartAlt,
-  Flag,
-} from '@mui/icons-material';
+import { Box, Typography, Button, IconButton, Tooltip, Fade, Chip } from '@mui/material';
+import { PlayArrow, Pause, RestartAlt, Flag } from '@mui/icons-material';
 import { CircularTimerRing } from './CircularTimerRing';
 import { persistenceService } from '@/services/persistenceService';
 
@@ -154,7 +141,7 @@ export const ZenStopwatch: React.FC<ZenStopwatchProps> = ({ onRunningStateChange
         >
           {formatTime(time)}
         </Typography>
-        
+
         {laps.length > 0 && (
           <Typography variant="caption" sx={{ color: 'text.secondary', mt: 1 }}>
             Lap {laps.length}
@@ -193,11 +180,7 @@ export const ZenStopwatch: React.FC<ZenStopwatchProps> = ({ onRunningStateChange
 
           {isActive && (
             <Tooltip title="Reset">
-              <IconButton
-                onClick={handleReset}
-                size="small"
-                sx={{ color: 'error.main' }}
-              >
+              <IconButton onClick={handleReset} size="small" sx={{ color: 'error.main' }}>
                 <RestartAlt />
               </IconButton>
             </Tooltip>
@@ -230,11 +213,7 @@ export const ZenStopwatch: React.FC<ZenStopwatchProps> = ({ onRunningStateChange
               />
             ))}
             {laps.length > 8 && (
-              <Chip
-                label={`+${laps.length - 8} more`}
-                size="small"
-                variant="outlined"
-              />
+              <Chip label={`+${laps.length - 8} more`} size="small" variant="outlined" />
             )}
           </Box>
         </Fade>

@@ -16,8 +16,8 @@ export interface RecoveryInfo {
   plan: SessionPlan;
   completedSegments: number;
   totalSegments: number;
-  completedFocusTime: number;    // seconds
-  remainingFocusTime: number;    // seconds
+  completedFocusTime: number; // seconds
+  remainingFocusTime: number; // seconds
   remainingSegments: number;
   interruptedAt: Date;
   plannedEndTime: Date;
@@ -30,16 +30,24 @@ export interface RecoveryInfo {
 }
 
 const getDismissedId = (): string | null => {
-  try { return localStorage.getItem(DISMISSED_KEY); } catch { return null; }
+  try {
+    return localStorage.getItem(DISMISSED_KEY);
+  } catch {
+    return null;
+  }
 };
 const setDismissedId = (id: string): void => {
-  try { localStorage.setItem(DISMISSED_KEY, id); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(DISMISSED_KEY, id);
+  } catch {
+    /* ignore */
+  }
 };
 
 /** A plan is resumable if it stopped short and still has segments left to run. */
 const planHasRemaining = (plan: SessionPlan): boolean =>
   plan.segments.some(
-    s => s.status === 'pending' || s.status === 'in_progress' || s.status === 'interrupted'
+    (s) => s.status === 'pending' || s.status === 'in_progress' || s.status === 'interrupted',
   );
 
 // Build display-ready recovery info from a plan without mutating it.
@@ -52,24 +60,34 @@ const buildRecoveryInfo = (plan: SessionPlan, interruptedAt: number): RecoveryIn
     const elapsed = seg.actualStartTime
       ? Math.round((interruptedAt - seg.actualStartTime) / 1000)
       : (seg.actualDuration ?? seg.elapsedAtLastUpdate);
-    interruptedSeg = { ...seg, status: 'interrupted', actualEndTime: interruptedAt, actualDuration: elapsed };
+    interruptedSeg = {
+      ...seg,
+      status: 'interrupted',
+      actualEndTime: interruptedAt,
+      actualDuration: elapsed,
+    };
   }
 
   const completedSegs = plan.segments.filter(
-    s => s.status === 'completed' || s.status === 'skipped'
+    (s) => s.status === 'completed' || s.status === 'skipped',
   );
-  const pendingSegs = plan.segments.filter(s => s.status === 'pending');
+  const pendingSegs = plan.segments.filter((s) => s.status === 'pending');
 
   const completedFocusTime = plan.segments
-    .filter(s => s.type === SessionType.FOCUS && s.status === 'completed')
+    .filter((s) => s.type === SessionType.FOCUS && s.status === 'completed')
     .reduce((sum, s) => sum + (s.actualDuration || 0), 0);
 
   const remainingFocusTime = plan.segments
-    .filter(s => s.type === SessionType.FOCUS && (s.status === 'pending' || s.status === 'in_progress' || s.status === 'interrupted'))
+    .filter(
+      (s) =>
+        s.type === SessionType.FOCUS &&
+        (s.status === 'pending' || s.status === 'in_progress' || s.status === 'interrupted'),
+    )
     .reduce((sum, s) => {
       // The interrupted/in-progress segment only has its remaining time left.
       const elapsedSoFar = Math.max(s.elapsedAtLastUpdate || 0, s.actualDuration || 0);
-      const remaining = s.status === 'pending' ? s.plannedDuration : Math.max(0, s.plannedDuration - elapsedSoFar);
+      const remaining =
+        s.status === 'pending' ? s.plannedDuration : Math.max(0, s.plannedDuration - elapsedSoFar);
       return sum + remaining;
     }, 0);
 
@@ -86,17 +104,25 @@ const buildRecoveryInfo = (plan: SessionPlan, interruptedAt: number): RecoveryIn
     totalSegments: plan.segments.length,
     completedFocusTime,
     remainingFocusTime,
-    remainingSegments: pendingSegs.length + (interruptedSeg && interruptedSeg.status !== 'completed' && interruptedSeg.status !== 'skipped' ? 1 : 0),
+    remainingSegments:
+      pendingSegs.length +
+      (interruptedSeg &&
+      interruptedSeg.status !== 'completed' &&
+      interruptedSeg.status !== 'skipped'
+        ? 1
+        : 0),
     interruptedAt: new Date(interruptedAt),
     plannedEndTime: new Date(plan.expectedEndTime),
     segmentAtInterruption: interruptedSeg,
     completedTimeFormatted: formatDurationFromSeconds(completedFocusTime),
     remainingTimeFormatted: formatDurationFromSeconds(remainingFocusTime),
     interruptedAtFormatted: new Date(interruptedAt).toLocaleTimeString([], {
-      hour: 'numeric', minute: '2-digit'
+      hour: 'numeric',
+      minute: '2-digit',
     }),
     plannedEndFormatted: new Date(plan.expectedEndTime).toLocaleTimeString([], {
-      hour: 'numeric', minute: '2-digit'
+      hour: 'numeric',
+      minute: '2-digit',
     }),
   };
 };
@@ -142,7 +168,7 @@ export const useRecovery = () => {
     try {
       const todaysPlans = await focusStorage.getPlansForDate(getTodayDateString());
       const candidates = todaysPlans
-        .filter(p => p.status !== 'completed' && p.id !== dismissedId && planHasRemaining(p))
+        .filter((p) => p.status !== 'completed' && p.id !== dismissedId && planHasRemaining(p))
         .sort((a, b) => (b.lastUpdated || b.createdAt) - (a.lastUpdated || a.createdAt));
 
       if (candidates.length > 0) {
@@ -185,18 +211,16 @@ export const useRecovery = () => {
       plan.status = 'interrupted';
       plan.interruptedAt = interruptedAt;
       plan.actualEndTime = interruptedAt;
-      plan.totalElapsed = plan.segments.reduce(
-        (sum, s) => sum + (s.actualDuration || 0), 0
-      );
+      plan.totalElapsed = plan.segments.reduce((sum, s) => sum + (s.actualDuration || 0), 0);
 
-      focusStorage.saveSessionPlan(plan).catch(err =>
-        console.error('Failed to save interrupted plan:', err)
-      );
+      focusStorage
+        .saveSessionPlan(plan)
+        .catch((err) => console.error('Failed to save interrupted plan:', err));
       persistenceService.clearPlanSnapshot();
 
-      focusStorage.recalculateLifetimeStats().catch(err =>
-        console.error('Failed to recalculate stats after recovery:', err)
-      );
+      focusStorage
+        .recalculateLifetimeStats()
+        .catch((err) => console.error('Failed to recalculate stats after recovery:', err));
     }
 
     rawPlanRef.current = null;

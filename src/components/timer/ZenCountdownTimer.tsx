@@ -1,20 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  IconButton,
-  Tooltip,
-  Fade,
-} from '@mui/material';
-import {
-  PlayArrow,
-  Pause,
-  RestartAlt,
-  Add,
-  Remove,
-  AccessTime,
-} from '@mui/icons-material';
+import { Box, Typography, Button, IconButton, Tooltip, Fade } from '@mui/material';
+import { PlayArrow, Pause, RestartAlt, Add, Remove, AccessTime } from '@mui/icons-material';
 import { useTimer } from 'react-timer-hook';
 import dayjs from 'dayjs';
 import { CircularTimerRing } from './CircularTimerRing';
@@ -47,7 +33,15 @@ export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningS
     });
   };
 
-  const { seconds, minutes: timerMinutes, hours, pause, resume, restart, isRunning } = useTimer({
+  const {
+    seconds,
+    minutes: timerMinutes,
+    hours,
+    pause,
+    resume,
+    restart,
+    isRunning,
+  } = useTimer({
     expiryTimestamp: new Date(),
     autoStart: false,
     onExpire: handleComplete,
@@ -91,7 +85,9 @@ export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningS
   };
 
   const handleReset = () => {
-    const expiryTimestamp = dayjs().add(minutes * 60, 'second').toDate();
+    const expiryTimestamp = dayjs()
+      .add(minutes * 60, 'second')
+      .toDate();
     restart(expiryTimestamp, false);
     activeExpiryRef.current = null;
     persistenceService.clearSnapshot(TIMER_SNAPSHOT_KEY);
@@ -245,11 +241,7 @@ export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningS
 
           {isActive && (
             <Tooltip title="Reset">
-              <IconButton
-                onClick={handleReset}
-                size="small"
-                sx={{ color: 'error.main' }}
-              >
+              <IconButton onClick={handleReset} size="small" sx={{ color: 'error.main' }}>
                 <RestartAlt />
               </IconButton>
             </Tooltip>

@@ -4,14 +4,21 @@
 
 /* Clean, minimal global styles */
 body {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
 /* Improved focus styles - exclude MUI inputs which have their own focus styling */
-*:focus-visible:not(.MuiInputBase-root):not(.MuiInputBase-input):not(.MuiOutlinedInput-root):not(.MuiOutlinedInput-input):not(input):not(textarea) {
+*:focus-visible:not(.MuiInputBase-root):not(.MuiInputBase-input):not(.MuiOutlinedInput-root):not(
+    .MuiOutlinedInput-input
+  ):not(input):not(textarea) {
   outline: 2px solid #2563eb !important;
   outline-offset: 2px !important;
   border-radius: 6px !important;

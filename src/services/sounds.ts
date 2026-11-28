@@ -38,11 +38,25 @@ interface Note {
   partials?: [number, number][];
 }
 
-const BELL: [number, number][] = [[1, 1], [2, 0.5], [2.76, 0.35], [5.4, 0.15]];
-const SOFT: [number, number][] = [[1, 1], [2, 0.15]];
+const BELL: [number, number][] = [
+  [1, 1],
+  [2, 0.5],
+  [2.76, 0.35],
+  [5.4, 0.15],
+];
+const SOFT: [number, number][] = [
+  [1, 1],
+  [2, 0.15],
+];
 const PURE: [number, number][] = [[1, 1]];
 
-const C5 = 523.25, E5 = 659.25, G5 = 783.99, A5 = 880, B5 = 987.77, C6 = 1046.5, E6 = 1318.51;
+const C5 = 523.25,
+  E5 = 659.25,
+  G5 = 783.99,
+  A5 = 880,
+  B5 = 987.77,
+  C6 = 1046.5,
+  E6 = 1318.51;
 
 const RECIPES: Record<SoundName, Note[]> = {
   // Two-note ping
@@ -91,7 +105,8 @@ export function renderSound(name: string, sampleRate: number): Float32Array {
       let env = amp * Math.exp(-decay * t) * Math.min(1, t / attack);
       if (i > count - fadeOut) env *= (count - i) / fadeOut;
       let s = 0;
-      for (const [ratio, weight] of partials) s += weight * Math.sin(2 * Math.PI * freq * ratio * t);
+      for (const [ratio, weight] of partials)
+        s += weight * Math.sin(2 * Math.PI * freq * ratio * t);
       out[start + i] += env * s;
     }
   }

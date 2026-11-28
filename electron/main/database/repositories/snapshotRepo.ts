@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 
 export function save(db: Database.Database, plan: any): void {
   db.prepare(
-    'INSERT OR REPLACE INTO active_snapshot (id, plan, last_updated) VALUES (1, ?, ?)'
+    'INSERT OR REPLACE INTO active_snapshot (id, plan, last_updated) VALUES (1, ?, ?)',
   ).run(JSON.stringify(plan), Date.now());
 }
 

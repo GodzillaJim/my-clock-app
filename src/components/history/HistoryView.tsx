@@ -6,7 +6,6 @@ import {
   SessionPlan,
   SessionPlanSegment,
   SegmentStatus,
-  SessionType,
   CompletionStatus,
   AppSettings,
   getTodayDateString,
@@ -32,20 +31,28 @@ const formatDayLabel = (dateStr: string): string => {
   if (dateStr === today) return 'Today';
   if (dateStr === yesterday) return 'Yesterday';
   return new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', {
-    weekday: 'long', month: 'long', day: 'numeric',
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
   });
 };
 
 // Older days may predate plan tracking. Rebuild a display-only plan from the
 // day's session records so the timeline still has something to show.
-const synthesizePlanFromSessions = (date: string, history: Awaited<ReturnType<typeof focusStorage.getHistoryByDate>>): SessionPlan[] => {
+const synthesizePlanFromSessions = (
+  date: string,
+  history: Awaited<ReturnType<typeof focusStorage.getHistoryByDate>>,
+): SessionPlan[] => {
   if (!history?.sessions || history.sessions.length === 0) return [];
   const segments: SessionPlanSegment[] = history.sessions.map((s, i) => {
     const start = new Date(s.startTime).getTime();
     const end = s.endTime ? new Date(s.endTime).getTime() : start + s.actualDuration * 1000;
     const status: SegmentStatus =
-      s.completionStatus === CompletionStatus.COMPLETED ? 'completed' :
-      s.completionStatus === CompletionStatus.INTERRUPTED ? 'interrupted' : 'skipped';
+      s.completionStatus === CompletionStatus.COMPLETED
+        ? 'completed'
+        : s.completionStatus === CompletionStatus.INTERRUPTED
+          ? 'interrupted'
+          : 'skipped';
     return {
       id: s.id,
       index: i,
@@ -61,20 +68,22 @@ const synthesizePlanFromSessions = (date: string, history: Awaited<ReturnType<ty
       elapsedAtLastUpdate: s.actualDuration,
     };
   });
-  return [{
-    id: `legacy-${date}`,
-    createdAt: segments[0]?.actualStartTime ?? Date.now(),
-    status: 'completed', // keeps legacy days non-resumable
-    segments,
-    currentSegmentIndex: -1,
-    settings: { focusDuration: 0, shortBreakDuration: 0 },
-    expectedEndTime: segments[segments.length - 1]?.actualEndTime ?? Date.now(),
-    actualEndTime: segments[segments.length - 1]?.actualEndTime ?? null,
-    interruptedAt: null,
-    totalPlannedDuration: segments.reduce((sum, s) => sum + s.plannedDuration, 0),
-    totalElapsed: segments.reduce((sum, s) => sum + (s.actualDuration || 0), 0),
-    lastUpdated: Date.now(),
-  }];
+  return [
+    {
+      id: `legacy-${date}`,
+      createdAt: segments[0]?.actualStartTime ?? Date.now(),
+      status: 'completed', // keeps legacy days non-resumable
+      segments,
+      currentSegmentIndex: -1,
+      settings: { focusDuration: 0, shortBreakDuration: 0 },
+      expectedEndTime: segments[segments.length - 1]?.actualEndTime ?? Date.now(),
+      actualEndTime: segments[segments.length - 1]?.actualEndTime ?? null,
+      interruptedAt: null,
+      totalPlannedDuration: segments.reduce((sum, s) => sum + s.plannedDuration, 0),
+      totalElapsed: segments.reduce((sum, s) => sum + (s.actualDuration || 0), 0),
+      lastUpdated: Date.now(),
+    },
+  ];
 };
 
 export const HistoryView: React.FC<HistoryViewProps> = ({ settings, onClose, onResumePlan }) => {
@@ -90,12 +99,10 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ settings, onClose, onR
 
   useEffect(() => {
     loadOverview();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     loadDay(selectedDate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
   const loadOverview = async () => {
@@ -109,7 +116,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ settings, onClose, onR
       const histories = await focusStorage.getHistoryForPeriod(dateKey(start), dateKey(today));
 
       const map = new Map<string, number>();
-      histories.forEach(h => map.set(h.date, h.totalFocusTime || 0));
+      histories.forEach((h) => map.set(h.date, h.totalFocusTime || 0));
 
       const daily: { date: string; seconds: number }[] = [];
       for (let i = 29; i >= 0; i--) {
@@ -147,7 +154,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ settings, onClose, onR
   const todayFocusSeconds = focusByDate.get(todayKey) || 0;
   const hasAnyData = useMemo(
     () => (stats?.totalSessions ?? 0) > 0 || focusByDate.size > 0,
-    [stats, focusByDate]
+    [stats, focusByDate],
   );
 
   return (
@@ -162,9 +169,20 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ settings, onClose, onR
     >
       <Box sx={{ maxWidth: 1120, mx: 'auto', px: { xs: 2.5, md: 5 }, py: { xs: 3, md: 5 } }}>
         {loading || !stats ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 2 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '60vh',
+              gap: 2,
+            }}
+          >
             <CircularProgress size={28} />
-            <Typography variant="body2" color="text.secondary">Gathering your history…</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Gathering your history…
+            </Typography>
           </Box>
         ) : (
           <>
@@ -177,7 +195,9 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ settings, onClose, onR
 
             {!hasAnyData ? (
               <Box sx={{ textAlign: 'center', py: 10 }}>
-                <Typography variant="h6" gutterBottom>No focus history yet</Typography>
+                <Typography variant="h6" gutterBottom>
+                  No focus history yet
+                </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Finish your first session and it will start filling in here.
                 </Typography>
@@ -186,7 +206,10 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ settings, onClose, onR
               <>
                 {/* Heatmap centerpiece */}
                 <Box sx={{ mt: 5, mb: 2 }}>
-                  <Typography variant="overline" sx={{ letterSpacing: '0.14em', color: 'text.secondary' }}>
+                  <Typography
+                    variant="overline"
+                    sx={{ letterSpacing: '0.14em', color: 'text.secondary' }}
+                  >
                     Last 12 weeks
                   </Typography>
                 </Box>
@@ -208,7 +231,12 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ settings, onClose, onR
                     alignItems: 'start',
                   }}
                 >
-                  <Box sx={{ pr: { md: 4 }, borderRight: { md: `1px solid ${theme.palette.divider}` } }}>
+                  <Box
+                    sx={{
+                      pr: { md: 4 },
+                      borderRight: { md: `1px solid ${theme.palette.divider}` },
+                    }}
+                  >
                     <DayTimeline
                       dateLabel={formatDayLabel(selectedDate)}
                       plans={dayPlans}

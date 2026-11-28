@@ -46,9 +46,12 @@ class NotificationService {
 
   private getSoundForType(type: SessionNotification['type']): string {
     switch (type) {
-      case 'session_complete': return this.settings?.sessionCompleteSound || 'complete';
-      case 'break_complete': return this.settings?.breakCompleteSound || 'break';
-      default: return 'default';
+      case 'session_complete':
+        return this.settings?.sessionCompleteSound || 'complete';
+      case 'break_complete':
+        return this.settings?.breakCompleteSound || 'break';
+      default:
+        return 'default';
     }
   }
 
@@ -58,7 +61,7 @@ class NotificationService {
       if (window.electronAPI && typeof window.electronAPI.sessionNotification === 'function') {
         await window.electronAPI.sessionNotification({
           title: notification.title,
-          body: notification.body
+          body: notification.body,
         });
         return;
       }
@@ -71,7 +74,7 @@ class NotificationService {
           badge: '/icon.png',
           silent: !this.settings?.enableAudioNotifications,
           requireInteraction: false,
-          tag: notification.type
+          tag: notification.type,
         });
       } else if (Notification.permission !== 'denied') {
         const permission = await Notification.requestPermission();
@@ -80,7 +83,7 @@ class NotificationService {
             body: notification.body,
             icon: '/icon.png',
             badge: '/icon.png',
-            silent: !this.settings?.enableAudioNotifications
+            silent: !this.settings?.enableAudioNotifications,
           });
         }
       }
@@ -140,7 +143,7 @@ class NotificationService {
         color: #666;
       }
     `;
-    
+
     document.head.appendChild(style);
     document.body.appendChild(notificationEl);
 

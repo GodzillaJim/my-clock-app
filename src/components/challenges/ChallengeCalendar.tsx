@@ -104,7 +104,11 @@ export const ChallengeCalendar: React.FC<ChallengeCalendarProps> = ({
                       <Typography variant="caption" display="block">
                         {dayjs(day.date).format('MMM D, YYYY')}
                       </Typography>
-                      <Typography variant="caption" display="block" sx={{ textTransform: 'capitalize' }}>
+                      <Typography
+                        variant="caption"
+                        display="block"
+                        sx={{ textTransform: 'capitalize' }}
+                      >
                         Status: {day.status}
                       </Typography>
                       {day.note && (
@@ -127,9 +131,12 @@ export const ChallengeCalendar: React.FC<ChallengeCalendarProps> = ({
                       cursor: canMark && onDayClick ? 'pointer' : 'default',
                       transition: 'all 0.2s ease',
                       opacity: !isPast && !isToday ? 0.4 : 1,
-                      '&:hover': canMark && onDayClick ? {
-                        transform: 'scale(1.2)',
-                      } : {},
+                      '&:hover':
+                        canMark && onDayClick
+                          ? {
+                              transform: 'scale(1.2)',
+                            }
+                          : {},
                     }}
                   />
                 </Tooltip>

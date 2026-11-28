@@ -24,13 +24,15 @@ function fromDbHistory(row: any): any {
 }
 
 export function save(db: Database.Database, history: any): void {
-  db.prepare(`
+  db.prepare(
+    `
     INSERT OR REPLACE INTO daily_history (date, total_focus_time, total_break_time, completed_sessions,
       interrupted_sessions, skipped_sessions, average_session_length, longest_streak,
       created_at, updated_at, day_start_time, day_end_time, session_plan_ids,
       total_planned_time, total_actual_time, completion_rate)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
+  `,
+  ).run(
     history.date,
     history.totalFocusTime || 0,
     history.totalBreakTime || 0,
@@ -46,7 +48,7 @@ export function save(db: Database.Database, history: any): void {
     JSON.stringify(history.sessionPlanIds || []),
     history.totalPlannedTime || 0,
     history.totalActualTime || 0,
-    history.completionRate || 0
+    history.completionRate || 0,
   );
 
   // Enforce date-based retention
@@ -59,17 +61,17 @@ export function getByDate(db: Database.Database, date: string): any | null {
 }
 
 export function getByRange(db: Database.Database, startDate: string, endDate: string): any[] {
-  const rows = db.prepare(
-    'SELECT * FROM daily_history WHERE date >= ? AND date <= ? ORDER BY date ASC'
-  ).all(startDate, endDate);
+  const rows = db
+    .prepare('SELECT * FROM daily_history WHERE date >= ? AND date <= ? ORDER BY date ASC')
+    .all(startDate, endDate);
   return rows.map(fromDbHistory);
 }
 
 export function getAllDates(db: Database.Database): string[] {
-  const rows = db.prepare(
-    'SELECT date FROM daily_history ORDER BY date DESC'
-  ).all() as { date: string }[];
-  return rows.map(r => r.date);
+  const rows = db.prepare('SELECT date FROM daily_history ORDER BY date DESC').all() as {
+    date: string;
+  }[];
+  return rows.map((r) => r.date);
 }
 
 export function deleteByDate(db: Database.Database, date: string): void {

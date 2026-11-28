@@ -14,7 +14,7 @@ import {
   SessionPlan,
   SegmentStatus,
   LifetimeStats,
-  PeriodSummary
+  PeriodSummary,
 } from '@/features/timer/types';
 import { FeedbackItem } from '@/types/feedback';
 import { createStorageService } from './storage';
@@ -23,11 +23,15 @@ class FocusStorageService {
   // Legacy storage services (browser fallback)
   private appStateStorage = createStorageService<AppState>('focus_sessions_app_state');
   private sessionsStorage = createStorageService<SessionRecord[]>('focus_sessions_sessions');
-  private dailyHistoryStorage = createStorageService<DailyHistory[]>('focus_sessions_daily_history');
+  private dailyHistoryStorage = createStorageService<DailyHistory[]>(
+    'focus_sessions_daily_history',
+  );
   private feedbackStorage = createStorageService<FeedbackItem[]>('focus_sessions_feedback');
   private challengeStorage = createStorageService<Challenge[]>('focus_sessions_challenges');
   private plansStorage = createStorageService<SessionPlan[]>('focus_sessions_plans');
-  private lifetimeStatsStorage = createStorageService<LifetimeStats>('focus_sessions_lifetime_stats');
+  private lifetimeStatsStorage = createStorageService<LifetimeStats>(
+    'focus_sessions_lifetime_stats',
+  );
 
   // SQLite via Electron IPC when available
   private get useDb(): boolean {
@@ -52,7 +56,7 @@ class FocusStorageService {
       currentSession: null,
       dailyHistory: null,
       settings: DEFAULT_SETTINGS,
-      lastActiveDate: getTodayDateString()
+      lastActiveDate: getTodayDateString(),
     };
 
     try {
@@ -68,7 +72,7 @@ class FocusStorageService {
         const state: AppState = {
           ...defaultState,
           ...loadedState,
-          settings: { ...DEFAULT_SETTINGS, ...loadedState.settings }
+          settings: { ...DEFAULT_SETTINGS, ...loadedState.settings },
         };
         if (state.lastActiveDate !== getTodayDateString()) {
           state.currentSession = null;
@@ -105,10 +109,12 @@ class FocusStorageService {
       if (this.useDb) {
         await this.db.sessions.save(session);
       } else {
-        const sessions = await this.sessionsStorage.load() || [];
+        const sessions = (await this.sessionsStorage.load()) || [];
         sessions.push(session);
         const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
-        await this.sessionsStorage.save(sessions.filter(s => new Date(s.startTime).getTime() >= cutoff));
+        await this.sessionsStorage.save(
+          sessions.filter((s) => new Date(s.startTime).getTime() >= cutoff),
+        );
       }
       await this.updateDailyStats(getTodayDateString());
     } catch (error) {
@@ -126,7 +132,7 @@ class FocusStorageService {
       if (this.useDb) {
         return await this.db.sessions.getHistory(limit);
       }
-      const sessions = await this.sessionsStorage.load() || [];
+      const sessions = (await this.sessionsStorage.load()) || [];
       return sessions
         .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
         .slice(0, limit);
@@ -141,8 +147,8 @@ class FocusStorageService {
       if (this.useDb) {
         await this.db.sessions.delete(sessionId);
       } else {
-        const sessions = await this.sessionsStorage.load() || [];
-        await this.sessionsStorage.save(sessions.filter(s => s.id !== sessionId));
+        const sessions = (await this.sessionsStorage.load()) || [];
+        await this.sessionsStorage.save(sessions.filter((s) => s.id !== sessionId));
       }
     } catch (error) {
       console.error('Failed to delete session:', error);
@@ -156,7 +162,7 @@ class FocusStorageService {
         const sessions = await this.db.sessions.getHistory();
         return this.calculateStats(sessions);
       }
-      const sessions = await this.sessionsStorage.load() || [];
+      const sessions = (await this.sessionsStorage.load()) || [];
       return this.calculateStats(sessions);
     } catch (error) {
       console.error('Failed to get session stats:', error);
@@ -166,13 +172,17 @@ class FocusStorageService {
 
   private calculateStats(sessions: SessionRecord[]): SessionStats {
     const totalSessions = sessions.length;
-    const completedSessions = sessions.filter(s => s.completionStatus === CompletionStatus.COMPLETED);
-    const focusSessions = sessions.filter(s => s.type === SessionType.FOCUS);
+    const completedSessions = sessions.filter(
+      (s) => s.completionStatus === CompletionStatus.COMPLETED,
+    );
+    const focusSessions = sessions.filter((s) => s.type === SessionType.FOCUS);
     const totalFocusSeconds = focusSessions.reduce((sum, s) => sum + s.actualDuration, 0);
-    const totalBreakSeconds = sessions.filter(s => s.type !== SessionType.FOCUS).reduce((sum, s) => sum + s.actualDuration, 0);
+    const totalBreakSeconds = sessions
+      .filter((s) => s.type !== SessionType.FOCUS)
+      .reduce((sum, s) => sum + s.actualDuration, 0);
 
-    const sortedSessions = [...sessions].sort((a, b) =>
-      new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+    const sortedSessions = [...sessions].sort(
+      (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
     );
 
     let currentStreak = 0;
@@ -196,17 +206,20 @@ class FocusStorageService {
       }
     }
 
-    const avgSeconds = totalSessions > 0 ? (totalFocusSeconds + totalBreakSeconds) / totalSessions : 0;
-    const completionRate = focusSessions.length > 0
-      ? focusSessions.filter(s => s.completionStatus === CompletionStatus.COMPLETED).length / focusSessions.length
-      : 0;
+    const avgSeconds =
+      totalSessions > 0 ? (totalFocusSeconds + totalBreakSeconds) / totalSessions : 0;
+    const completionRate =
+      focusSessions.length > 0
+        ? focusSessions.filter((s) => s.completionStatus === CompletionStatus.COMPLETED).length /
+          focusSessions.length
+        : 0;
 
     return {
       totalFocusTime: formatDurationFromSeconds(totalFocusSeconds),
       completedSessions: completedSessions.length,
       currentStreak,
       todayProgress: Math.round(completionRate * 100),
-      averageSessionTime: formatDurationFromSeconds(avgSeconds)
+      averageSessionTime: formatDurationFromSeconds(avgSeconds),
     };
   }
 
@@ -217,12 +230,23 @@ class FocusStorageService {
   async getTodayHistory(): Promise<DailyHistory> {
     const today = getTodayDateString();
     const defaultHistory: DailyHistory = {
-      date: today, sessions: [], totalFocusTime: 0, totalBreakTime: 0,
-      completedSessions: 0, interruptedSessions: 0, skippedSessions: 0,
-      averageSessionLength: 0, longestStreak: 0,
-      createdAt: new Date(), updatedAt: new Date(),
-      dayStartTime: null, dayEndTime: null, sessionPlanIds: [],
-      totalPlannedTime: 0, totalActualTime: 0, completionRate: 0
+      date: today,
+      sessions: [],
+      totalFocusTime: 0,
+      totalBreakTime: 0,
+      completedSessions: 0,
+      interruptedSessions: 0,
+      skippedSessions: 0,
+      averageSessionLength: 0,
+      longestStreak: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      dayStartTime: null,
+      dayEndTime: null,
+      sessionPlanIds: [],
+      totalPlannedTime: 0,
+      totalActualTime: 0,
+      completionRate: 0,
     };
 
     try {
@@ -235,8 +259,8 @@ class FocusStorageService {
         }
         return defaultHistory;
       }
-      const histories = await this.dailyHistoryStorage.load() || [];
-      return histories.find(h => h.date === today) || defaultHistory;
+      const histories = (await this.dailyHistoryStorage.load()) || [];
+      return histories.find((h) => h.date === today) || defaultHistory;
     } catch (error) {
       console.error('Failed to get today history:', error);
       return defaultHistory;
@@ -248,8 +272,8 @@ class FocusStorageService {
       if (this.useDb) {
         await this.db.history.save(history);
       } else {
-        const histories = await this.dailyHistoryStorage.load() || [];
-        const existingIndex = histories.findIndex(h => h.date === history.date);
+        const histories = (await this.dailyHistoryStorage.load()) || [];
+        const existingIndex = histories.findIndex((h) => h.date === history.date);
         if (existingIndex >= 0) {
           histories[existingIndex] = history;
         } else {
@@ -257,7 +281,9 @@ class FocusStorageService {
         }
         const ninetyDaysAgo = new Date();
         ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-        await this.dailyHistoryStorage.save(histories.filter(h => new Date(h.date) >= ninetyDaysAgo));
+        await this.dailyHistoryStorage.save(
+          histories.filter((h) => new Date(h.date) >= ninetyDaysAgo),
+        );
       }
     } catch (error) {
       console.error('Failed to save daily history:', error);
@@ -272,26 +298,35 @@ class FocusStorageService {
       if (this.useDb) {
         daySessions = await this.db.sessions.getByDate(date);
       } else {
-        const sessions = await this.sessionsStorage.load() || [];
+        const sessions = (await this.sessionsStorage.load()) || [];
         const dayStartTime = new Date(`${date}T00:00:00.000Z`).getTime();
         const dayEndTime = new Date(`${date}T23:59:59.999Z`).getTime();
-        daySessions = sessions.filter(session => {
+        daySessions = sessions.filter((session) => {
           const sessionTime = new Date(session.startTime).getTime();
           return sessionTime >= dayStartTime && sessionTime <= dayEndTime;
         });
       }
 
-      const completedSessions = daySessions.filter(s => s.completionStatus === CompletionStatus.COMPLETED);
-      const totalFocusSeconds = daySessions.filter(s => s.type === SessionType.FOCUS).reduce((sum, s) => sum + s.actualDuration, 0);
-      const totalBreakSeconds = daySessions.filter(s => s.type !== SessionType.FOCUS).reduce((sum, s) => sum + s.actualDuration, 0);
+      const completedSessions = daySessions.filter(
+        (s) => s.completionStatus === CompletionStatus.COMPLETED,
+      );
+      const totalFocusSeconds = daySessions
+        .filter((s) => s.type === SessionType.FOCUS)
+        .reduce((sum, s) => sum + s.actualDuration, 0);
+      const totalBreakSeconds = daySessions
+        .filter((s) => s.type !== SessionType.FOCUS)
+        .reduce((sum, s) => sum + s.actualDuration, 0);
 
       let longestStreak = 0;
       let currentStreak = 0;
-      const sortedSessions = [...daySessions].sort((a, b) =>
-        new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+      const sortedSessions = [...daySessions].sort(
+        (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
       );
       for (const session of sortedSessions) {
-        if (session.type === SessionType.FOCUS && session.completionStatus === CompletionStatus.COMPLETED) {
+        if (
+          session.type === SessionType.FOCUS &&
+          session.completionStatus === CompletionStatus.COMPLETED
+        ) {
           currentStreak++;
           longestStreak = Math.max(longestStreak, currentStreak);
         } else if (session.type === SessionType.FOCUS) {
@@ -300,21 +335,30 @@ class FocusStorageService {
       }
 
       const sessionTimes = sortedSessions
-        .map(s => new Date(s.startTime).getTime())
-        .filter(t => !isNaN(t));
+        .map((s) => new Date(s.startTime).getTime())
+        .filter((t) => !isNaN(t));
       const endTimes = sortedSessions
-        .map(s => s.endTime ? new Date(s.endTime).getTime() : null)
+        .map((s) => (s.endTime ? new Date(s.endTime).getTime() : null))
         .filter((t): t is number => t !== null && !isNaN(t));
       const dayStart = sessionTimes.length > 0 ? Math.min(...sessionTimes) : null;
       const dayEnd = endTimes.length > 0 ? Math.max(...endTimes) : null;
 
       const plans: SessionPlan[] = await this.getPlansForDate(date);
       const planIds = plans.map((p: SessionPlan) => p.id);
-      const totalPlanned = plans.reduce((sum: number, p: SessionPlan) => sum + p.totalPlannedDuration, 0);
+      const totalPlanned = plans.reduce(
+        (sum: number, p: SessionPlan) => sum + p.totalPlannedDuration,
+        0,
+      );
       const totalActual = plans.reduce((sum: number, p: SessionPlan) => sum + p.totalElapsed, 0);
-      const totalSegments = plans.reduce((sum: number, p: SessionPlan) => sum + p.segments.length, 0);
-      const completedSegments = plans.reduce((sum: number, p: SessionPlan) =>
-        sum + p.segments.filter(s => s.status === 'completed').length, 0);
+      const totalSegments = plans.reduce(
+        (sum: number, p: SessionPlan) => sum + p.segments.length,
+        0,
+      );
+      const completedSegments = plans.reduce(
+        (sum: number, p: SessionPlan) =>
+          sum + p.segments.filter((s) => s.status === 'completed').length,
+        0,
+      );
 
       const existingHistory = await this.getHistoryByDate(date);
 
@@ -324,8 +368,11 @@ class FocusStorageService {
         totalFocusTime: totalFocusSeconds,
         totalBreakTime: totalBreakSeconds,
         completedSessions: completedSessions.length,
-        interruptedSessions: daySessions.filter(s => s.completionStatus === CompletionStatus.INTERRUPTED).length,
-        skippedSessions: daySessions.filter(s => s.completionStatus === CompletionStatus.SKIPPED).length,
+        interruptedSessions: daySessions.filter(
+          (s) => s.completionStatus === CompletionStatus.INTERRUPTED,
+        ).length,
+        skippedSessions: daySessions.filter((s) => s.completionStatus === CompletionStatus.SKIPPED)
+          .length,
         averageSessionLength: daySessions.length > 0 ? totalFocusSeconds / daySessions.length : 0,
         longestStreak,
         createdAt: existingHistory?.createdAt || new Date(),
@@ -335,7 +382,7 @@ class FocusStorageService {
         sessionPlanIds: planIds,
         totalPlannedTime: totalPlanned,
         totalActualTime: totalActual,
-        completionRate: totalSegments > 0 ? completedSegments / totalSegments : 0
+        completionRate: totalSegments > 0 ? completedSegments / totalSegments : 0,
       };
 
       await this.saveDailyHistory(history);
@@ -350,8 +397,8 @@ class FocusStorageService {
       if (this.useDb) {
         return await this.db.history.getByRange(startDate, endDate);
       }
-      const histories = await this.dailyHistoryStorage.load() || [];
-      return histories.filter(h => h.date >= startDate && h.date <= endDate);
+      const histories = (await this.dailyHistoryStorage.load()) || [];
+      return histories.filter((h) => h.date >= startDate && h.date <= endDate);
     } catch (error) {
       console.error('Failed to get history for period:', error);
       return [];
@@ -363,8 +410,8 @@ class FocusStorageService {
       if (this.useDb) {
         return await this.db.history.getAllDates();
       }
-      const histories = await this.dailyHistoryStorage.load() || [];
-      return histories.map(h => h.date).sort((a, b) => b.localeCompare(a));
+      const histories = (await this.dailyHistoryStorage.load()) || [];
+      return histories.map((h) => h.date).sort((a, b) => b.localeCompare(a));
     } catch (error) {
       console.error('Failed to get history dates:', error);
       return [];
@@ -380,8 +427,8 @@ class FocusStorageService {
         }
         return history;
       }
-      const histories = await this.dailyHistoryStorage.load() || [];
-      return histories.find(h => h.date === date) || null;
+      const histories = (await this.dailyHistoryStorage.load()) || [];
+      return histories.find((h) => h.date === date) || null;
     } catch (error) {
       console.error('Failed to get history by date:', error);
       return null;
@@ -394,15 +441,17 @@ class FocusStorageService {
       if (this.useDb) {
         await this.db.history.clearToday(today);
       } else {
-        const histories = await this.dailyHistoryStorage.load() || [];
-        await this.dailyHistoryStorage.save(histories.filter(h => h.date !== today));
-        const sessions = await this.sessionsStorage.load() || [];
+        const histories = (await this.dailyHistoryStorage.load()) || [];
+        await this.dailyHistoryStorage.save(histories.filter((h) => h.date !== today));
+        const sessions = (await this.sessionsStorage.load()) || [];
         const dayStartTime = new Date(`${today}T00:00:00.000Z`).getTime();
         const dayEndTime = new Date(`${today}T23:59:59.999Z`).getTime();
-        await this.sessionsStorage.save(sessions.filter(session => {
-          const t = new Date(session.startTime).getTime();
-          return !(t >= dayStartTime && t <= dayEndTime);
-        }));
+        await this.sessionsStorage.save(
+          sessions.filter((session) => {
+            const t = new Date(session.startTime).getTime();
+            return !(t >= dayStartTime && t <= dayEndTime);
+          }),
+        );
       }
     } catch (error) {
       console.error('Failed to clear today history:', error);
@@ -429,11 +478,23 @@ class FocusStorageService {
     if (format === 'json') {
       return JSON.stringify(histories, null, 2);
     }
-    const headers = ['date', 'totalFocusTime', 'totalBreakTime', 'completedSessions', 'interruptedSessions', 'skippedSessions'];
-    const rows = histories.map(h => [
-      h.date, h.totalFocusTime, h.totalBreakTime, h.completedSessions, h.interruptedSessions, h.skippedSessions
+    const headers = [
+      'date',
+      'totalFocusTime',
+      'totalBreakTime',
+      'completedSessions',
+      'interruptedSessions',
+      'skippedSessions',
+    ];
+    const rows = histories.map((h) => [
+      h.date,
+      h.totalFocusTime,
+      h.totalBreakTime,
+      h.completedSessions,
+      h.interruptedSessions,
+      h.skippedSessions,
     ]);
-    return [headers, ...rows].map(row => row.join(',')).join('\n');
+    return [headers, ...rows].map((row) => row.join(',')).join('\n');
   }
 
   // ============================================
@@ -445,15 +506,15 @@ class FocusStorageService {
       if (this.useDb) {
         await this.db.plans.save(plan);
       } else {
-        const plans = await this.plansStorage.load() || [];
-        const existingIndex = plans.findIndex(p => p.id === plan.id);
+        const plans = (await this.plansStorage.load()) || [];
+        const existingIndex = plans.findIndex((p) => p.id === plan.id);
         if (existingIndex >= 0) {
           plans[existingIndex] = plan;
         } else {
           plans.push(plan);
         }
         const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
-        await this.plansStorage.save(plans.filter(p => p.createdAt >= ninetyDaysAgo));
+        await this.plansStorage.save(plans.filter((p) => p.createdAt >= ninetyDaysAgo));
       }
     } catch (error) {
       console.error('Failed to save session plan:', error);
@@ -466,8 +527,8 @@ class FocusStorageService {
       if (this.useDb) {
         return await this.db.plans.get(id);
       }
-      const plans = await this.plansStorage.load() || [];
-      return plans.find(p => p.id === id) || null;
+      const plans = (await this.plansStorage.load()) || [];
+      return plans.find((p) => p.id === id) || null;
     } catch (error) {
       console.error('Failed to get session plan:', error);
       return null;
@@ -479,10 +540,10 @@ class FocusStorageService {
       if (this.useDb) {
         return await this.db.plans.getByDate(date);
       }
-      const plans = await this.plansStorage.load() || [];
+      const plans = (await this.plansStorage.load()) || [];
       const dayStart = new Date(`${date}T00:00:00`).getTime();
       const dayEnd = new Date(`${date}T23:59:59.999`).getTime();
-      return plans.filter(p => p.createdAt >= dayStart && p.createdAt <= dayEnd);
+      return plans.filter((p) => p.createdAt >= dayStart && p.createdAt <= dayEnd);
     } catch (error) {
       console.error('Failed to get plans for date:', error);
       return [];
@@ -494,10 +555,10 @@ class FocusStorageService {
       if (this.useDb) {
         return await this.db.plans.getByDateRange(startDate, endDate);
       }
-      const plans = await this.plansStorage.load() || [];
+      const plans = (await this.plansStorage.load()) || [];
       const start = new Date(`${startDate}T00:00:00`).getTime();
       const end = new Date(`${endDate}T23:59:59.999`).getTime();
-      return plans.filter(p => p.createdAt >= start && p.createdAt <= end);
+      return plans.filter((p) => p.createdAt >= start && p.createdAt <= end);
     } catch (error) {
       console.error('Failed to get plans for period:', error);
       return [];
@@ -509,8 +570,8 @@ class FocusStorageService {
       if (this.useDb) {
         return await this.db.plans.update(id, updates);
       }
-      const plans = await this.plansStorage.load() || [];
-      const index = plans.findIndex(p => p.id === id);
+      const plans = (await this.plansStorage.load()) || [];
+      const index = plans.findIndex((p) => p.id === id);
       if (index === -1) return null;
       plans[index] = { ...plans[index], ...updates, lastUpdated: Date.now() };
       await this.plansStorage.save(plans);
@@ -538,7 +599,7 @@ class FocusStorageService {
       const end = getTodayDateString();
       const start = toDateStr(Date.now() - 90 * 24 * 60 * 60 * 1000);
       const plans = await this.getPlansForPeriod(start, end);
-      const orphaned = plans.filter(p => p.status === 'active');
+      const orphaned = plans.filter((p) => p.status === 'active');
       if (orphaned.length === 0) return [];
 
       const affectedDates = new Set<string>();
@@ -551,7 +612,7 @@ class FocusStorageService {
           if (idx === segIdx && (seg.status === 'in_progress' || seg.status === 'pending')) {
             const elapsed = seg.actualStartTime
               ? Math.max(0, Math.round((interruptedAt - seg.actualStartTime) / 1000))
-              : (seg.elapsedAtLastUpdate || 0);
+              : seg.elapsedAtLastUpdate || 0;
             return {
               ...seg,
               status: 'interrupted' as SegmentStatus,
@@ -578,11 +639,13 @@ class FocusStorageService {
       }
 
       for (const date of affectedDates) {
-        await this.updateDailyStats(date).catch(err =>
-          console.error('Failed to update stats after reconcile:', err));
+        await this.updateDailyStats(date).catch((err) =>
+          console.error('Failed to update stats after reconcile:', err),
+        );
       }
-      await this.recalculateLifetimeStats().catch(err =>
-        console.error('Failed to recalculate stats after reconcile:', err));
+      await this.recalculateLifetimeStats().catch((err) =>
+        console.error('Failed to recalculate stats after reconcile:', err),
+      );
 
       return orphaned;
     } catch (error) {
@@ -643,11 +706,11 @@ class FocusStorageService {
         }
       }
     } else {
-      histories = await this.dailyHistoryStorage.load() || [];
+      histories = (await this.dailyHistoryStorage.load()) || [];
     }
 
     const now = Date.now();
-    const activeDays = histories.filter(h => h.sessions && h.sessions.length > 0);
+    const activeDays = histories.filter((h) => h.sessions && h.sessions.length > 0);
 
     const totalSessions = activeDays.reduce((sum, h) => sum + (h.sessions?.length || 0), 0);
     const totalFocusTime = activeDays.reduce((sum, h) => sum + (h.totalFocusTime || 0), 0);
@@ -681,8 +744,8 @@ class FocusStorageService {
     }
 
     const sortedDates = activeDays
-      .filter(h => h.completedSessions > 0)
-      .map(h => h.date)
+      .filter((h) => h.completedSessions > 0)
+      .map((h) => h.date)
       .sort();
     let currentDayStreak = 0;
     let longestDayStreak = 0;
@@ -702,7 +765,7 @@ class FocusStorageService {
     }
 
     currentDayStreak = 0;
-    let checkDate = new Date(today);
+    const checkDate = new Date(today);
     while (true) {
       const dateStr = checkDate.toISOString().split('T')[0];
       if (sortedDates.includes(dateStr)) {
@@ -716,10 +779,13 @@ class FocusStorageService {
     const last7 = this.computePeriodSummary(histories, 7);
     const last30 = this.computePeriodSummary(histories, 30);
 
-    const focusSessions = totalSessions > 0
-      ? activeDays.reduce((sum, h) =>
-          sum + (h.sessions?.filter(s => s.type === SessionType.FOCUS).length || 0), 0)
-      : 0;
+    const focusSessions =
+      totalSessions > 0
+        ? activeDays.reduce(
+            (sum, h) => sum + (h.sessions?.filter((s) => s.type === SessionType.FOCUS).length || 0),
+            0,
+          )
+        : 0;
     const completionRate = focusSessions > 0 ? totalCompleted / focusSessions : 0;
 
     const stats: LifetimeStats = {
@@ -732,13 +798,14 @@ class FocusStorageService {
       averageDayEndTime: avgEndTime,
       averageDailyFocusTime: activeDays.length > 0 ? totalFocusTime / activeDays.length : 0,
       averageDailySessionCount: activeDays.length > 0 ? totalSessions / activeDays.length : 0,
-      averageSessionDuration: totalSessions > 0 ? (totalFocusTime + totalBreakTime) / totalSessions : 0,
+      averageSessionDuration:
+        totalSessions > 0 ? (totalFocusTime + totalBreakTime) / totalSessions : 0,
       currentDayStreak,
       longestDayStreak,
       overallCompletionRate: completionRate,
       totalInterruptedSessions: totalInterrupted,
       last7Days: last7,
-      last30Days: last30
+      last30Days: last30,
     };
 
     await this.saveLifetimeStats(stats);
@@ -749,37 +816,51 @@ class FocusStorageService {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
     const cutoffStr = cutoff.toISOString().split('T')[0];
-    const period = histories.filter(h => h.date >= cutoffStr);
-    const active = period.filter(h => h.sessions && h.sessions.length > 0);
+    const period = histories.filter((h) => h.date >= cutoffStr);
+    const active = period.filter((h) => h.sessions && h.sessions.length > 0);
 
     const totalFocusTime = active.reduce((sum, h) => sum + (h.totalFocusTime || 0), 0);
     const totalSessions = active.reduce((sum, h) => sum + (h.sessions?.length || 0), 0);
     const totalCompleted = active.reduce((sum, h) => sum + (h.completedSessions || 0), 0);
-    const focusSessions = active.reduce((sum, h) =>
-      sum + (h.sessions?.filter(s => s.type === SessionType.FOCUS).length || 0), 0);
+    const focusSessions = active.reduce(
+      (sum, h) => sum + (h.sessions?.filter((s) => s.type === SessionType.FOCUS).length || 0),
+      0,
+    );
 
     return {
       totalFocusTime,
       totalSessions,
       averageDailyFocusTime: active.length > 0 ? totalFocusTime / active.length : 0,
       completionRate: focusSessions > 0 ? totalCompleted / focusSessions : 0,
-      daysActive: active.length
+      daysActive: active.length,
     };
   }
 
   private createDefaultLifetimeStats(): LifetimeStats {
     const emptyPeriod: PeriodSummary = {
-      totalFocusTime: 0, totalSessions: 0, averageDailyFocusTime: 0,
-      completionRate: 0, daysActive: 0
+      totalFocusTime: 0,
+      totalSessions: 0,
+      averageDailyFocusTime: 0,
+      completionRate: 0,
+      daysActive: 0,
     };
     return {
-      lastUpdated: 0, totalDaysActive: 0, totalSessions: 0,
-      totalFocusTime: 0, totalBreakTime: 0,
-      averageDayStartTime: '--:--', averageDayEndTime: '--:--',
-      averageDailyFocusTime: 0, averageDailySessionCount: 0, averageSessionDuration: 0,
-      currentDayStreak: 0, longestDayStreak: 0,
-      overallCompletionRate: 0, totalInterruptedSessions: 0,
-      last7Days: emptyPeriod, last30Days: emptyPeriod
+      lastUpdated: 0,
+      totalDaysActive: 0,
+      totalSessions: 0,
+      totalFocusTime: 0,
+      totalBreakTime: 0,
+      averageDayStartTime: '--:--',
+      averageDayEndTime: '--:--',
+      averageDailyFocusTime: 0,
+      averageDailySessionCount: 0,
+      averageSessionDuration: 0,
+      currentDayStreak: 0,
+      longestDayStreak: 0,
+      overallCompletionRate: 0,
+      totalInterruptedSessions: 0,
+      last7Days: emptyPeriod,
+      last30Days: emptyPeriod,
     };
   }
 
@@ -792,13 +873,13 @@ class FocusStorageService {
       ...feedback,
       id: crypto.randomUUID(),
       timestamp: new Date(),
-      status: 'open'
+      status: 'open',
     };
     try {
       if (this.useDb) {
         await this.db.feedback.save(newFeedback);
       } else {
-        const feedbacks = await this.feedbackStorage.load() || [];
+        const feedbacks = (await this.feedbackStorage.load()) || [];
         feedbacks.push(newFeedback);
         await this.feedbackStorage.save(feedbacks);
       }
@@ -818,11 +899,11 @@ class FocusStorageService {
       if (this.useDb) {
         return await this.db.feedback.getAll(filters);
       }
-      const feedbacks = await this.feedbackStorage.load() || [];
-      let filtered = feedbacks.map(f => ({ ...f, timestamp: new Date(f.timestamp) }));
-      if (filters?.type) filtered = filtered.filter(f => f.type === filters.type);
-      if (filters?.status) filtered = filtered.filter(f => f.status === filters.status);
-      if (filters?.severity) filtered = filtered.filter(f => f.severity === filters.severity);
+      const feedbacks = (await this.feedbackStorage.load()) || [];
+      let filtered = feedbacks.map((f) => ({ ...f, timestamp: new Date(f.timestamp) }));
+      if (filters?.type) filtered = filtered.filter((f) => f.type === filters.type);
+      if (filters?.status) filtered = filtered.filter((f) => f.status === filters.status);
+      if (filters?.severity) filtered = filtered.filter((f) => f.severity === filters.severity);
       filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       if (filters?.limit) filtered = filtered.slice(0, filters.limit);
       return filtered;
@@ -837,8 +918,8 @@ class FocusStorageService {
       if (this.useDb) {
         await this.db.feedback.update(id, updates);
       } else {
-        const feedbacks = await this.feedbackStorage.load() || [];
-        const index = feedbacks.findIndex(f => f.id === id);
+        const feedbacks = (await this.feedbackStorage.load()) || [];
+        const index = feedbacks.findIndex((f) => f.id === id);
         if (index >= 0) {
           feedbacks[index] = { ...feedbacks[index], ...updates };
           await this.feedbackStorage.save(feedbacks);
@@ -855,8 +936,8 @@ class FocusStorageService {
       if (this.useDb) {
         await this.db.feedback.delete(id);
       } else {
-        const feedbacks = await this.feedbackStorage.load() || [];
-        await this.feedbackStorage.save(feedbacks.filter(f => f.id !== id));
+        const feedbacks = (await this.feedbackStorage.load()) || [];
+        await this.feedbackStorage.save(feedbacks.filter((f) => f.id !== id));
       }
     } catch (error) {
       console.error('Failed to delete feedback:', error);
@@ -872,28 +953,31 @@ class FocusStorageService {
     } catch (error) {
       console.error('Failed to get feedback stats:', error);
     }
-    const feedbacks = await this.feedbackStorage.load() || [];
+    const feedbacks = (await this.feedbackStorage.load()) || [];
     return {
       total: feedbacks.length,
-      open: feedbacks.filter(f => f.status === 'open').length,
-      resolved: feedbacks.filter(f => f.status === 'resolved').length,
-      inProgress: feedbacks.filter(f => f.status === 'in-progress').length,
+      open: feedbacks.filter((f) => f.status === 'open').length,
+      resolved: feedbacks.filter((f) => f.status === 'resolved').length,
+      inProgress: feedbacks.filter((f) => f.status === 'in-progress').length,
       byType: {
-        bug: feedbacks.filter(f => f.type === 'bug').length,
-        'feature-request': feedbacks.filter(f => f.type === 'feature-request').length,
-        issue: feedbacks.filter(f => f.type === 'issue').length,
-        general: feedbacks.filter(f => f.type === 'general').length
+        bug: feedbacks.filter((f) => f.type === 'bug').length,
+        'feature-request': feedbacks.filter((f) => f.type === 'feature-request').length,
+        issue: feedbacks.filter((f) => f.type === 'issue').length,
+        general: feedbacks.filter((f) => f.type === 'general').length,
       },
       bySeverity: {
-        low: feedbacks.filter(f => f.severity === 'low').length,
-        medium: feedbacks.filter(f => f.severity === 'medium').length,
-        high: feedbacks.filter(f => f.severity === 'high').length,
-        critical: feedbacks.filter(f => f.severity === 'critical').length
-      }
+        low: feedbacks.filter((f) => f.severity === 'low').length,
+        medium: feedbacks.filter((f) => f.severity === 'medium').length,
+        high: feedbacks.filter((f) => f.severity === 'high').length,
+        critical: feedbacks.filter((f) => f.severity === 'critical').length,
+      },
     };
   }
 
-  async updateFeedbackStatus(id: string, status: 'open' | 'in-progress' | 'resolved' | 'dismissed'): Promise<void> {
+  async updateFeedbackStatus(
+    id: string,
+    status: 'open' | 'in-progress' | 'resolved' | 'dismissed',
+  ): Promise<void> {
     return this.updateFeedback(id, { status });
   }
 
@@ -902,12 +986,27 @@ class FocusStorageService {
     if (format === 'json') {
       return JSON.stringify(feedbacks, null, 2);
     }
-    const headers = ['id', 'type', 'title', 'description', 'severity', 'category', 'timestamp', 'status'];
-    const rows = feedbacks.map(f => [
-      f.id, f.type, f.title, f.description, f.severity, f.category,
-      new Date(f.timestamp).toISOString(), f.status
+    const headers = [
+      'id',
+      'type',
+      'title',
+      'description',
+      'severity',
+      'category',
+      'timestamp',
+      'status',
+    ];
+    const rows = feedbacks.map((f) => [
+      f.id,
+      f.type,
+      f.title,
+      f.description,
+      f.severity,
+      f.category,
+      new Date(f.timestamp).toISOString(),
+      f.status,
     ]);
-    return [headers, ...rows].map(row => row.join(',')).join('\n');
+    return [headers, ...rows].map((row) => row.join(',')).join('\n');
   }
 
   // ============================================
@@ -919,15 +1018,15 @@ class FocusStorageService {
       if (this.useDb) {
         return await this.db.challenges.getAll();
       }
-      const challenges = await this.challengeStorage.load() || [];
-      return challenges.map(c => ({
+      const challenges = (await this.challengeStorage.load()) || [];
+      return challenges.map((c) => ({
         ...c,
         createdAt: new Date(c.createdAt),
         updatedAt: new Date(c.updatedAt),
-        days: c.days.map(d => ({
+        days: c.days.map((d) => ({
           ...d,
-          markedAt: d.markedAt ? new Date(d.markedAt) : undefined
-        }))
+          markedAt: d.markedAt ? new Date(d.markedAt) : undefined,
+        })),
       }));
     } catch (error) {
       console.error('Failed to get challenges:', error);
@@ -937,7 +1036,7 @@ class FocusStorageService {
 
   async getActiveChallenges(): Promise<Challenge[]> {
     const challenges = await this.getChallenges();
-    return challenges.filter(c => c.status === ChallengeStatus.ACTIVE);
+    return challenges.filter((c) => c.status === ChallengeStatus.ACTIVE);
   }
 
   async getChallengeById(id: string): Promise<Challenge | null> {
@@ -949,10 +1048,21 @@ class FocusStorageService {
       console.error('Failed to get challenge by id:', error);
     }
     const challenges = await this.getChallenges();
-    return challenges.find(c => c.id === id) || null;
+    return challenges.find((c) => c.id === id) || null;
   }
 
-  async createChallenge(challenge: Omit<Challenge, 'id' | 'createdAt' | 'updatedAt' | 'completedDays' | 'failedDays' | 'currentStreak' | 'longestStreak'>): Promise<Challenge> {
+  async createChallenge(
+    challenge: Omit<
+      Challenge,
+      | 'id'
+      | 'createdAt'
+      | 'updatedAt'
+      | 'completedDays'
+      | 'failedDays'
+      | 'currentStreak'
+      | 'longestStreak'
+    >,
+  ): Promise<Challenge> {
     const newChallenge: Challenge = {
       ...challenge,
       id: crypto.randomUUID(),
@@ -961,7 +1071,7 @@ class FocusStorageService {
       completedDays: 0,
       failedDays: 0,
       currentStreak: 0,
-      longestStreak: 0
+      longestStreak: 0,
     };
 
     try {
@@ -982,7 +1092,7 @@ class FocusStorageService {
 
   async updateChallenge(id: string, updates: Partial<Challenge>): Promise<Challenge | null> {
     const challenges = await this.getChallenges();
-    const index = challenges.findIndex(c => c.id === id);
+    const index = challenges.findIndex((c) => c.id === id);
     if (index === -1) return null;
 
     challenges[index] = { ...challenges[index], ...updates, updatedAt: new Date() };
@@ -1006,20 +1116,20 @@ class FocusStorageService {
     challengeId: string,
     date: string,
     status: ChallengeDayStatus,
-    note?: string
+    note?: string,
   ): Promise<Challenge | null> {
     const challenges = await this.getChallenges();
-    const challenge = challenges.find(c => c.id === challengeId);
+    const challenge = challenges.find((c) => c.id === challengeId);
     if (!challenge) return null;
 
-    const dayIndex = challenge.days.findIndex(d => d.date === date);
+    const dayIndex = challenge.days.findIndex((d) => d.date === date);
     if (dayIndex === -1) return null;
 
     challenge.days[dayIndex] = {
       ...challenge.days[dayIndex],
       status,
       note,
-      markedAt: new Date()
+      markedAt: new Date(),
     };
 
     challenge.updatedAt = new Date();
@@ -1027,7 +1137,7 @@ class FocusStorageService {
 
     const today = new Date().toISOString().split('T')[0];
     if (challenge.endDate < today) {
-      const allMarked = challenge.days.every(d => d.status !== ChallengeDayStatus.PENDING);
+      const allMarked = challenge.days.every((d) => d.status !== ChallengeDayStatus.PENDING);
       if (allMarked) {
         const successRate = challenge.completedDays / challenge.days.length;
         challenge.status = successRate >= 0.8 ? ChallengeStatus.COMPLETED : ChallengeStatus.FAILED;
@@ -1054,7 +1164,7 @@ class FocusStorageService {
         await this.db.challenges.delete(id);
       } else {
         const challenges = await this.getChallenges();
-        await this.challengeStorage.save(challenges.filter(c => c.id !== id));
+        await this.challengeStorage.save(challenges.filter((c) => c.id !== id));
       }
     } catch (error) {
       console.error('Failed to delete challenge:', error);
@@ -1063,8 +1173,8 @@ class FocusStorageService {
   }
 
   private recalculateChallengeStats(challenge: Challenge): void {
-    const completedDays = challenge.days.filter(d => d.status === ChallengeDayStatus.COMPLETED);
-    const failedDays = challenge.days.filter(d => d.status === ChallengeDayStatus.FAILED);
+    const completedDays = challenge.days.filter((d) => d.status === ChallengeDayStatus.COMPLETED);
+    const failedDays = challenge.days.filter((d) => d.status === ChallengeDayStatus.FAILED);
     challenge.completedDays = completedDays.length;
     challenge.failedDays = failedDays.length;
 

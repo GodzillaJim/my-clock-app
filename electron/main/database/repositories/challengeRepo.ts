@@ -15,7 +15,7 @@ function fromDbChallenge(row: any, dayRows: any[]): any {
     failedDays: row.failed_days,
     currentStreak: row.current_streak,
     longestStreak: row.longest_streak,
-    days: dayRows.map(d => ({
+    days: dayRows.map((d) => ({
       date: d.date,
       status: d.status,
       note: d.note,
@@ -26,18 +26,26 @@ function fromDbChallenge(row: any, dayRows: any[]): any {
 
 export function saveWithDays(db: Database.Database, challenge: any): void {
   const saveTx = db.transaction(() => {
-    db.prepare(`
+    db.prepare(
+      `
       INSERT OR REPLACE INTO challenges (id, name, description, start_date, end_date, duration_days,
         status, created_at, updated_at, completed_days, failed_days, current_streak, longest_streak)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      challenge.id, challenge.name, challenge.description || null,
-      challenge.startDate, challenge.endDate, challenge.durationDays,
+    `,
+    ).run(
+      challenge.id,
+      challenge.name,
+      challenge.description || null,
+      challenge.startDate,
+      challenge.endDate,
+      challenge.durationDays,
       challenge.status,
       new Date(challenge.createdAt).toISOString(),
       new Date(challenge.updatedAt || new Date()).toISOString(),
-      challenge.completedDays || 0, challenge.failedDays || 0,
-      challenge.currentStreak || 0, challenge.longestStreak || 0
+      challenge.completedDays || 0,
+      challenge.failedDays || 0,
+      challenge.currentStreak || 0,
+      challenge.longestStreak || 0,
     );
 
     // Delete existing days and re-insert
@@ -50,8 +58,11 @@ export function saveWithDays(db: Database.Database, challenge: any): void {
 
     for (const d of challenge.days || []) {
       insertDay.run(
-        challenge.id, d.date, d.status || 'pending', d.note || null,
-        d.markedAt ? new Date(d.markedAt).toISOString() : null
+        challenge.id,
+        d.date,
+        d.status || 'pending',
+        d.note || null,
+        d.markedAt ? new Date(d.markedAt).toISOString() : null,
       );
     }
   });
@@ -61,9 +72,9 @@ export function saveWithDays(db: Database.Database, challenge: any): void {
 export function getAll(db: Database.Database): any[] {
   const challengeRows = db.prepare('SELECT * FROM challenges ORDER BY created_at DESC').all();
   return challengeRows.map((row: any) => {
-    const dayRows = db.prepare(
-      'SELECT * FROM challenge_days WHERE challenge_id = ? ORDER BY date ASC'
-    ).all(row.id);
+    const dayRows = db
+      .prepare('SELECT * FROM challenge_days WHERE challenge_id = ? ORDER BY date ASC')
+      .all(row.id);
     return fromDbChallenge(row, dayRows);
   });
 }
@@ -71,9 +82,9 @@ export function getAll(db: Database.Database): any[] {
 export function getById(db: Database.Database, id: string): any | null {
   const row = db.prepare('SELECT * FROM challenges WHERE id = ?').get(id) as any;
   if (!row) return null;
-  const dayRows = db.prepare(
-    'SELECT * FROM challenge_days WHERE challenge_id = ? ORDER BY date ASC'
-  ).all(id);
+  const dayRows = db
+    .prepare('SELECT * FROM challenge_days WHERE challenge_id = ? ORDER BY date ASC')
+    .all(id);
   return fromDbChallenge(row, dayRows);
 }
 
@@ -84,9 +95,17 @@ export function deleteById(db: Database.Database, id: string): void {
   })();
 }
 
-export function markDay(db: Database.Database, challengeId: string, date: string, status: string, note?: string): void {
-  db.prepare(`
+export function markDay(
+  db: Database.Database,
+  challengeId: string,
+  date: string,
+  status: string,
+  note?: string,
+): void {
+  db.prepare(
+    `
     INSERT OR REPLACE INTO challenge_days (challenge_id, date, status, note, marked_at)
     VALUES (?, ?, ?, ?, ?)
-  `).run(challengeId, date, status, note || null, new Date().toISOString());
+  `,
+  ).run(challengeId, date, status, note || null, new Date().toISOString());
 }

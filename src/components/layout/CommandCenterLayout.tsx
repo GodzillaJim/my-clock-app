@@ -1,14 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
-  IconButton,
-  Tooltip,
-  Button,
-  Chip,
-  Divider,
-} from '@mui/material';
+import { Box, Typography, Paper, IconButton, Tooltip, Button, Chip, Divider } from '@mui/material';
 import {
   PlayArrow,
   Pause,
@@ -21,7 +12,13 @@ import {
   AccessTime,
 } from '@mui/icons-material';
 import { CircularTimerRing } from '../timer/CircularTimerRing';
-import { AppSettings, SessionRecord, SessionType, CompletionStatus, SessionPlan } from '@/features/timer/types';
+import {
+  AppSettings,
+  SessionRecord,
+  SessionType,
+  CompletionStatus,
+  SessionPlan,
+} from '@/features/timer/types';
 import { focusStorage } from '@/services/focusStorage';
 import { useTickSound } from '@/features/timer/hooks/useTickSound';
 import { useTimer } from 'react-timer-hook';
@@ -37,7 +34,7 @@ interface SimpleSession {
 const generateSessions = (
   totalMinutes: number,
   settings: AppSettings,
-  planStartTime: Date = new Date()
+  planStartTime: Date = new Date(),
 ): SimpleSession[] => {
   const totalSeconds = totalMinutes * 60;
   const sessions: SimpleSession[] = [];
@@ -130,7 +127,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
     try {
       await focusStorage.addSession(record);
     } catch (error) {
-      console.error("Failed to save session record:", error);
+      console.error('Failed to save session record:', error);
     }
   };
 
@@ -160,7 +157,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
       };
 
       focusStorage.addSession(record).catch((error) => {
-        console.error("Failed to save session record:", error);
+        console.error('Failed to save session record:', error);
       });
     }
 
@@ -252,7 +249,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
   // continuing the first (partially-elapsed) segment with the time that was left.
   const resumeFromPlan = (oldPlan: SessionPlan) => {
     const remaining = oldPlan.segments.filter(
-      s => s.status === 'pending' || s.status === 'in_progress' || s.status === 'interrupted'
+      (s) => s.status === 'pending' || s.status === 'in_progress' || s.status === 'interrupted',
     );
     if (remaining.length === 0) return;
 
@@ -266,7 +263,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
       const endTime = new Date(currentTime + dur * 1000);
       currentTime = endTime.getTime();
       return {
-        type: seg.type === SessionType.FOCUS ? 'focus' as const : 'break' as const,
+        type: seg.type === SessionType.FOCUS ? ('focus' as const) : ('break' as const),
         duration: dur,
         startTime,
         endTime,
@@ -283,22 +280,29 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
     // Finalize the old plan so it is no longer flagged as resumable. Its
     // remaining segments are carried into this run; preserve any elapsed time.
     const nowTs = now.getTime();
-    const finalizedSegments = oldPlan.segments.map(s => {
+    const finalizedSegments = oldPlan.segments.map((s) => {
       if (s.status === 'pending' || s.status === 'in_progress' || s.status === 'interrupted') {
         const elapsed = Math.max(s.elapsedAtLastUpdate || 0, s.actualDuration || 0);
-        return { ...s, status: 'skipped', actualEndTime: s.actualEndTime ?? nowTs, actualDuration: elapsed };
+        return {
+          ...s,
+          status: 'skipped',
+          actualEndTime: s.actualEndTime ?? nowTs,
+          actualDuration: elapsed,
+        };
       }
       return s;
     });
-    focusStorage.saveSessionPlan({
-      ...oldPlan,
-      segments: finalizedSegments,
-      status: 'interrupted',
-      interruptedAt: nowTs,
-      actualEndTime: nowTs,
-      totalElapsed: finalizedSegments.reduce((sum, s) => sum + (s.actualDuration || 0), 0),
-      lastUpdated: nowTs,
-    } as SessionPlan).catch(err => console.error('Failed to finalize resumed plan:', err));
+    focusStorage
+      .saveSessionPlan({
+        ...oldPlan,
+        segments: finalizedSegments,
+        status: 'interrupted',
+        interruptedAt: nowTs,
+        actualEndTime: nowTs,
+        totalElapsed: finalizedSegments.reduce((sum, s) => sum + (s.actualDuration || 0), 0),
+        lastUpdated: nowTs,
+      } as SessionPlan)
+      .catch((err) => console.error('Failed to finalize resumed plan:', err));
   };
 
   // Auto-trigger resume when a resumePlan prop is provided.
@@ -398,24 +402,13 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
           <Typography variant="h4" sx={{ fontWeight: 500, mb: 2 }}>
             Session Complete!
           </Typography>
-          <Typography
-            variant="body1"
-            sx={{ color: 'text.secondary', mb: 2, maxWidth: 400 }}
-          >
+          <Typography variant="body1" sx={{ color: 'text.secondary', mb: 2, maxWidth: 400 }}>
             Great work! You've successfully completed your focus session.
           </Typography>
-          <Typography
-            variant="h6"
-            sx={{ color: 'primary.main', mb: 4 }}
-          >
+          <Typography variant="h6" sx={{ color: 'primary.main', mb: 4 }}>
             {todayStats.completed} sessions completed today
           </Typography>
-          <Button
-            variant="contained"
-            size="large"
-            onClick={resetToIdle}
-            sx={{ px: 4, py: 1.5 }}
-          >
+          <Button variant="contained" size="large" onClick={resetToIdle} sx={{ px: 4, py: 1.5 }}>
             Start New Session
           </Button>
         </Box>
@@ -559,7 +552,10 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     py: 1,
-                    borderBottom: index < recentSessions.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                    borderBottom:
+                      index < recentSessions.length - 1
+                        ? '1px solid rgba(255,255,255,0.05)'
+                        : 'none',
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -568,10 +564,13 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
                         width: 8,
                         height: 8,
                         borderRadius: '50%',
-                        backgroundColor: session.type === 'focus' ? 'primary.main' : 'secondary.main',
+                        backgroundColor:
+                          session.type === 'focus' ? 'primary.main' : 'secondary.main',
                       }}
                     />
-                    <Typography variant="body2">{session.type === 'focus' ? 'Focus' : 'Break'}</Typography>
+                    <Typography variant="body2">
+                      {session.type === 'focus' ? 'Focus' : 'Break'}
+                    </Typography>
                   </Box>
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                     {Math.round(session.plannedDuration / 60)}m
@@ -648,7 +647,11 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
           </Box>
         )}
 
-        <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255, 255, 255, 0.08)', mx: 2 }} />
+        <Divider
+          orientation="vertical"
+          flexItem
+          sx={{ borderColor: 'rgba(255, 255, 255, 0.08)', mx: 2 }}
+        />
 
         {/* Main Controls */}
         {!isActive && (

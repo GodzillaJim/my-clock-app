@@ -24,8 +24,7 @@ import {
   Card,
   CardContent,
   Chip,
-  IconButton,
-  Stack
+  Stack,
 } from '@mui/material';
 import {
   Settings as SettingsIcon,
@@ -34,12 +33,9 @@ import {
   Palette,
   Storage,
   Add,
-  Remove
+  Remove,
 } from '@mui/icons-material';
-import {
-  AppSettings,
-  DEFAULT_SETTINGS
-} from '@/features/timer/types';
+import { AppSettings, DEFAULT_SETTINGS } from '@/features/timer/types';
 import { focusStorage } from '@/services/focusStorage';
 import { notificationService } from '@/services/notificationService';
 import { SOUND_OPTIONS } from '@/services/sounds';
@@ -66,11 +62,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other })
     aria-labelledby={`settings-tab-${index}`}
     {...other}
   >
-    {value === index && (
-      <Box sx={{ p: 3 }}>
-        {children}
-      </Box>
-    )}
+    {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
   </div>
 );
 
@@ -79,11 +71,12 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
   onClose,
   settings,
   onSettingsChange,
-  onOpenFeedbackManager
+  onOpenFeedbackManager,
 }) => {
   const [localSettings, setLocalSettings] = useState<AppSettings>(settings);
   const [activeTab, setActiveTab] = useState(0);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [notificationPermission, setNotificationPermission] =
+    useState<NotificationPermission>('default');
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -99,12 +92,9 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
     }
   }, [open, settings]);
 
-  const handleSettingChange = <K extends keyof AppSettings>(
-    key: K,
-    value: AppSettings[K]
-  ) => {
+  const handleSettingChange = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     console.log('Setting change:', key, 'to:', value);
-    setLocalSettings(prev => {
+    setLocalSettings((prev) => {
       const newSettings = { ...prev, [key]: value };
       console.log('New local settings:', newSettings);
       return newSettings;
@@ -114,10 +104,10 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
 
   const handleSave = async () => {
     if (isSaving) return; // Prevent double-clicks
-    
+
     setIsSaving(true);
     setSaveError(null);
-    
+
     try {
       console.log('Saving settings with presets:', localSettings.quickPresets);
       const appState = await focusStorage.getAppState();
@@ -127,7 +117,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
       onSettingsChange(localSettings);
       setIsDirty(false);
       console.log('Settings saved successfully');
-      
+
       // Show success state briefly before closing
       setTimeout(() => {
         onClose();
@@ -153,14 +143,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
   };
 
   const handlePresetRemove = (value: number) => {
-    const newPresets = localSettings.quickPresets.filter(preset => preset !== value);
-    handleSettingChange('quickPresets', newPresets);
-  };
-
-  const handlePresetEdit = (oldValue: number, newValue: number) => {
-    const newPresets = localSettings.quickPresets
-      .map(preset => preset === oldValue ? newValue : preset)
-      .sort((a, b) => a - b);
+    const newPresets = localSettings.quickPresets.filter((preset) => preset !== value);
     handleSettingChange('quickPresets', newPresets);
   };
 
@@ -180,7 +163,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
       <Typography variant="h6" gutterBottom>
         Session Duration
       </Typography>
-      
+
       <Grid container spacing={3}>
         <Grid item xs={12}>
           <Card>
@@ -199,7 +182,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
                     { value: 25, label: '25' },
                     { value: 60, label: '60' },
                     { value: 120, label: '120' },
-                    { value: 240, label: '240' }
+                    { value: 240, label: '240' },
                   ]}
                   valueLabelDisplay="auto"
                   valueLabelFormat={(value) => `${value}m`}
@@ -207,12 +190,12 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
                     '& .MuiSlider-markLabel': {
                       fontSize: '0.75rem',
                       transform: 'translateX(-50%)',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
                     },
                     '& .MuiSlider-mark': {
                       height: 8,
-                      width: 2
-                    }
+                      width: 2,
+                    },
                   }}
                 />
               </Box>
@@ -221,7 +204,9 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
                   size="small"
                   type="number"
                   value={localSettings.focusDuration}
-                  onChange={(e) => handleSettingChange('focusDuration', parseInt(e.target.value) || 25)}
+                  onChange={(e) =>
+                    handleSettingChange('focusDuration', parseInt(e.target.value) || 25)
+                  }
                   inputProps={{ min: 1, max: 240 }}
                   sx={{ width: 100 }}
                   label="Minutes"
@@ -248,7 +233,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
                 step={1}
                 marks={[
                   { value: 5, label: '5m' },
-                  { value: 15, label: '15m' }
+                  { value: 15, label: '15m' },
                 ]}
                 valueLabelDisplay="auto"
                 valueLabelFormat={(value) => `${value}m`}
@@ -257,7 +242,9 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
                 size="small"
                 type="number"
                 value={localSettings.shortBreakDuration}
-                onChange={(e) => handleSettingChange('shortBreakDuration', parseInt(e.target.value) || 5)}
+                onChange={(e) =>
+                  handleSettingChange('shortBreakDuration', parseInt(e.target.value) || 5)
+                }
                 inputProps={{ min: 1, max: 30 }}
                 sx={{ mt: 1 }}
                 fullWidth
@@ -277,7 +264,9 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
         </Typography>
         <Select
           value={localSettings.resumeStrategy || 'elapsed'}
-          onChange={(e) => handleSettingChange('resumeStrategy', e.target.value as 'elapsed' | 'pause')}
+          onChange={(e) =>
+            handleSettingChange('resumeStrategy', e.target.value as 'elapsed' | 'pause')
+          }
           size="small"
           sx={{ minWidth: 200 }}
         >
@@ -293,7 +282,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Customize the quick duration buttons shown in the timer
         </Typography>
-        
+
         <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2 }}>
           {localSettings.quickPresets.map((preset, index) => (
             <Chip
@@ -329,7 +318,9 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
             size="small"
             startIcon={<Add />}
             onClick={(e) => {
-              const input = (e.currentTarget.parentElement?.querySelector('input[type="number"]') as HTMLInputElement);
+              const input = e.currentTarget.parentElement?.querySelector(
+                'input[type="number"]',
+              ) as HTMLInputElement;
               const value = parseInt(input?.value || '');
               if (value >= 1 && value <= 240 && !localSettings.quickPresets.includes(value)) {
                 handlePresetAdd(value);
@@ -347,7 +338,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
       <Typography variant="h6" gutterBottom>
         Display Settings
       </Typography>
-      
+
       <FormGroup>
         <FormControlLabel
           control={
@@ -386,7 +377,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
       <Typography variant="h6" gutterBottom>
         Behavior
       </Typography>
-      
+
       <FormGroup>
         <FormControlLabel
           control={
@@ -415,10 +406,10 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
       <Typography variant="h6" gutterBottom>
         Notification Permissions
       </Typography>
-      
+
       {notificationPermission !== 'granted' && (
-        <Alert 
-          severity={notificationPermission === 'denied' ? 'error' : 'warning'} 
+        <Alert
+          severity={notificationPermission === 'denied' ? 'error' : 'warning'}
           sx={{ mb: 2 }}
           action={
             notificationPermission !== 'denied' && (
@@ -430,8 +421,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
         >
           {notificationPermission === 'denied'
             ? 'Notifications are blocked. Please enable them in your browser settings.'
-            : 'Click "Enable" to allow desktop notifications.'
-          }
+            : 'Click "Enable" to allow desktop notifications.'}
         </Alert>
       )}
 
@@ -479,7 +469,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
           marks={[
             { value: 0, label: '0%' },
             { value: 50, label: '50%' },
-            { value: 100, label: '100%' }
+            { value: 100, label: '100%' },
           ]}
           valueLabelDisplay="auto"
           valueLabelFormat={(value) => `${value}%`}
@@ -493,7 +483,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
       <Typography variant="h6" gutterBottom>
         Sound Settings
       </Typography>
-      
+
       <FormGroup>
         <FormControlLabel
           control={
@@ -522,7 +512,9 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
           sx={{ minWidth: 200 }}
         >
           {SOUND_OPTIONS.sessionComplete.map((o) => (
-            <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+            <MenuItem key={o.value} value={o.value}>
+              {o.label}
+            </MenuItem>
           ))}
         </Select>
       </Box>
@@ -542,7 +534,9 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
           sx={{ minWidth: 200 }}
         >
           {SOUND_OPTIONS.breakComplete.map((o) => (
-            <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+            <MenuItem key={o.value} value={o.value}>
+              {o.label}
+            </MenuItem>
           ))}
         </Select>
       </Box>
@@ -567,13 +561,22 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
               border: localSettings.uiTheme === 'deepFocus' ? '2px solid' : '1px solid',
               borderColor: localSettings.uiTheme === 'deepFocus' ? 'primary.main' : 'divider',
               transition: 'all 0.2s ease',
-              '&:hover': { borderColor: 'primary.main' }
+              '&:hover': { borderColor: 'primary.main' },
             }}
           >
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <Box sx={{ width: 16, height: 16, borderRadius: 1, background: 'linear-gradient(135deg, #60A5FA, #A78BFA)' }} />
-                <Typography variant="subtitle1" fontWeight={600}>Deep Focus</Typography>
+                <Box
+                  sx={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 1,
+                    background: 'linear-gradient(135deg, #60A5FA, #A78BFA)',
+                  }}
+                />
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Deep Focus
+                </Typography>
               </Box>
               <Typography variant="body2" color="text.secondary">
                 Clean dark theme. OLED-optimized for reduced eye strain.
@@ -589,13 +592,22 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
               border: localSettings.uiTheme === 'aerogel' ? '2px solid' : '1px solid',
               borderColor: localSettings.uiTheme === 'aerogel' ? 'primary.main' : 'divider',
               transition: 'all 0.2s ease',
-              '&:hover': { borderColor: 'primary.main' }
+              '&:hover': { borderColor: 'primary.main' },
             }}
           >
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <Box sx={{ width: 16, height: 16, borderRadius: 1, background: 'linear-gradient(135deg, #6366F1, #EC4899)' }} />
-                <Typography variant="subtitle1" fontWeight={600}>Aerogel</Typography>
+                <Box
+                  sx={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 1,
+                    background: 'linear-gradient(135deg, #6366F1, #EC4899)',
+                  }}
+                />
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Aerogel
+                </Typography>
               </Box>
               <Typography variant="body2" color="text.secondary">
                 Light, airy theme with glassmorphism and soft pastel tones.
@@ -613,7 +625,9 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
           <FormControl sx={{ minWidth: 200 }}>
             <Select
               value={localSettings.theme}
-              onChange={(e) => handleSettingChange('theme', e.target.value as 'light' | 'dark' | 'system')}
+              onChange={(e) =>
+                handleSettingChange('theme', e.target.value as 'light' | 'dark' | 'system')
+              }
               size="small"
             >
               <MenuItem value="system">System Default</MenuItem>
@@ -638,7 +652,9 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
       <FormControl sx={{ minWidth: 300 }}>
         <Select
           value={localSettings.layout || 'zen'}
-          onChange={(e) => handleSettingChange('layout', e.target.value as 'zen' | 'dashboard' | 'commandCenter')}
+          onChange={(e) =>
+            handleSettingChange('layout', e.target.value as 'zen' | 'dashboard' | 'commandCenter')
+          }
           size="small"
         >
           <MenuItem value="zen">Zen Minimal - Clean, centered timer</MenuItem>
@@ -672,7 +688,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
       <Typography variant="h6" gutterBottom>
         Daily History
       </Typography>
-      
+
       <FormGroup>
         <FormControlLabel
           control={
@@ -707,10 +723,10 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
   );
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={handleCancel} 
-      maxWidth="md" 
+    <Dialog
+      open={open}
+      onClose={handleCancel}
+      maxWidth="md"
       fullWidth
       PaperProps={{ sx: { height: '80vh' } }}
     >
@@ -718,11 +734,11 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
         <SettingsIcon />
         Focus Sessions Settings
       </DialogTitle>
-      
+
       <DialogContent>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs 
-            value={activeTab} 
+          <Tabs
+            value={activeTab}
             onChange={(_, newValue) => setActiveTab(newValue)}
             aria-label="settings tabs"
           >
@@ -746,7 +762,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
           {renderDataSettings()}
         </TabPanel>
       </DialogContent>
-      
+
       <DialogActions sx={{ px: 3, py: 2 }}>
         <Button onClick={handleReset} color="warning">
           Reset to Defaults
@@ -765,12 +781,8 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
         <Button onClick={handleCancel} disabled={isSaving}>
           Cancel
         </Button>
-        <Button 
-          onClick={handleSave} 
-          variant="contained"
-          disabled={!isDirty || isSaving}
-        >
-          {isSaving ? 'Saving...' : (!isDirty && !isSaving) ? 'Saved ✓' : 'Save Settings'}
+        <Button onClick={handleSave} variant="contained" disabled={!isDirty || isSaving}>
+          {isSaving ? 'Saving...' : !isDirty && !isSaving ? 'Saved ✓' : 'Save Settings'}
         </Button>
       </DialogActions>
     </Dialog>

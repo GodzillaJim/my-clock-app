@@ -9,19 +9,17 @@ import {
   MenuItem,
   Alert,
   Paper,
-  IconButton,
   TextField,
   ToggleButtonGroup,
   ToggleButton,
 } from '@mui/material';
+import { Add, EmojiEvents, CheckCircle, Cancel } from '@mui/icons-material';
 import {
-  Add,
-  EmojiEvents,
-  Close,
-  CheckCircle,
-  Cancel,
-} from '@mui/icons-material';
-import { Challenge, ChallengeStatus, ChallengeDay, ChallengeDayStatus } from '@/features/timer/types';
+  Challenge,
+  ChallengeStatus,
+  ChallengeDay,
+  ChallengeDayStatus,
+} from '@/features/timer/types';
 import { focusStorage } from '@/services/focusStorage';
 import { ChallengeCard } from './ChallengeCard';
 import { ChallengeCalendar } from './ChallengeCalendar';
@@ -59,10 +57,10 @@ export const ChallengesView: React.FC = () => {
   const getFilteredChallenges = () => {
     switch (tab) {
       case 0:
-        return challenges.filter(c => c.status === ChallengeStatus.ACTIVE);
+        return challenges.filter((c) => c.status === ChallengeStatus.ACTIVE);
       case 1:
-        return challenges.filter(c =>
-          c.status === ChallengeStatus.COMPLETED || c.status === ChallengeStatus.FAILED
+        return challenges.filter(
+          (c) => c.status === ChallengeStatus.COMPLETED || c.status === ChallengeStatus.FAILED,
         );
       default:
         return challenges;
@@ -71,7 +69,9 @@ export const ChallengesView: React.FC = () => {
 
   const filteredChallenges = getFilteredChallenges();
 
-  const handleCreateChallenge = async (challengeData: Parameters<typeof focusStorage.createChallenge>[0]) => {
+  const handleCreateChallenge = async (
+    challengeData: Parameters<typeof focusStorage.createChallenge>[0],
+  ) => {
     await focusStorage.createChallenge(challengeData);
     await loadChallenges();
   };
@@ -100,7 +100,7 @@ export const ChallengesView: React.FC = () => {
       selectedChallenge.id,
       selectedDay.date,
       dayStatus,
-      dayNote.trim() || undefined
+      dayNote.trim() || undefined,
     );
 
     setSelectedDay(null);
@@ -117,9 +117,9 @@ export const ChallengesView: React.FC = () => {
     setDayNote('');
   };
 
-  const activeCount = challenges.filter(c => c.status === ChallengeStatus.ACTIVE).length;
-  const completedCount = challenges.filter(c =>
-    c.status === ChallengeStatus.COMPLETED || c.status === ChallengeStatus.FAILED
+  const activeCount = challenges.filter((c) => c.status === ChallengeStatus.ACTIVE).length;
+  const completedCount = challenges.filter(
+    (c) => c.status === ChallengeStatus.COMPLETED || c.status === ChallengeStatus.FAILED,
   ).length;
 
   // Detail view when a challenge is selected
@@ -127,13 +127,11 @@ export const ChallengesView: React.FC = () => {
     return (
       <Box sx={{ width: '100%', maxWidth: 600 }}>
         {/* Header */}
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 3 }}>
+        <Box
+          sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 3 }}
+        >
           <Box>
-            <Button
-              size="small"
-              onClick={() => setSelectedChallenge(null)}
-              sx={{ mb: 1, ml: -1 }}
-            >
+            <Button size="small" onClick={() => setSelectedChallenge(null)} sx={{ mb: 1, ml: -1 }}>
               Back to Challenges
             </Button>
             <Typography variant="h5" sx={{ fontWeight: 600 }}>
@@ -193,10 +191,7 @@ export const ChallengesView: React.FC = () => {
           </Typography>
 
           <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-            <ChallengeCalendar
-              days={selectedChallenge.days}
-              onDayClick={handleDayClick}
-            />
+            <ChallengeCalendar days={selectedChallenge.days} onDayClick={handleDayClick} />
           </Box>
         </Paper>
 
@@ -235,9 +230,7 @@ export const ChallengesView: React.FC = () => {
             />
 
             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-              <Button onClick={handleCancelDayEdit}>
-                Cancel
-              </Button>
+              <Button onClick={handleCancelDayEdit}>Cancel</Button>
               <Button variant="contained" onClick={handleSaveDay}>
                 Save
               </Button>
@@ -245,8 +238,13 @@ export const ChallengesView: React.FC = () => {
           </Paper>
         )}
 
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block', textAlign: 'center' }}>
-          {dayjs(selectedChallenge.startDate).format('MMM D')} - {dayjs(selectedChallenge.endDate).format('MMM D, YYYY')}
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ mt: 2, display: 'block', textAlign: 'center' }}
+        >
+          {dayjs(selectedChallenge.startDate).format('MMM D')} -{' '}
+          {dayjs(selectedChallenge.endDate).format('MMM D, YYYY')}
         </Typography>
       </Box>
     );
@@ -287,13 +285,11 @@ export const ChallengesView: React.FC = () => {
         </Box>
       ) : filteredChallenges.length === 0 ? (
         <Alert severity="info" sx={{ mt: 2 }}>
-          {tab === 0
-            ? 'No active challenges. Create one to get started!'
-            : 'No challenges found.'}
+          {tab === 0 ? 'No active challenges. Create one to get started!' : 'No challenges found.'}
         </Alert>
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {filteredChallenges.map(challenge => (
+          {filteredChallenges.map((challenge) => (
             <ChallengeCard
               key={challenge.id}
               challenge={challenge}
@@ -313,11 +309,7 @@ export const ChallengesView: React.FC = () => {
         onSubmit={handleCreateChallenge}
       />
 
-      <Menu
-        anchorEl={menuAnchor}
-        open={Boolean(menuAnchor)}
-        onClose={() => setMenuAnchor(null)}
-      >
+      <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
         <MenuItem onClick={handleDeleteChallenge} sx={{ color: 'error.main' }}>
           Delete Challenge
         </MenuItem>

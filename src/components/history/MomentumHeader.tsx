@@ -1,6 +1,12 @@
 import React from 'react';
 import { Box, Typography, IconButton, Tooltip } from '@mui/material';
-import { ArrowBack, LocalFireDepartment, TrendingUp, TrendingDown, TrendingFlat } from '@mui/icons-material';
+import {
+  ArrowBack,
+  LocalFireDepartment,
+  TrendingUp,
+  TrendingDown,
+  TrendingFlat,
+} from '@mui/icons-material';
 import { useTheme, alpha } from '@mui/material/styles';
 import { formatDurationFromSeconds } from '@/features/timer/types';
 
@@ -57,7 +63,9 @@ export const MomentumHeader: React.FC<MomentumHeaderProps> = ({
         </Typography>
       </Box>
 
-      <Box sx={{ display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: { xs: 2, sm: 5 } }}>
+      <Box
+        sx={{ display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: { xs: 2, sm: 5 } }}
+      >
         {/* Focal figure: today's focus */}
         <Box>
           <Typography
@@ -87,7 +95,8 @@ export const MomentumHeader: React.FC<MomentumHeaderProps> = ({
                 width: 26,
                 height: 26,
                 borderRadius: '50%',
-                backgroundColor: streakDays > 0 ? alpha(theme.palette.warning.main, 0.14) : 'transparent',
+                backgroundColor:
+                  streakDays > 0 ? alpha(theme.palette.warning.main, 0.14) : 'transparent',
               }}
             >
               <LocalFireDepartment
@@ -95,8 +104,10 @@ export const MomentumHeader: React.FC<MomentumHeaderProps> = ({
               />
             </Box>
             <Typography variant="body2" sx={{ color: 'text.primary' }}>
-              <Box component="span" sx={{ fontWeight: 700, fontFamily: MONO }}>{streakDays}</Box>
-              {' '}day{streakDays === 1 ? '' : 's'} streak
+              <Box component="span" sx={{ fontWeight: 700, fontFamily: MONO }}>
+                {streakDays}
+              </Box>{' '}
+              day{streakDays === 1 ? '' : 's'} streak
             </Typography>
           </Box>
 

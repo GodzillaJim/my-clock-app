@@ -1,16 +1,25 @@
-import { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage, globalShortcut, Notification } from 'electron'
-import { createRequire } from 'node:module'
-import { fileURLToPath } from 'node:url'
-import path from 'node:path'
-import url from 'node:url'
-import os from 'node:os'
-import { update } from './update'
-import { getDatabase, closeDatabase } from './database/connection'
-import { runMigrations, migrateLegacyData } from './database/migrations'
-import { registerDatabaseHandlers } from './database/ipcHandlers'
+import {
+  app,
+  BrowserWindow,
+  shell,
+  ipcMain,
+  Tray,
+  Menu,
+  nativeImage,
+  globalShortcut,
+  Notification,
+} from 'electron';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import os from 'node:os';
+import { update } from './update';
+import { getDatabase, closeDatabase } from './database/connection';
+import { runMigrations, migrateLegacyData } from './database/migrations';
+import { registerDatabaseHandlers } from './database/ipcHandlers';
 
-const require = createRequire(import.meta.url)
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const require = createRequire(import.meta.url);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // The built directory structure
 //
@@ -22,60 +31,65 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // ├─┬ dist
 // │ └── index.html    > Electron-Renderer
 //
-process.env.APP_ROOT = path.join(__dirname, '../..')
+process.env.APP_ROOT = path.join(__dirname, '../..');
 
-export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
-export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
-export const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL
+export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron');
+export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist');
+export const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
 
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
   ? path.join(process.env.APP_ROOT, 'public')
-  : RENDERER_DIST
+  : RENDERER_DIST;
 
 // Disable GPU Acceleration for Windows 7
-if (os.release().startsWith('6.1')) app.disableHardwareAcceleration()
+if (os.release().startsWith('6.1')) app.disableHardwareAcceleration();
 
 // Set application name for Windows 10+ notifications
-if (process.platform === 'win32') app.setAppUserModelId(app.getName())
+if (process.platform === 'win32') app.setAppUserModelId(app.getName());
 
 // Let automated tests run against a throwaway profile instead of the user's
 // real database. Must happen before anything reads `userData` (including the
 // single-instance lock below).
 if (process.env.FOCUS_USER_DATA_DIR) {
-  app.setPath('userData', process.env.FOCUS_USER_DATA_DIR)
+  app.setPath('userData', process.env.FOCUS_USER_DATA_DIR);
 }
 
 if (!app.requestSingleInstanceLock()) {
-  app.quit()
-  process.exit(0)
+  app.quit();
+  process.exit(0);
 }
 
 // Register custom protocol for file loading before app is ready
 app.whenReady().then(() => {
   // Initialize SQLite database before creating window
   try {
-    const db = getDatabase()
-    runMigrations(db)
-    migrateLegacyData(db)
-    registerDatabaseHandlers(db)
-    console.log('SQLite database initialized successfully')
+    const db = getDatabase();
+    runMigrations(db);
+    migrateLegacyData(db);
+    registerDatabaseHandlers(db);
+    console.log('SQLite database initialized successfully');
   } catch (err) {
-    console.error('Failed to initialize database:', err)
+    console.error('Failed to initialize database:', err);
   }
 
-  const { protocol } = require('electron')
-  protocol.registerFileProtocol('app', (request: Electron.ProtocolRequest, callback: (response: Electron.ProtocolResponse) => void) => {
-    const url = request.url.substr(6)
-    callback({ path: path.normalize(`${RENDERER_DIST}/${url}`) })
-  })
-  createWindow()
-})
+  const { protocol } = require('electron');
+  protocol.registerFileProtocol(
+    'app',
+    (
+      request: Electron.ProtocolRequest,
+      callback: (response: Electron.ProtocolResponse) => void,
+    ) => {
+      const url = request.url.substr(6);
+      callback({ path: path.normalize(`${RENDERER_DIST}/${url}`) });
+    },
+  );
+  createWindow();
+});
 
-let win: BrowserWindow | null = null
-let tray: Tray | null = null
-let isQuitting = false
-const preload = path.join(__dirname, '../preload/index.mjs')
-const indexHtml = path.join(RENDERER_DIST, 'index.html')
+let win: BrowserWindow | null = null;
+let tray: Tray | null = null;
+let isQuitting = false;
+const preload = path.join(__dirname, '../preload/index.mjs');
 
 function getIconPath(iconName: string): string {
   if (app.isPackaged) {
@@ -87,7 +101,8 @@ function getIconPath(iconName: string): string {
   }
 }
 
-function createTrayIcon(isActive: boolean = false): Electron.NativeImage {
+// TODO(#65): show a distinct tray icon while a session is active
+function createTrayIcon(_isActive: boolean = false): Electron.NativeImage {
   // Use .ico for Windows tray (better support), .png for others
   const iconName = process.platform === 'win32' ? 'hour_glass.ico' : 'hour_glass.png';
   const iconPath = getIconPath(iconName);
@@ -103,35 +118,30 @@ function createAppIcon(): Electron.NativeImage {
   return nativeImage.createFromPath(iconPath);
 }
 
-function createSimpleTrayIcon(): Electron.NativeImage {
-  // Create the absolute simplest possible icon
-  return nativeImage.createEmpty().resize({ width: 16, height: 16 })
-}
-
 function updateTrayIcon(isActive: boolean = false) {
   if (tray) {
     // Use the proper tray icon instead of empty one
-    const trayIcon = createTrayIcon(isActive)
-    tray.setImage(trayIcon)
+    const trayIcon = createTrayIcon(isActive);
+    tray.setImage(trayIcon);
   }
 }
 
 function updateWindowTitle(status: string) {
   if (win) {
-    win.setTitle(`Focus Sessions - ${status}`)
+    win.setTitle(`Focus Sessions - ${status}`);
   }
 }
 
 function createTray() {
   // Create a proper tray icon
-  const trayIcon = createTrayIcon(false)
-  tray = new Tray(trayIcon)
-  
+  const trayIcon = createTrayIcon(false);
+  tray = new Tray(trayIcon);
+
   const contextMenu = Menu.buildFromTemplate([
     {
       label: 'Focus Sessions',
       type: 'normal',
-      enabled: false
+      enabled: false,
     },
     { type: 'separator' },
     {
@@ -140,26 +150,26 @@ function createTray() {
       click: () => {
         if (win) {
           if (win.isVisible()) {
-            win.hide()
+            win.hide();
           } else {
-            if (win.isMinimized()) win.restore()
-            win.show()
-            win.focus()
+            if (win.isMinimized()) win.restore();
+            win.show();
+            win.focus();
           }
         }
-      }
+      },
     },
     {
       label: 'Start Focus Session',
       type: 'normal',
       click: () => {
         if (win) {
-          win.webContents.send('tray-start-session')
-          if (win.isMinimized()) win.restore()
-          win.show()
-          win.focus()
+          win.webContents.send('tray-start-session');
+          if (win.isMinimized()) win.restore();
+          win.show();
+          win.focus();
         }
-      }
+      },
     },
     { type: 'separator' },
     {
@@ -167,66 +177,66 @@ function createTray() {
       type: 'normal',
       click: () => {
         if (win) {
-          win.webContents.send('tray-open-settings')
-          if (win.isMinimized()) win.restore()
-          win.show()
-          win.focus()
+          win.webContents.send('tray-open-settings');
+          if (win.isMinimized()) win.restore();
+          win.show();
+          win.focus();
         }
-      }
+      },
     },
     {
       label: 'History',
       type: 'normal',
       click: () => {
         if (win) {
-          win.webContents.send('tray-open-history')
-          if (win.isMinimized()) win.restore()
-          win.show()
-          win.focus()
+          win.webContents.send('tray-open-history');
+          if (win.isMinimized()) win.restore();
+          win.show();
+          win.focus();
         }
-      }
+      },
     },
     { type: 'separator' },
     {
       label: 'Quit',
       type: 'normal',
       click: () => {
-        isQuitting = true
-        app.quit()
-      }
-    }
-  ])
-  
-  tray.setToolTip('Focus Sessions')
-  tray.setContextMenu(contextMenu)
-  
+        isQuitting = true;
+        app.quit();
+      },
+    },
+  ]);
+
+  tray.setToolTip('Focus Sessions');
+  tray.setContextMenu(contextMenu);
+
   tray.on('click', () => {
     if (win) {
       if (win.isVisible()) {
-        win.hide()
+        win.hide();
       } else {
-        if (win.isMinimized()) win.restore()
-        win.show()
-        win.focus()
+        if (win.isMinimized()) win.restore();
+        win.show();
+        win.focus();
       }
     }
-  })
+  });
 }
 
 function setupGlobalShortcuts() {
   globalShortcut.register('CommandOrControl+Shift+Alt+T', () => {
     if (win) {
-      if (win.isMinimized()) win.restore()
-      win.show()
-      win.focus()
+      if (win.isMinimized()) win.restore();
+      win.show();
+      win.focus();
     }
-  })
-  
+  });
+
   globalShortcut.register('CommandOrControl+Shift+S', () => {
     if (win) {
-      win.webContents.send('global-shortcut-start-session')
+      win.webContents.send('global-shortcut-start-session');
     }
-  })
+  });
 }
 
 async function createWindow() {
@@ -249,118 +259,119 @@ async function createWindow() {
       // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
       // contextIsolation: false,
     },
-  })
+  });
 
-  if (VITE_DEV_SERVER_URL) { // #298
-    win.loadURL(VITE_DEV_SERVER_URL)
+  if (VITE_DEV_SERVER_URL) {
+    // #298
+    win.loadURL(VITE_DEV_SERVER_URL);
     // Open devTool if the app is not packaged
-    win.webContents.openDevTools()
+    win.webContents.openDevTools();
   } else {
     // Try custom app protocol for Electron
-    win.loadURL('app://./index.html')
+    win.loadURL('app://./index.html');
   }
 
   // Show window when ready
   win.once('ready-to-show', () => {
     if (win) {
-      win.show()
-      
+      win.show();
+
       if (process.platform === 'darwin') {
-        win.setVisibleOnAllWorkspaces(true)
+        win.setVisibleOnAllWorkspaces(true);
       }
     }
-  })
+  });
 
   // Handle window close event for tray functionality
   win.on('close', (event) => {
     if (!isQuitting) {
-      event.preventDefault()
+      event.preventDefault();
       if (win) {
-        win.hide()
+        win.hide();
       }
-      return false
+      return false;
     }
-  })
+  });
 
   // Make all links open with the browser, not with the application
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https:')) shell.openExternal(url)
-    return { action: 'deny' }
-  })
+    if (url.startsWith('https:')) shell.openExternal(url);
+    return { action: 'deny' };
+  });
 
   // Setup global shortcuts and tray
-  setupGlobalShortcuts()
-  createTray()
+  setupGlobalShortcuts();
+  createTray();
 
   // Auto update
-  update(win)
+  update(win);
 }
 
 // Protocol registration and window creation handled above
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    app.quit()
+    app.quit();
   }
-})
+});
 
 app.on('before-quit', () => {
-  isQuitting = true
-  globalShortcut.unregisterAll()
-  closeDatabase()
-})
+  isQuitting = true;
+  globalShortcut.unregisterAll();
+  closeDatabase();
+});
 
 app.on('will-quit', () => {
-  globalShortcut.unregisterAll()
-})
+  globalShortcut.unregisterAll();
+});
 
 app.on('second-instance', () => {
   if (win) {
     // Focus on the main window if the user tried to open another
-    if (win.isMinimized()) win.restore()
-    win.show()
-    win.focus()
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
   }
-})
+});
 
 app.on('activate', () => {
-  const allWindows = BrowserWindow.getAllWindows()
+  const allWindows = BrowserWindow.getAllWindows();
   if (allWindows.length) {
-    allWindows[0].show()
-    allWindows[0].focus()
+    allWindows[0].show();
+    allWindows[0].focus();
   } else {
-    createWindow()
+    createWindow();
   }
-})
+});
 
 // IPC handlers for tray and session management
 ipcMain.handle('minimize-to-tray', () => {
   if (win) {
-    win.hide()
+    win.hide();
   }
-})
+});
 
 ipcMain.handle('show-window', () => {
   if (win) {
-    if (win.isMinimized()) win.restore()
-    win.show()
-    win.focus()
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
   }
-})
+});
 
 ipcMain.handle('update-tray-status', (_, status: string) => {
   if (tray) {
-    tray.setToolTip(`Focus Sessions - ${status}`)
+    tray.setToolTip(`Focus Sessions - ${status}`);
     // Update icon based on status
-    const isActive = status.toLowerCase().includes('running')
-    updateTrayIcon(isActive)
+    const isActive = status.toLowerCase().includes('running');
+    updateTrayIcon(isActive);
   }
-  
-  // Also update window title
-  updateWindowTitle(status)
-})
 
-ipcMain.handle('session-notification', (_, { title, body }: { title: string, body: string }) => {
+  // Also update window title
+  updateWindowTitle(status);
+});
+
+ipcMain.handle('session-notification', (_, { title, body }: { title: string; body: string }) => {
   const notificationOptions: Electron.NotificationConstructorOptions = {
     title,
     body,
@@ -370,8 +381,11 @@ ipcMain.handle('session-notification', (_, { title, body }: { title: string, bod
 
   // On Windows, use toastXml with scenario="alarm" to break through Focus Assist / fullscreen
   if (process.platform === 'win32') {
-    const escapeXml = (s: string) => s.replace(/[&<>"']/g, c =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c] || c));
+    const escapeXml = (s: string) =>
+      s.replace(
+        /[&<>"']/g,
+        (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c] || c,
+      );
     notificationOptions.toastXml = `
       <toast scenario="alarm" activationType="protocol">
         <visual>
@@ -390,7 +404,9 @@ ipcMain.handle('session-notification', (_, { title, body }: { title: string, bod
   // Flash taskbar as additional visual cue when window is not focused
   if (win && !win.isFocused()) {
     win.flashFrame(true);
-    setTimeout(() => { if (win) win.flashFrame(false); }, 5000);
+    setTimeout(() => {
+      if (win) win.flashFrame(false);
+    }, 5000);
   }
 });
 
@@ -415,7 +431,7 @@ ipcMain.handle('storage-read', async (_, filePath: string) => {
 ipcMain.handle('storage-write', async (_, filePath: string, data: string) => {
   const fs = require('fs/promises');
   const path = require('path');
-  
+
   // Ensure directory exists
   const dir = path.dirname(filePath);
   try {
@@ -423,7 +439,7 @@ ipcMain.handle('storage-write', async (_, filePath: string, data: string) => {
   } catch (error) {
     console.error('Failed to create storage directory:', error);
   }
-  
+
   await fs.writeFile(filePath, data);
 });
 
@@ -432,7 +448,8 @@ ipcMain.handle('storage-delete', async (_, filePath: string) => {
   try {
     await fs.unlink(filePath);
   } catch (error: any) {
-    if (error.code !== 'ENOENT') { // It's not an error if the file doesn't exist
+    if (error.code !== 'ENOENT') {
+      // It's not an error if the file doesn't exist
       throw error;
     }
   }
