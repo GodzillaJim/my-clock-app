@@ -61,15 +61,6 @@ interface ElectronAPI {
   updateTrayStatus: (status: string) => Promise<void>;
   sessionNotification: (notification: { title: string; body: string }) => Promise<void>;
 
-  // Storage (legacy - kept for backward compatibility)
-  getUserDataPath: () => Promise<string>;
-
-  // File storage operations (legacy)
-  storageRead: (filePath: string) => Promise<string | null>;
-  storageWrite: (filePath: string, data: string) => Promise<void>;
-  storageDelete: (filePath: string) => Promise<void>;
-  getStoragePath: (key: string) => Promise<string>;
-
   // SQLite database API
   db: ElectronDbAPI;
 

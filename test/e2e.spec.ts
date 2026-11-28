@@ -75,6 +75,28 @@ if (process.platform === 'linux') {
       expect(statuses).toEqual({ index: 200, traversal: 404 });
     });
 
+    test('gives the renderer no file-system access', async () => {
+      // Outside the app data directory: the old storage IPC accepted any path
+      const target = path.join(os.tmpdir(), `focus-e2e-escape-${Date.now()}.txt`);
+      const result = await page.evaluate(async (target) => {
+        const w = window as any;
+        const attempts = await Promise.allSettled([
+          w.ipcRenderer.invoke('storage-write', target, 'written by the renderer'),
+          w.ipcRenderer.invoke('storage-read', target),
+          w.ipcRenderer.invoke('storage-delete', target),
+          w.ipcRenderer.invoke('get-storage-path', '../../escape'),
+          w.ipcRenderer.invoke('get-user-data-path'),
+        ]);
+        return {
+          fileApis: Object.keys(w.electronAPI).filter((k) => /storage|path/i.test(k)),
+          statuses: attempts.map((a) => a.status),
+        };
+      }, target);
+      expect(result.fileApis).toEqual([]);
+      expect(result.statuses).toEqual(Array(5).fill('rejected'));
+      expect(fs.existsSync(target)).toBe(false);
+    });
+
     test('initializes the SQLite database', async () => {
       // Fails if better-sqlite3 was not rebuilt for Electron's ABI — the app
       // would otherwise fall back to localStorage silently.

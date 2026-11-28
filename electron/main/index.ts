@@ -11,7 +11,6 @@ import {
   protocol,
   net,
 } from 'electron';
-import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
@@ -24,7 +23,6 @@ import { createLogger, initLogging } from './logger';
 
 const log = createLogger('main');
 
-const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // The built directory structure
@@ -410,56 +408,4 @@ ipcMain.handle('session-notification', (_, { title, body }: { title: string; bod
       if (win) win.flashFrame(false);
     }, 5000);
   }
-});
-
-ipcMain.handle('get-user-data-path', () => {
-  return app.getPath('userData');
-});
-
-// File storage operations
-ipcMain.handle('storage-read', async (_, filePath: string) => {
-  const fs = require('fs/promises');
-  try {
-    const data = await fs.readFile(filePath, 'utf-8');
-    return data;
-  } catch (error: any) {
-    if (error.code === 'ENOENT') {
-      return null; // File not found is a normal condition
-    }
-    throw error;
-  }
-});
-
-ipcMain.handle('storage-write', async (_, filePath: string, data: string) => {
-  const fs = require('fs/promises');
-  const path = require('path');
-
-  // Ensure directory exists
-  const dir = path.dirname(filePath);
-  try {
-    await fs.mkdir(dir, { recursive: true });
-  } catch (error) {
-    log.error('Failed to create storage directory:', error);
-  }
-
-  await fs.writeFile(filePath, data);
-});
-
-ipcMain.handle('storage-delete', async (_, filePath: string) => {
-  const fs = require('fs/promises');
-  try {
-    await fs.unlink(filePath);
-  } catch (error: any) {
-    if (error.code !== 'ENOENT') {
-      // It's not an error if the file doesn't exist
-      throw error;
-    }
-  }
-});
-
-ipcMain.handle('get-storage-path', async (_, key: string) => {
-  const path = require('path');
-  const userDataPath = app.getPath('userData');
-  const storageDir = path.join(userDataPath, 'data');
-  return path.join(storageDir, `${key}.json`);
 });
