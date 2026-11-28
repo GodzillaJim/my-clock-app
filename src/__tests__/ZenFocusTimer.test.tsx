@@ -128,17 +128,16 @@ describe('ZenFocusTimer', () => {
     expect(screen.getByText('FOCUS')).toBeInTheDocument();
     expect(screen.getByText('1 / 6')).toBeInTheDocument();
 
+    // The switch happens exactly when the focus minute is used up
     await tick(60 * 1000);
-    await tick(1000);
 
     expect(screen.getByText('BREAK')).toBeInTheDocument();
     expect(screen.getByText('2 / 6')).toBeInTheDocument();
     expect(screen.getByText('05:00')).toBeInTheDocument();
 
-    // The break counts down from its full length (the display can trail the
-    // segment switch by one tick, so allow either second).
+    // The break counts down from its full length
     await tick(1000);
-    expect(screen.getByText(/^04:5[89]$/)).toBeInTheDocument();
+    expect(screen.getByText('04:59')).toBeInTheDocument();
 
     expect(mocks.focusStorage.addSession).toHaveBeenCalledWith(
       expect.objectContaining({ type: SessionType.FOCUS, sessionNumber: 1 }),

@@ -142,7 +142,7 @@ src/
     challenges/       # challenges view, calendar, create dialog
     settings/         # settings dialog
     feedback/         # feedback form and manager
-  features/timer/     # domain types and timer hooks
+  features/timer/     # timer engine (pure state machines in engine/), React hooks, domain types
   services/           # storage, notifications, sounds, crash-recovery snapshots
   __tests__/          # unit tests (Vitest + Testing Library)
 test/                 # e2e tests (Playwright driving Electron) and main-process unit tests

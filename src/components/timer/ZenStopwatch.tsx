@@ -1,100 +1,38 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Typography, Button, IconButton, Tooltip, Fade, Chip } from '@mui/material';
 import { PlayArrow, Pause, RestartAlt, Flag } from '@mui/icons-material';
 import { CircularTimerRing } from './CircularTimerRing';
-import { persistenceService } from '@/services/persistenceService';
-
-const STOPWATCH_SNAPSHOT_KEY = 'STOPWATCH_SNAPSHOT';
-
-interface LapTime {
-  id: number;
-  time: number;
-  lapDuration: number;
-}
+import { useStopwatch } from '@/features/timer/hooks/useToolTimers';
 
 interface ZenStopwatchProps {
   onRunningStateChange?: (isRunning: boolean) => void;
 }
 
+/** `mm:ss.cc`, or `hh:mm:ss` from an hour on. */
+const formatTime = (milliseconds: number): string => {
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const centis = Math.floor((milliseconds % 1000) / 10);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return hours > 0
+    ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+    : `${pad(minutes)}:${pad(seconds)}.${pad(centis)}`;
+};
+
+/** View for the stopwatch tool; timing lives in `useStopwatch`. */
 export const ZenStopwatch: React.FC<ZenStopwatchProps> = ({ onRunningStateChange }) => {
-  const [time, setTime] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
-  const [laps, setLaps] = useState<LapTime[]>([]);
   const [showControls, setShowControls] = useState(true);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastLapTimeRef = useRef(0);
-
-  useEffect(() => {
-    if (isRunning) {
-      intervalRef.current = setInterval(() => {
-        setTime((prevTime) => prevTime + 10);
-      }, 10);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [isRunning]);
+  const { isRunning, elapsedMs: time, laps, actions } = useStopwatch();
 
   useEffect(() => {
     onRunningStateChange?.(isRunning);
   }, [isRunning, onRunningStateChange]);
 
-  const formatTime = (milliseconds: number): string => {
-    const totalSeconds = Math.floor(milliseconds / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    const ms = Math.floor((milliseconds % 1000) / 10);
-
-    if (hours > 0) {
-      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    }
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(ms).padStart(2, '0')}`;
-  };
-
-  const handleStartPause = () => {
-    setIsRunning(!isRunning);
-  };
-
-  const handleReset = () => {
-    setIsRunning(false);
-    setTime(0);
-    setLaps([]);
-    lastLapTimeRef.current = 0;
-    persistenceService.clearSnapshot(STOPWATCH_SNAPSHOT_KEY);
-  };
-
-  const handleLap = () => {
-    if (isRunning) {
-      const lapDuration = time - lastLapTimeRef.current;
-      setLaps((prevLaps) => [
-        {
-          id: prevLaps.length + 1,
-          time: time,
-          lapDuration: lapDuration,
-        },
-        ...prevLaps,
-      ]);
-      lastLapTimeRef.current = time;
-    }
-  };
-
-  // Progress is based on seconds within the current minute (for visual interest)
-  const calculateProgress = (): number => {
-    const totalSeconds = Math.floor(time / 1000);
-    const secondsInMinute = totalSeconds % 60;
-    return (secondsInMinute / 60) * 100;
-  };
-
+  // The ring sweeps once per minute (for visual interest)
+  const progress = ((Math.floor(time / 1000) % 60) / 60) * 100;
   const isActive = time > 0 || isRunning;
-
   return (
     <Box
       sx={{
@@ -122,7 +60,7 @@ export const ZenStopwatch: React.FC<ZenStopwatchProps> = ({ onRunningStateChange
 
       {/* Circular Timer */}
       <CircularTimerRing
-        progress={calculateProgress()}
+        progress={progress}
         size={300}
         strokeWidth={6}
         isRunning={isRunning}
@@ -156,7 +94,7 @@ export const ZenStopwatch: React.FC<ZenStopwatchProps> = ({ onRunningStateChange
             variant={isRunning ? 'outlined' : 'contained'}
             size="large"
             startIcon={isRunning ? <Pause /> : <PlayArrow />}
-            onClick={handleStartPause}
+            onClick={actions.toggle}
             sx={{ px: 4, py: 1.5 }}
           >
             {isRunning ? 'Pause' : time > 0 ? 'Resume' : 'Start'}
@@ -165,7 +103,7 @@ export const ZenStopwatch: React.FC<ZenStopwatchProps> = ({ onRunningStateChange
           {isRunning && (
             <Tooltip title="Lap">
               <IconButton
-                onClick={handleLap}
+                onClick={actions.lap}
                 sx={{
                   width: 48,
                   height: 48,
@@ -180,7 +118,7 @@ export const ZenStopwatch: React.FC<ZenStopwatchProps> = ({ onRunningStateChange
 
           {isActive && (
             <Tooltip title="Reset">
-              <IconButton onClick={handleReset} size="small" sx={{ color: 'error.main' }}>
+              <IconButton onClick={actions.reset} size="small" sx={{ color: 'error.main' }}>
                 <RestartAlt />
               </IconButton>
             </Tooltip>
