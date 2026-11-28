@@ -1,116 +1,31 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Typography, Button, IconButton, Tooltip, Fade } from '@mui/material';
 import { PlayArrow, Pause, RestartAlt, Add, Remove, AccessTime } from '@mui/icons-material';
-import { useTimer } from 'react-timer-hook';
 import dayjs from 'dayjs';
 import { CircularTimerRing } from './CircularTimerRing';
-import { notificationService } from '@/services/notificationService';
-import { persistenceService } from '@/services/persistenceService';
-import { useTickSound } from '@/features/timer/hooks/useTickSound';
-
-const TIMER_SNAPSHOT_KEY = 'TIMER_SNAPSHOT';
+import { useCountdown } from '@/features/timer/hooks/useToolTimers';
+import { formatClock } from '@/features/timer/engine/format';
 
 interface ZenCountdownTimerProps {
   onRunningStateChange?: (isRunning: boolean) => void;
 }
 
+/** View for the countdown tool; timing lives in `useCountdown`. */
 export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningStateChange }) => {
-  const [isActive, setIsActive] = useState(false);
   const [minutes, setMinutes] = useState(5);
-  const [totalSeconds, setTotalSeconds] = useState(0);
   const [showControls, setShowControls] = useState(true);
-  const activeExpiryRef = useRef<Date | null>(null);
-
-  const handleComplete = () => {
-    setIsActive(false);
-    activeExpiryRef.current = null;
-    persistenceService.clearSnapshot(TIMER_SNAPSHOT_KEY);
-    notificationService.showNotification({
-      type: 'session_complete',
-      title: 'Timer Complete',
-      body: 'Your countdown timer has finished!',
-      timestamp: new Date(),
-    });
-  };
-
-  const {
-    seconds,
-    minutes: timerMinutes,
-    hours,
-    pause,
-    resume,
-    restart,
-    isRunning,
-  } = useTimer({
-    expiryTimestamp: new Date(),
-    autoStart: false,
-    onExpire: handleComplete,
-  });
-
-  useTickSound(hours * 3600 + timerMinutes * 60 + seconds, isRunning);
+  const countdown = useCountdown();
+  const { isActive, isRunning, isPaused, actions } = countdown;
 
   useEffect(() => {
     onRunningStateChange?.(isRunning);
   }, [isRunning, onRunningStateChange]);
 
-  const formatTime = (h: number, m: number, s: number): string => {
-    if (h > 0) {
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    }
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  };
-
-  const calculateProgress = (): number => {
-    if (totalSeconds === 0) return 0;
-    const remaining = hours * 3600 + timerMinutes * 60 + seconds;
-    const elapsed = totalSeconds - remaining;
-    return Math.max(0, Math.min(100, (elapsed / totalSeconds) * 100));
-  };
-
-  const handleStart = () => {
-    const totalSecs = minutes * 60;
-    setTotalSeconds(totalSecs);
-    const expiryTimestamp = dayjs().add(totalSecs, 'second').toDate();
-    restart(expiryTimestamp, true);
-    activeExpiryRef.current = expiryTimestamp;
-    setIsActive(true);
-  };
-
-  const handlePause = () => {
-    pause();
-  };
-
-  const handleResume = () => {
-    resume();
-  };
-
-  const handleReset = () => {
-    const expiryTimestamp = dayjs()
-      .add(minutes * 60, 'second')
-      .toDate();
-    restart(expiryTimestamp, false);
-    activeExpiryRef.current = null;
-    persistenceService.clearSnapshot(TIMER_SNAPSHOT_KEY);
-    setIsActive(false);
-    setTotalSeconds(0);
-  };
-
   const handleMinutesChange = (delta: number) => {
-    const newValue = Math.max(1, Math.min(480, minutes + delta));
-    setMinutes(newValue);
+    setMinutes((value) => Math.max(1, Math.min(480, value + delta)));
   };
 
-  const isPaused = isActive && !isRunning;
-
-  const getExpectedEndTime = () => {
-    if (isActive || isPaused) {
-      // When running or paused, show end time based on remaining time
-      return dayjs().add(hours, 'hour').add(timerMinutes, 'minute').add(seconds, 'second');
-    }
-    // When idle, show end time if we start now with the selected duration
-    return dayjs().add(minutes, 'minute');
-  };
-
+  const expectedEnd = dayjs(isActive ? countdown.endsAt : Date.now() + minutes * 60_000);
   return (
     <Box
       sx={{
@@ -138,7 +53,7 @@ export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningS
 
       {/* Circular Timer */}
       <CircularTimerRing
-        progress={calculateProgress()}
+        progress={countdown.progress}
         size={300}
         strokeWidth={6}
         isRunning={isRunning}
@@ -169,7 +84,7 @@ export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningS
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <AccessTime fontSize="small" sx={{ color: 'text.secondary', fontSize: '0.75rem' }} />
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                Ends at {getExpectedEndTime().format('h:mm A')}
+                Ends at {expectedEnd.format('h:mm A')}
               </Typography>
             </Box>
           </Box>
@@ -186,12 +101,12 @@ export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningS
                 transition: 'all 0.3s ease',
               }}
             >
-              {formatTime(hours, timerMinutes, seconds)}
+              {formatClock(countdown.remainingSeconds)}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
               <AccessTime fontSize="small" sx={{ color: 'text.secondary', fontSize: '0.875rem' }} />
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Ends at {getExpectedEndTime().format('h:mm A')}
+                Ends at {expectedEnd.format('h:mm A')}
               </Typography>
             </Box>
           </Box>
@@ -206,7 +121,7 @@ export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningS
               variant="contained"
               size="large"
               startIcon={<PlayArrow />}
-              onClick={handleStart}
+              onClick={() => actions.start(minutes * 60)}
               sx={{ px: 4, py: 1.5 }}
             >
               Start {minutes}m Timer
@@ -218,7 +133,7 @@ export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningS
               variant="contained"
               size="large"
               startIcon={<PlayArrow />}
-              onClick={handleResume}
+              onClick={actions.resume}
               sx={{ px: 4, py: 1.5 }}
             >
               Resume
@@ -227,7 +142,8 @@ export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningS
 
           {isRunning && (
             <IconButton
-              onClick={handlePause}
+              aria-label="Pause"
+              onClick={actions.pause}
               sx={{
                 width: 56,
                 height: 56,
@@ -241,7 +157,7 @@ export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningS
 
           {isActive && (
             <Tooltip title="Reset">
-              <IconButton onClick={handleReset} size="small" sx={{ color: 'error.main' }}>
+              <IconButton onClick={actions.reset} size="small" sx={{ color: 'error.main' }}>
                 <RestartAlt />
               </IconButton>
             </Tooltip>

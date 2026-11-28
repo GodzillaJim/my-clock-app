@@ -12,59 +12,14 @@ import {
   AccessTime,
 } from '@mui/icons-material';
 import { CircularTimerRing } from '../timer/CircularTimerRing';
-import {
-  AppSettings,
-  SessionRecord,
-  SessionType,
-  CompletionStatus,
-  SessionPlan,
-} from '@/features/timer/types';
+import { AppSettings, SessionRecord, SessionType, SessionPlan } from '@/features/timer/types';
 import { focusStorage } from '@/services/focusStorage';
-import { useTickSound } from '@/features/timer/hooks/useTickSound';
-import { useTimer } from 'react-timer-hook';
+import { useFocusTimer } from '@/features/timer/hooks/useFocusTimer';
+import { formatClock } from '@/features/timer/engine/format';
 import dayjs from 'dayjs';
 import { createLogger } from '@/services/logger';
 
 const log = createLogger('CommandCenterLayout');
-
-interface SimpleSession {
-  type: 'focus' | 'break';
-  duration: number;
-  startTime: Date;
-  endTime: Date;
-}
-
-const generateSessions = (
-  totalMinutes: number,
-  settings: AppSettings,
-  planStartTime: Date = new Date(),
-): SimpleSession[] => {
-  const totalSeconds = totalMinutes * 60;
-  const sessions: SimpleSession[] = [];
-  let remainingTime = totalSeconds;
-  const focusDuration = settings.focusDuration * 60;
-  const breakDuration = settings.shortBreakDuration * 60;
-  let currentTime = planStartTime.getTime();
-
-  while (remainingTime > 0) {
-    if (sessions.length % 2 === 0) {
-      const currentFocusDuration = Math.min(focusDuration, remainingTime);
-      const startTime = new Date(currentTime);
-      const endTime = new Date(currentTime + currentFocusDuration * 1000);
-      sessions.push({ type: 'focus', duration: currentFocusDuration, startTime, endTime });
-      remainingTime -= currentFocusDuration;
-      currentTime = endTime.getTime();
-    } else {
-      const currentBreakDuration = Math.min(breakDuration, remainingTime);
-      const startTime = new Date(currentTime);
-      const endTime = new Date(currentTime + currentBreakDuration * 1000);
-      sessions.push({ type: 'break', duration: currentBreakDuration, startTime, endTime });
-      remainingTime -= currentBreakDuration;
-      currentTime = endTime.getTime();
-    }
-  }
-  return sessions;
-};
 
 interface CommandCenterLayoutProps {
   settings: AppSettings;
@@ -74,6 +29,7 @@ interface CommandCenterLayoutProps {
   onResumeConsumed?: () => void;
 }
 
+/** Command Center layout; the timer itself is `useFocusTimer`, shared with the Zen view. */
 export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
   settings,
   onOpenSettings,
@@ -82,123 +38,11 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
   onResumeConsumed,
 }) => {
   const [totalDuration, setTotalDuration] = useState(settings.focusDuration);
-  const [sessions, setSessions] = useState<SimpleSession[]>([]);
-  const [currentSessionIndex, setCurrentSessionIndex] = useState(0);
-  const [isComplete, setIsComplete] = useState(false);
-  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const [recentSessions, setRecentSessions] = useState<SessionRecord[]>([]);
   const [todayStats, setTodayStats] = useState({ focusTime: 0, completed: 0 });
-
-  // Refs to hold latest state values for the timer callback
-  const sessionsRef = React.useRef<SimpleSession[]>([]);
-  const currentSessionIndexRef = React.useRef(0);
-  const sessionStartTimeRef = React.useRef<Date | null>(null);
-
-  // Keep refs in sync with state
-  React.useEffect(() => {
-    sessionsRef.current = sessions;
-  }, [sessions]);
-
-  React.useEffect(() => {
-    currentSessionIndexRef.current = currentSessionIndex;
-  }, [currentSessionIndex]);
-
-  React.useEffect(() => {
-    sessionStartTimeRef.current = sessionStartTime;
-  }, [sessionStartTime]);
-
-  const recordSession = async (status: CompletionStatus) => {
-    const currentSession = sessions[currentSessionIndex];
-    if (!currentSession || !sessionStartTime) return;
-
-    const now = new Date();
-    const actualDuration = Math.round((now.getTime() - sessionStartTime.getTime()) / 1000);
-
-    const record: SessionRecord = {
-      id: `${sessionStartTime.getTime()}-${currentSessionIndex}`,
-      type: currentSession.type === 'focus' ? SessionType.FOCUS : SessionType.SHORT_BREAK,
-      sessionNumber: currentSessionIndex + 1,
-      plannedDuration: currentSession.duration,
-      actualDuration: actualDuration,
-      startTime: sessionStartTime,
-      endTime: now,
-      completionStatus: status,
-      pausedTime: 0,
-      remainingTime: 0,
-    };
-
-    try {
-      await focusStorage.addSession(record);
-    } catch (error) {
-      log.error('Failed to save session record:', error);
-    }
-  };
-
-  const handleExpire = () => {
-    // Use refs to get current values
-    const currentSessions = sessionsRef.current;
-    const currentIndex = currentSessionIndexRef.current;
-    const startTime = sessionStartTimeRef.current;
-
-    // Record the completed session
-    const currentSession = currentSessions[currentIndex];
-    if (currentSession && startTime) {
-      const now = new Date();
-      const actualDuration = Math.round((now.getTime() - startTime.getTime()) / 1000);
-
-      const record: SessionRecord = {
-        id: `${startTime.getTime()}-${currentIndex}`,
-        type: currentSession.type === 'focus' ? SessionType.FOCUS : SessionType.SHORT_BREAK,
-        sessionNumber: currentIndex + 1,
-        plannedDuration: currentSession.duration,
-        actualDuration: actualDuration,
-        startTime: startTime,
-        endTime: now,
-        completionStatus: CompletionStatus.COMPLETED,
-        pausedTime: 0,
-        remainingTime: 0,
-      };
-
-      focusStorage.addSession(record).catch((error) => {
-        log.error('Failed to save session record:', error);
-      });
-    }
-
-    // Check if there are more sessions
-    if (currentIndex < currentSessions.length - 1) {
-      const nextIndex = currentIndex + 1;
-      setCurrentSessionIndex(nextIndex);
-      setSessionStartTime(new Date());
-      const nextSession = currentSessions[nextIndex];
-      const newExpiry = dayjs().add(nextSession.duration, 'second').toDate();
-      restart(newExpiry, false);
-      resume(); // Start the next session immediately
-    } else {
-      pause(); // Stop the timer
-      setIsComplete(true);
-      loadStats();
-    }
-  };
-
-  const { seconds, minutes, hours, pause, resume, restart, isRunning } = useTimer({
-    expiryTimestamp: new Date(),
-    autoStart: false,
-    onExpire: handleExpire,
-  });
-
-  useTickSound(hours * 3600 + minutes * 60 + seconds, isRunning);
-
-  const resetToIdle = () => {
-    setIsComplete(false);
-    pause(); // Stop the timer
-    setSessions([]);
-    setCurrentSessionIndex(0);
-    setSessionStartTime(null);
-  };
-
-  useEffect(() => {
-    loadStats();
-  }, []);
+  const timer = useFocusTimer();
+  const { isRunning, isPaused, isComplete, isBreak, actions } = timer;
+  const isActive = timer.hasSession;
 
   const loadStats = async () => {
     try {
@@ -208,7 +52,6 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
           focusTime: Math.round(history.totalFocusTime / 60),
           completed: history.completedSessions || 0,
         });
-        // Get recent sessions
         setRecentSessions(history.sessions?.slice(-5).reverse() || []);
       }
     } catch (error) {
@@ -216,163 +59,24 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
     }
   };
 
-  const currentSession = sessions[currentSessionIndex];
-  const sessionType = currentSession?.type || 'focus';
-  const isBreak = sessionType === 'break';
-  const isActive = sessions.length > 0 && !isComplete;
-
-  const calculateProgress = (): number => {
-    if (!currentSession) return 0;
-    const totalSeconds = currentSession.duration;
-    const elapsed = totalSeconds - (hours * 3600 + minutes * 60 + seconds);
-    return Math.max(0, Math.min(100, (elapsed / totalSeconds) * 100));
-  };
-
-  const displayTime = () => {
-    if (!isActive) {
-      return dayjs.duration(totalDuration, 'minutes').format('mm:ss');
-    }
-    if (hours > 0) {
-      return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    }
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  };
-
-  const startSession = () => {
-    const newSessions = generateSessions(totalDuration, settings);
-    setSessions(newSessions);
-    setCurrentSessionIndex(0);
-    setSessionStartTime(new Date());
-    const firstSessionDuration = newSessions[0]?.duration || 0;
-    const newExpiryTimestamp = dayjs().add(firstSessionDuration, 'second').toDate();
-    restart(newExpiryTimestamp, true); // Auto-start
-  };
-
-  // Resume an interrupted plan: rebuild the timer from its remaining segments,
-  // continuing the first (partially-elapsed) segment with the time that was left.
-  const resumeFromPlan = (oldPlan: SessionPlan) => {
-    const remaining = oldPlan.segments.filter(
-      (s) => s.status === 'pending' || s.status === 'in_progress' || s.status === 'interrupted',
-    );
-    if (remaining.length === 0) return;
-
-    const now = new Date();
-    let currentTime = now.getTime();
-    const newSessions: SimpleSession[] = remaining.map((seg, i) => {
-      const elapsedSoFar = Math.max(seg.elapsedAtLastUpdate || 0, seg.actualDuration || 0);
-      const isPartial = i === 0 && (seg.status === 'in_progress' || seg.status === 'interrupted');
-      const dur = isPartial ? Math.max(1, seg.plannedDuration - elapsedSoFar) : seg.plannedDuration;
-      const startTime = new Date(currentTime);
-      const endTime = new Date(currentTime + dur * 1000);
-      currentTime = endTime.getTime();
-      return {
-        type: seg.type === SessionType.FOCUS ? ('focus' as const) : ('break' as const),
-        duration: dur,
-        startTime,
-        endTime,
-      };
-    });
-
-    setSessions(newSessions);
-    setCurrentSessionIndex(0);
-    setSessionStartTime(now);
-    setIsComplete(false);
-    const firstExpiry = dayjs().add(newSessions[0].duration, 'second').toDate();
-    restart(firstExpiry, true); // Auto-start
-
-    // Finalize the old plan so it is no longer flagged as resumable. Its
-    // remaining segments are carried into this run; preserve any elapsed time.
-    const nowTs = now.getTime();
-    const finalizedSegments = oldPlan.segments.map((s) => {
-      if (s.status === 'pending' || s.status === 'in_progress' || s.status === 'interrupted') {
-        const elapsed = Math.max(s.elapsedAtLastUpdate || 0, s.actualDuration || 0);
-        return {
-          ...s,
-          status: 'skipped',
-          actualEndTime: s.actualEndTime ?? nowTs,
-          actualDuration: elapsed,
-        };
-      }
-      return s;
-    });
-    focusStorage
-      .saveSessionPlan({
-        ...oldPlan,
-        segments: finalizedSegments,
-        status: 'interrupted',
-        interruptedAt: nowTs,
-        actualEndTime: nowTs,
-        totalElapsed: finalizedSegments.reduce((sum, s) => sum + (s.actualDuration || 0), 0),
-        lastUpdated: nowTs,
-      } as SessionPlan)
-      .catch((err) => log.error('Failed to finalize resumed plan:', err));
-  };
-
-  // Auto-trigger resume when a resumePlan prop is provided.
+  // Load on mount, and refresh when a plan finishes or is stopped
   useEffect(() => {
-    if (resumePlan && sessions.length === 0 && !isComplete) {
-      resumeFromPlan(resumePlan);
+    if (timer.phase === 'idle' || timer.phase === 'complete') void loadStats();
+  }, [timer.phase]);
+
+  // Resume a plan handed in from History or the recovery banner
+  useEffect(() => {
+    if (resumePlan && timer.phase === 'idle') {
+      actions.resumePlan(resumePlan);
       onResumeConsumed?.();
     }
+    // Trigger only when a new plan is handed in; the guard reads the phase at that moment.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resumePlan]);
 
-  const pauseSession = () => {
-    pause();
-  };
-
-  const resumeSession = () => {
-    resume();
-  };
-
-  const stopSession = () => {
-    if (sessions.length > 0 && sessionStartTime) {
-      recordSession(CompletionStatus.INTERRUPTED);
-    }
-    pause(); // Stop the timer
-    setSessions([]);
-    setCurrentSessionIndex(0);
-    setSessionStartTime(null);
-  };
-
-  const skipToNext = () => {
-    if (currentSessionIndex < sessions.length - 1) {
-      recordSession(CompletionStatus.SKIPPED);
-      const nextIndex = currentSessionIndex + 1;
-      setCurrentSessionIndex(nextIndex);
-      setSessionStartTime(new Date());
-      const nextSession = sessions[nextIndex];
-      const newExpiry = dayjs().add(nextSession.duration, 'second').toDate();
-      restart(newExpiry, false);
-      resume(); // Start the next session immediately
-    }
-  };
-
-  const fastForward = () => {
-    if (!isRunning) return;
-
-    // Calculate remaining time in seconds
-    const remainingSeconds = hours * 3600 + minutes * 60 + seconds;
-
-    // Reduce by 30 seconds, minimum 1 second
-    const newRemainingSeconds = Math.max(1, remainingSeconds - 30);
-
-    // Calculate new expiry time
-    const newExpiry = dayjs().add(newRemainingSeconds, 'second').toDate();
-    restart(newExpiry, true);
-  };
-
-  const isPaused = isActive && !isRunning && !isComplete;
-
-  const getExpectedEndTime = () => {
-    if (isActive || isPaused) {
-      // When running or paused, show end time for the current session
-      return dayjs().add(hours, 'hour').add(minutes, 'minute').add(seconds, 'second');
-    }
-    // When idle, show end time for the entire plan if we start now
-    return dayjs().add(totalDuration, 'minute');
-  };
-
+  const startSession = () => actions.start(totalDuration, settings);
+  const displayTime = formatClock(isActive ? timer.remainingSeconds : totalDuration * 60);
+  const expectedEnd = dayjs(isActive ? timer.segmentEndsAt : Date.now() + totalDuration * 60_000);
   // Show completion screen when all sessions are done
   if (isComplete) {
     return (
@@ -411,7 +115,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
           <Typography variant="h6" sx={{ color: 'primary.main', mb: 4 }}>
             {todayStats.completed} sessions completed today
           </Typography>
-          <Button variant="contained" size="large" onClick={resetToIdle} sx={{ px: 4, py: 1.5 }}>
+          <Button variant="contained" size="large" onClick={actions.reset} sx={{ px: 4, py: 1.5 }}>
             Start New Session
           </Button>
         </Box>
@@ -458,7 +162,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
         }}
       >
         <CircularTimerRing
-          progress={calculateProgress()}
+          progress={timer.progress}
           size={200}
           strokeWidth={6}
           isRunning={isRunning}
@@ -473,7 +177,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
               color: isActive ? (isBreak ? 'secondary.main' : 'primary.main') : 'text.secondary',
             }}
           >
-            {displayTime()}
+            {displayTime}
           </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5 }}>
             {isActive ? (isBreak ? 'BREAK' : 'FOCUS') : 'READY'}
@@ -485,7 +189,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 3 }}>
         <AccessTime fontSize="small" sx={{ color: 'text.secondary' }} />
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          Ends at {getExpectedEndTime().format('h:mm A')}
+          Ends at {expectedEnd.format('h:mm A')}
         </Typography>
       </Box>
 
@@ -503,20 +207,20 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
           Session Plan
         </Typography>
         <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 1 }}>
-          {sessions.length === 0 ? (
+          {timer.segments.length === 0 ? (
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               Start a session to see your plan
             </Typography>
           ) : (
-            sessions.map((session, index) => (
+            timer.segments.map((segment, index) => (
               <Chip
-                key={index}
-                label={`${Math.round(session.duration / 60)}m ${session.type}`}
+                key={segment.id}
+                label={`${Math.round(segment.plannedDuration / 60)}m ${segment.type === SessionType.FOCUS ? 'focus' : 'break'}`}
                 size="small"
-                color={session.type === 'focus' ? 'primary' : 'secondary'}
-                variant={index === currentSessionIndex ? 'filled' : 'outlined'}
+                color={segment.type === SessionType.FOCUS ? 'primary' : 'secondary'}
+                variant={index === timer.segmentIndex ? 'filled' : 'outlined'}
                 sx={{
-                  opacity: index < currentSessionIndex ? 0.5 : 1,
+                  opacity: index < timer.segmentIndex ? 0.5 : 1,
                 }}
               />
             ))
@@ -674,7 +378,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
             variant="contained"
             size="large"
             startIcon={<PlayArrow />}
-            onClick={resumeSession}
+            onClick={actions.resume}
           >
             Resume
           </Button>
@@ -683,7 +387,8 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
         {isRunning && (
           <>
             <IconButton
-              onClick={pauseSession}
+              aria-label="Pause"
+              onClick={actions.pause}
               sx={{
                 width: 48,
                 height: 48,
@@ -694,13 +399,17 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
               <Pause />
             </IconButton>
             <Tooltip title="Skip">
-              <IconButton onClick={skipToNext} size="small">
+              <IconButton onClick={actions.skip} size="small">
                 <SkipNext />
               </IconButton>
             </Tooltip>
             {import.meta.env.DEV && (
               <Tooltip title="Fast forward -30s (Test)">
-                <IconButton onClick={fastForward} size="small" sx={{ color: 'warning.main' }}>
+                <IconButton
+                  onClick={() => actions.fastForward()}
+                  size="small"
+                  sx={{ color: 'warning.main' }}
+                >
                   <FastForward />
                 </IconButton>
               </Tooltip>
@@ -710,7 +419,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
 
         {isActive && (
           <Tooltip title="Stop">
-            <IconButton onClick={stopSession} size="small" sx={{ color: 'error.main' }}>
+            <IconButton onClick={actions.stop} size="small" sx={{ color: 'error.main' }}>
               <Stop />
             </IconButton>
           </Tooltip>
