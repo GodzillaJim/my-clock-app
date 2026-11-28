@@ -27,7 +27,8 @@ Built with Electron, React and TypeScript, with all data stored locally in SQLit
 
 **History and insights**
 
-- Day timeline of every run and segment, focus heatmap, momentum header and rhythm trends
+- A plain-language summary of today, a 12-week focus heatmap (arrow keys move between days), a
+  timeline of any day, and your 30-day rhythm
 - Streaks, average day start/end times and focus totals, computed from your local history
 - Sessions, plans and daily history are kept for 90 days
 

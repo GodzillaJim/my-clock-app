@@ -1,22 +1,26 @@
-import React, { useMemo } from 'react';
-import { Box, Typography, Tooltip } from '@mui/material';
-import { useTheme, alpha } from '@mui/material/styles';
-import { formatDurationFromSeconds } from '@/features/timer/types';
+import React, { useMemo, useRef } from 'react';
+import { Box, Typography, Tooltip, useTheme, alpha } from '@mui/material';
+import { datesUpTo } from '@/features/stats/stats';
+import { formatSpan } from '@/features/stats/historyCopy';
+import { motion, radius } from '@/theme/tokens';
 
 interface FocusHeatmapProps {
-  /** Map of YYYY-MM-DD -> focus seconds for that day. */
+  /** Store date (YYYY-MM-DD) → focus seconds that day. */
   focusByDate: Map<string, number>;
+  /** Today's store date: the last cell. */
+  today: string;
   selectedDate: string;
   onSelectDate: (date: string) => void;
   weeks?: number;
 }
 
-const WEEKDAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const CELL = 14;
+const GAP = 4;
+const LABEL_W = 32;
 
-const dateKey = (d: Date): string => d.toISOString().split('T')[0];
-
-// Fixed, meaningful thresholds (minutes) rather than relative quantiles.
+/** Fixed, meaningful thresholds (minutes) rather than relative quantiles. */
 const levelFor = (seconds: number): number => {
   const m = seconds / 60;
   if (m <= 0) return 0;
@@ -26,76 +30,87 @@ const levelFor = (seconds: number): number => {
   return 4;
 };
 
-const CELL = 13;
-const GAP = 4;
+const LEVEL_NAMES = ['None', 'Under 30 min', '30 min to 1 h', '1 to 2 h', '2 h or more'];
 
+/** Store dates are UTC days, so the grid is laid out in UTC too. */
+const parse = (date: string) => new Date(`${date}T00:00:00Z`);
+const longLabel = (date: string) =>
+  parse(date).toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+
+/**
+ * Twelve weeks of focus, one cell per day. It is a single tab stop: arrow keys
+ * move between days (left and right by week, up and down by day) and the
+ * selected day shows below.
+ */
 export const FocusHeatmap: React.FC<FocusHeatmapProps> = ({
   focusByDate,
+  today,
   selectedDate,
   onSelectDate,
   weeks = 12,
 }) => {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
-  const todayKey = dateKey(new Date());
+  const { palette, tokens } = useTheme();
+  const gridRef = useRef<HTMLDivElement>(null);
 
-  const { columns, monthLabels } = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const days: Date[] = [];
-    for (let i = weeks * 7 - 1; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      days.push(d);
-    }
-
-    // Pad the front so the first column begins on Sunday, and the back to fill
-    // the final week, keeping every column a clean 7-cell run.
-    const padded: (Date | null)[] = [];
-    const firstDow = days[0].getDay();
-    for (let k = 0; k < firstDow; k++) padded.push(null);
-    padded.push(...days);
+  const { dates, columns, monthLabels } = useMemo(() => {
+    const all = datesUpTo(today, weeks * 7);
+    // Pad the front so each column runs Sunday to Saturday
+    const lead = parse(all[0]).getUTCDay();
+    const padded: (string | null)[] = [...Array<null>(lead).fill(null), ...all];
     while (padded.length % 7 !== 0) padded.push(null);
-
-    const cols: (Date | null)[][] = [];
+    const cols: (string | null)[][] = [];
     for (let i = 0; i < padded.length; i += 7) cols.push(padded.slice(i, i + 7));
 
-    // A month label sits above the first column where a new month appears.
     const labels: { col: number; text: string }[] = [];
     let lastMonth = -1;
     cols.forEach((col, ci) => {
-      const firstReal = col.find(Boolean) as Date | undefined;
-      if (firstReal && firstReal.getMonth() !== lastMonth) {
-        lastMonth = firstReal.getMonth();
-        labels.push({ col: ci, text: MONTHS[firstReal.getMonth()] });
+      const first = col.find(Boolean);
+      if (!first) return;
+      const month = parse(first).getUTCMonth();
+      if (month !== lastMonth) {
+        lastMonth = month;
+        labels.push({ col: ci, text: MONTHS[month] });
       }
     });
+    return { dates: all, columns: cols, monthLabels: labels };
+  }, [today, weeks]);
 
-    return { columns: cols, monthLabels: labels };
-  }, [weeks]);
+  const fill = (level: number) =>
+    level === 0 ? tokens.overlay.track : alpha(palette.primary.main, [0, 0.3, 0.5, 0.75, 1][level]);
 
-  const cellColor = (level: number): string =>
-    level === 0
-      ? alpha(theme.palette.text.primary, isDark ? 0.07 : 0.05)
-      : alpha(theme.palette.primary.main, [0, 0.3, 0.5, 0.72, 1][level]);
+  const move = (event: React.KeyboardEvent) => {
+    const steps: Record<string, number> = {
+      ArrowLeft: -7,
+      ArrowRight: 7,
+      ArrowUp: -1,
+      ArrowDown: 1,
+    };
+    let index = dates.indexOf(selectedDate);
+    if (event.key in steps) index += steps[event.key];
+    else if (event.key === 'Home') index = 0;
+    else if (event.key === 'End') index = dates.length - 1;
+    else return;
+    event.preventDefault();
+    const next = dates[Math.max(0, Math.min(dates.length - 1, index))];
+    onSelectDate(next);
+    gridRef.current?.querySelector<HTMLElement>(`[data-date="${next}"]`)?.focus();
+  };
 
   const colWidth = CELL + GAP;
 
   return (
     <Box>
-      {/* Month labels aligned to columns */}
-      <Box sx={{ display: 'flex', pl: '34px', height: 16, position: 'relative' }}>
+      <Box sx={{ position: 'relative', height: 18, ml: `${LABEL_W}px` }} aria-hidden="true">
         {monthLabels.map(({ col, text }) => (
           <Typography
             key={`${col}-${text}`}
             variant="caption"
-            sx={{
-              position: 'absolute',
-              left: `${34 + col * colWidth}px`,
-              color: 'text.secondary',
-              fontSize: '0.68rem',
-            }}
+            sx={{ position: 'absolute', left: col * colWidth, color: 'text.secondary' }}
           >
             {text}
           </Typography>
@@ -103,75 +118,73 @@ export const FocusHeatmap: React.FC<FocusHeatmapProps> = ({
       </Box>
 
       <Box sx={{ display: 'flex', gap: `${GAP}px` }}>
-        {/* Weekday labels */}
         <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: `${GAP}px`,
-            width: 30,
-            flexShrink: 0,
-          }}
+          aria-hidden="true"
+          sx={{ display: 'flex', flexDirection: 'column', gap: `${GAP}px`, width: LABEL_W - GAP }}
         >
-          {WEEKDAY_LABELS.map((label, i) => (
-            <Box key={i} sx={{ height: CELL, display: 'flex', alignItems: 'center' }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.62rem' }}>
-                {label}
-              </Typography>
-            </Box>
+          {WEEKDAYS.map((day, i) => (
+            <Typography
+              key={day}
+              variant="caption"
+              sx={{
+                height: CELL,
+                lineHeight: `${CELL}px`,
+                fontSize: '0.6875rem',
+                color: 'text.secondary',
+                visibility: i % 2 === 1 ? 'visible' : 'hidden',
+              }}
+            >
+              {day}
+            </Typography>
           ))}
         </Box>
 
-        {/* Week columns */}
-        <Box sx={{ display: 'flex', gap: `${GAP}px`, flexWrap: 'nowrap', overflowX: 'auto' }}>
+        <Box
+          ref={gridRef}
+          role="group"
+          aria-label="Focus per day, last 12 weeks"
+          onKeyDown={move}
+          sx={{ display: 'flex', gap: `${GAP}px` }}
+        >
           {columns.map((col, ci) => (
             <Box key={ci} sx={{ display: 'flex', flexDirection: 'column', gap: `${GAP}px` }}>
-              {col.map((day, ri) => {
-                if (!day) return <Box key={ri} sx={{ width: CELL, height: CELL }} />;
-                const key = dateKey(day);
-                const isFuture = key > todayKey;
-                if (isFuture) return <Box key={ri} sx={{ width: CELL, height: CELL }} />;
-
-                const seconds = focusByDate.get(key) || 0;
+              {col.map((date, ri) => {
+                if (!date) return <Box key={ri} sx={{ width: CELL, height: CELL }} />;
+                const seconds = focusByDate.get(date) ?? 0;
                 const level = levelFor(seconds);
-                const isSelected = key === selectedDate;
-                const isToday = key === todayKey;
-                const label = day.toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                });
-
+                const selected = date === selectedDate;
+                const amount = seconds > 0 ? `${formatSpan(seconds)} of focus` : 'no focus';
                 return (
                   <Tooltip
-                    key={ri}
-                    arrow
-                    title={
-                      <Box sx={{ textAlign: 'center', py: 0.25 }}>
-                        <div style={{ fontWeight: 600 }}>{label}</div>
-                        <div>
-                          {seconds > 0 ? `${formatDurationFromSeconds(seconds)} focus` : 'No focus'}
-                        </div>
-                      </Box>
-                    }
+                    key={date}
+                    title={`${longLabel(date)}: ${amount}`}
+                    enterDelay={300}
+                    disableInteractive
                   >
                     <Box
-                      role="button"
-                      aria-label={`${label}: ${seconds > 0 ? formatDurationFromSeconds(seconds) : 'no'} focus`}
-                      onClick={() => onSelectDate(key)}
+                      component="button"
+                      type="button"
+                      data-date={date}
+                      aria-label={`${longLabel(date)}, ${amount}`}
+                      aria-pressed={selected}
+                      tabIndex={selected ? 0 : -1}
+                      onClick={() => onSelectDate(date)}
                       sx={{
+                        display: 'block',
+                        p: 0,
+                        border: 0,
                         width: CELL,
                         height: CELL,
-                        borderRadius: '3px',
-                        backgroundColor: cellColor(level),
+                        borderRadius: '4px',
                         cursor: 'pointer',
-                        transition: 'transform 120ms cubic-bezier(0.22,1,0.36,1), box-shadow 120ms',
-                        boxShadow: isSelected
-                          ? `0 0 0 2px ${theme.palette.background.default}, 0 0 0 3.5px ${theme.palette.primary.main}`
-                          : isToday
-                            ? `inset 0 0 0 1.5px ${alpha(theme.palette.text.primary, 0.45)}`
+                        backgroundColor: fill(level),
+                        boxShadow: selected
+                          ? `0 0 0 2px ${palette.background.default}, 0 0 0 3.5px ${palette.text.primary}`
+                          : date === today
+                            ? `inset 0 0 0 1.5px ${tokens.line.strong}`
                             : 'none',
-                        '&:hover': { transform: 'scale(1.18)' },
+                        transition: `box-shadow ${motion.fast} ${motion.easeOut}`,
+                        '&:hover': { boxShadow: `0 0 0 1.5px ${tokens.line.strong}` },
                       }}
                     />
                   </Tooltip>
@@ -182,24 +195,26 @@ export const FocusHeatmap: React.FC<FocusHeatmapProps> = ({
         </Box>
       </Box>
 
-      {/* Legend */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5, pl: '34px' }}>
-        <Typography
-          variant="caption"
-          sx={{ color: 'text.secondary', mr: 0.5, fontSize: '0.65rem' }}
-        >
+      <Box
+        sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5, ml: `${LABEL_W}px` }}
+        aria-hidden="true"
+      >
+        <Typography variant="caption" sx={{ color: 'text.secondary', mr: 0.5 }}>
           Less
         </Typography>
-        {[0, 1, 2, 3, 4].map((lvl) => (
-          <Box
-            key={lvl}
-            sx={{ width: 11, height: 11, borderRadius: '2px', backgroundColor: cellColor(lvl) }}
-          />
+        {LEVEL_NAMES.map((name, level) => (
+          <Tooltip key={name} title={name} disableInteractive>
+            <Box
+              sx={{
+                width: 11,
+                height: 11,
+                borderRadius: `${radius.sm / 3}px`,
+                bgcolor: fill(level),
+              }}
+            />
+          </Tooltip>
         ))}
-        <Typography
-          variant="caption"
-          sx={{ color: 'text.secondary', ml: 0.5, fontSize: '0.65rem' }}
-        >
+        <Typography variant="caption" sx={{ color: 'text.secondary', ml: 0.5 }}>
           More
         </Typography>
       </Box>

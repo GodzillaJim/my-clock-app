@@ -26,6 +26,12 @@ const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
 /** `YYYY-MM-DD` in UTC, the date format the stores use for days. */
 export const utcDate = (ms: number) => new Date(ms).toISOString().split('T')[0];
 
+/** The `count` store dates ending with `today` (a `YYYY-MM-DD` store date), oldest first. */
+export function datesUpTo(today: string, count: number): string[] {
+  const end = Date.parse(today);
+  return Array.from({ length: count }, (_, i) => utcDate(end - (count - 1 - i) * DAY_MS));
+}
+
 /** Longest run of completed focus sessions; breaks don't interrupt a run. */
 export function longestFocusStreak(sessions: SessionRecord[]): number {
   let longest = 0;
