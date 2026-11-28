@@ -62,7 +62,7 @@ npm ci          # installs locked dependencies and rebuilds better-sqlite3 for E
 npm run dev     # starts Vite and launches the app with hot reload
 ```
 
-Your data lives in a `focus-sessions.db` SQLite file in the app's folder under `%APPDATA%`.
+Your data lives in a `focus-sessions.db` SQLite file in the app's folder under `%APPDATA%`. Before a schema upgrade, the app saves a copy to `backups\` in the same folder (the last 5 are kept).
 Logs from both processes go to `logs\main.log` in the same folder (rotated to `main.old.log`
 at 5 MB). App code logs through `createLogger(scope)` from `src/services/logger.ts` (renderer)
 or `electron/main/logger.ts` (main); `console.*` is a lint error.

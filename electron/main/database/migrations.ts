@@ -1,50 +1,14 @@
+/**
+ * One-time import of the JSON files written by pre-SQLite versions.
+ * Schema migrations live in migrationRunner.ts.
+ */
 import type Database from 'better-sqlite3';
 import path from 'node:path';
 import fs from 'node:fs';
 import { app } from 'electron';
-import { up as migration001 } from './migrations/001_initial_schema';
 import { createLogger } from '../logger';
 
 const log = createLogger('migrations');
-
-interface Migration {
-  version: number;
-  description: string;
-  up: (db: Database.Database) => void;
-}
-
-const migrations: Migration[] = [{ version: 1, description: 'Initial schema', up: migration001 }];
-
-export function runMigrations(db: Database.Database): void {
-  // Ensure schema_version table exists
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS schema_version (
-      version INTEGER NOT NULL,
-      applied_at TEXT NOT NULL DEFAULT (datetime('now')),
-      description TEXT
-    );
-  `);
-
-  const currentVersion = db.prepare('SELECT MAX(version) as version FROM schema_version').get() as {
-    version: number | null;
-  };
-
-  const appliedVersion = currentVersion?.version || 0;
-
-  for (const migration of migrations) {
-    if (migration.version > appliedVersion) {
-      log.info(`Applying migration ${migration.version}: ${migration.description}`);
-      db.transaction(() => {
-        migration.up(db);
-        db.prepare('INSERT INTO schema_version (version, description) VALUES (?, ?)').run(
-          migration.version,
-          migration.description,
-        );
-      })();
-      log.info(`Migration ${migration.version} applied successfully`);
-    }
-  }
-}
 
 export function migrateLegacyData(db: Database.Database): void {
   // Check if already migrated

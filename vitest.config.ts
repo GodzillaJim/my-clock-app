@@ -59,10 +59,10 @@ export default defineConfig({
       // raises them here whenever coverage improves. Commit the bumped values.
       thresholds: {
         autoUpdate: true,
-        lines: 41.68,
-        statements: 42.5,
-        branches: 36.14,
-        functions: 44.33,
+        lines: 43.07,
+        statements: 43.83,
+        branches: 37.02,
+        functions: 46.16,
       },
     },
   },
