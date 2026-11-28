@@ -8,12 +8,15 @@ import {
   nativeImage,
   globalShortcut,
   Notification,
+  protocol,
+  net,
 } from 'electron';
 import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
 import { update } from './update';
+import { APP_ORIGIN, resolveAppRequest } from './appProtocol';
 import { getDatabase, closeDatabase } from './database/connection';
 import { runMigrations, migrateLegacyData } from './database/migrations';
 import { registerDatabaseHandlers } from './database/ipcHandlers';
@@ -59,7 +62,13 @@ if (!app.requestSingleInstanceLock()) {
   process.exit(0);
 }
 
-// Register custom protocol for file loading before app is ready
+// The packaged renderer is served from `app://bundle/...`. Registering it as a
+// standard, secure scheme gives the page a real origin, so module scripts,
+// fetch and storage work with web security enabled. Must run before `ready`.
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } },
+]);
+
 app.whenReady().then(() => {
   // Initialize SQLite database before creating window
   try {
@@ -72,24 +81,18 @@ app.whenReady().then(() => {
     console.error('Failed to initialize database:', err);
   }
 
-  const { protocol } = require('electron');
-  protocol.registerFileProtocol(
-    'app',
-    (
-      request: Electron.ProtocolRequest,
-      callback: (response: Electron.ProtocolResponse) => void,
-    ) => {
-      const url = request.url.substr(6);
-      callback({ path: path.normalize(`${RENDERER_DIST}/${url}`) });
-    },
-  );
+  protocol.handle('app', (request) => {
+    const filePath = resolveAppRequest(request.url, RENDERER_DIST);
+    if (!filePath) return new Response('Not found', { status: 404 });
+    return net.fetch(pathToFileURL(filePath).toString());
+  });
   createWindow();
 });
 
 let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false;
-const preload = path.join(__dirname, '../preload/index.mjs');
+const preload = path.join(__dirname, '../preload/index.cjs');
 
 function getIconPath(iconName: string): string {
   if (app.isPackaged) {
@@ -250,25 +253,19 @@ async function createWindow() {
     show: false,
     webPreferences: {
       preload,
-      // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false,
-
-      // Consider using contextBridge.exposeInMainWorld
-      // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
-      // contextIsolation: false,
+      // Explicit: the ESM preload needs an unsandboxed renderer (sandboxing is #40)
+      sandbox: false,
     },
   });
 
   if (VITE_DEV_SERVER_URL) {
-    // #298
     win.loadURL(VITE_DEV_SERVER_URL);
     // Open devTool if the app is not packaged
     win.webContents.openDevTools();
   } else {
-    // Try custom app protocol for Electron
-    win.loadURL('app://./index.html');
+    win.loadURL(`${APP_ORIGIN}/index.html`);
   }
 
   // Show window when ready
