@@ -18,9 +18,9 @@ Work milestones roughly in order; within a milestone, `priority:high` items go f
 *Exit criteria: CI green on main; no dead code or boilerplate leftovers; repo metadata reflects the product; Windows-only build config.*
 
 ### CI & git hygiene
-- [ ] [PR #11](https://github.com/GodzillaJim/my-clock-app/pull/11) — ZenFocusTimer tests; e2e isolated from real user data
-- [ ] [#12](https://github.com/GodzillaJim/my-clock-app/issues/12) replace boilerplate workflows with a Windows CI pipeline **(priority)**
-- [ ] [#13](https://github.com/GodzillaJim/my-clock-app/issues/13) commit package-lock.json for reproducible installs **(priority)**
+- [x] [PR #11](https://github.com/GodzillaJim/my-clock-app/pull/11) — ZenFocusTimer tests; e2e isolated from real user data
+- [x] [#12](https://github.com/GodzillaJim/my-clock-app/issues/12) replace boilerplate workflows with a Windows CI pipeline **(priority)**
+- [x] [#13](https://github.com/GodzillaJim/my-clock-app/issues/13) commit package-lock.json for reproducible installs **(priority)**
 - [ ] [#14](https://github.com/GodzillaJim/my-clock-app/issues/14) untrack .claude/settings.local.json
 - [ ] [#15](https://github.com/GodzillaJim/my-clock-app/issues/15) close stale Dependabot PRs and reconfigure Dependabot
 
@@ -37,6 +37,7 @@ Work milestones roughly in order; within a milestone, `priority:high` items go f
 - [ ] [#23](https://github.com/GodzillaJim/my-clock-app/issues/23) rewrite README to match the current app
 
 ### Known bugs
+- [x] [#78](https://github.com/GodzillaJim/my-clock-app/issues/78) better-sqlite3 is not rebuilt for Electron in dev and test **(priority)**
 - [ ] [#24](https://github.com/GodzillaJim/my-clock-app/issues/24) replace 1000-session cap with 90-day retention
 - [ ] [#25](https://github.com/GodzillaJim/my-clock-app/issues/25) notification sounds setting has no sound files
 

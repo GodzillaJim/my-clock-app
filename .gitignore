@@ -24,8 +24,7 @@ release
 *.sln
 *.sw?
 
-#lockfile
-package-lock.json
+# npm is the package manager; package-lock.json is committed
 pnpm-lock.yaml
 yarn.lock
 /test-results/
