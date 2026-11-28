@@ -28,3 +28,8 @@ the native module was built for the wrong ABI (#78).
 - Repositories are testable against an in-memory database (`test/repositories.test.ts`).
 - Every data access is an async IPC round trip; the renderer cannot read data synchronously.
 - Removing the remaining `localStorage` fallback path is tracked in #43.
+
+## Update (2026-11-28, #43)
+
+The `localStorage` fallback is gone. The renderer's store is one interface, `FocusDb`
+(`src/services/db.ts`): the SQLite bridge in Electron, and an in-memory implementation with the same semantics for unit tests or a renderer running outside Electron, where nothing is persisted.

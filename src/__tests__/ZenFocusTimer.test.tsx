@@ -14,7 +14,6 @@ const mocks = vi.hoisted(() => ({
   persistenceService: {
     savePlanSnapshot: vi.fn(),
     clearPlanSnapshot: vi.fn(),
-    clearSnapshot: vi.fn(),
   },
   notificationService: {
     showNotification: vi.fn(),

@@ -15,7 +15,6 @@ vi.mock('@/services/persistenceService', () => ({
   persistenceService: {
     savePlanSnapshot: vi.fn(),
     clearPlanSnapshot: vi.fn(),
-    clearSnapshot: vi.fn(),
   },
 }));
 vi.mock('@/services/notificationService', () => ({

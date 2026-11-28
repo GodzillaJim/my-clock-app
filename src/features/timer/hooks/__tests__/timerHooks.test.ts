@@ -13,7 +13,6 @@ const mocks = vi.hoisted(() => ({
   persistenceService: {
     savePlanSnapshot: vi.fn(),
     clearPlanSnapshot: vi.fn(),
-    clearSnapshot: vi.fn(),
   },
   notificationService: {
     showNotification: vi.fn(),
@@ -68,7 +67,6 @@ describe('useCountdown', () => {
     expect(mocks.notificationService.showNotification).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Timer Complete' }),
     );
-    expect(mocks.persistenceService.clearSnapshot).toHaveBeenCalledWith('TIMER_SNAPSHOT');
   });
 
   it('resets without notifying', () => {
@@ -97,7 +95,6 @@ describe('useStopwatch', () => {
     act(() => result.current.actions.reset());
     expect(result.current.elapsedMs).toBe(0);
     expect(result.current.laps).toEqual([]);
-    expect(mocks.persistenceService.clearSnapshot).toHaveBeenCalledWith('STOPWATCH_SNAPSHOT');
   });
 });
 
@@ -109,7 +106,6 @@ describe('runFocusEffect', () => {
     runFocusEffect({ type: 'savePlan', plan });
     runFocusEffect({ type: 'savePlanSnapshot', plan });
     runFocusEffect({ type: 'clearPlanSnapshot' });
-    runFocusEffect({ type: 'clearSessionSnapshot' });
     runFocusEffect({ type: 'recordSession', record });
     runFocusEffect({ type: 'recalculateStats' });
     runFocusEffect({
@@ -120,7 +116,6 @@ describe('runFocusEffect', () => {
     expect(mocks.focusStorage.saveSessionPlan).toHaveBeenCalledWith(plan);
     expect(mocks.persistenceService.savePlanSnapshot).toHaveBeenCalledWith(plan);
     expect(mocks.persistenceService.clearPlanSnapshot).toHaveBeenCalled();
-    expect(mocks.persistenceService.clearSnapshot).toHaveBeenCalledWith();
     expect(mocks.focusStorage.addSession).toHaveBeenCalledWith(record);
     expect(mocks.focusStorage.recalculateLifetimeStats).toHaveBeenCalled();
     expect(mocks.notificationService.showNotification).toHaveBeenCalledWith(

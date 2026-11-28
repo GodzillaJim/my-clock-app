@@ -1,101 +1,34 @@
-import {
-  ActiveSessionSnapshot,
-  ActivePlanSnapshot,
-  SNAPSHOT_KEY,
-  PLAN_SNAPSHOT_KEY,
-} from '@/types/Persistence';
-import { SessionPlan } from '@/features/timer/types';
+import type { PlanSnapshot } from '../../electron/ipc/contract';
+import type { SessionPlan } from '@/features/timer/types';
+import { db as defaultDb, type FocusDb } from './db';
 import { createLogger } from '@/services/logger';
 
 const log = createLogger('persistenceService');
 
-const hasDb = () => !!window.electronAPI?.db;
+/**
+ * The crash-recovery snapshot of the running plan. better-sqlite3 writes
+ * synchronously in the main process, so a snapshot is on disk once its IPC
+ * call returns. Saves are fire-and-forget: the timer must never wait on them.
+ */
+export function createPersistenceService(db: FocusDb) {
+  return {
+    savePlanSnapshot(plan: SessionPlan): void {
+      db.snapshot.save(plan).catch((err) => log.error('Failed to save plan snapshot:', err));
+    },
 
-export const persistenceService = {
-  // Generic snapshots (used by ZenCountdownTimer and ZenStopwatch)
-  saveSnapshot: (snapshot: ActiveSessionSnapshot, key: string = SNAPSHOT_KEY): void => {
-    try {
-      localStorage.setItem(key, JSON.stringify(snapshot));
-    } catch (error) {
-      log.error('Failed to save session snapshot:', error);
-    }
-  },
-
-  loadSnapshot: (key: string = SNAPSHOT_KEY): ActiveSessionSnapshot | null => {
-    try {
-      const data = localStorage.getItem(key);
-      if (!data) return null;
-      return JSON.parse(data) as ActiveSessionSnapshot;
-    } catch (error) {
-      log.error('Failed to load session snapshot:', error);
-      return null;
-    }
-  },
-
-  clearSnapshot: (key: string = SNAPSHOT_KEY): void => {
-    try {
-      localStorage.removeItem(key);
-    } catch (error) {
-      log.error('Failed to clear session snapshot:', error);
-    }
-  },
-
-  // Plan snapshot — SQLite-backed when in Electron for crash durability
-  savePlanSnapshot: (plan: SessionPlan): void => {
-    if (hasDb()) {
-      // Fire-and-forget IPC — better-sqlite3 is synchronous on the main process,
-      // so data is fsync'd to disk before the IPC response returns
-      window
-        .electronAPI!.db.snapshot.save(plan)
-        .catch((err) => log.error('Failed to save plan snapshot to SQLite:', err));
-      return;
-    }
-    try {
-      const snapshot: ActivePlanSnapshot = { plan, lastUpdated: Date.now() };
-      localStorage.setItem(PLAN_SNAPSHOT_KEY, JSON.stringify(snapshot));
-    } catch (error) {
-      log.error('Failed to save plan snapshot:', error);
-    }
-  },
-
-  loadPlanSnapshot: async (): Promise<ActivePlanSnapshot | null> => {
-    if (hasDb()) {
+    async loadPlanSnapshot(): Promise<PlanSnapshot | null> {
       try {
-        const result = await window.electronAPI!.db.snapshot.load();
-        if (!result) return null;
-        return { plan: result.plan, lastUpdated: result.lastUpdated };
+        return await db.snapshot.load();
       } catch (error) {
-        log.error('Failed to load plan snapshot from SQLite:', error);
+        log.error('Failed to load plan snapshot:', error);
         return null;
       }
-    }
-    try {
-      const data = localStorage.getItem(PLAN_SNAPSHOT_KEY);
-      if (!data) return null;
-      return JSON.parse(data) as ActivePlanSnapshot;
-    } catch (error) {
-      log.error('Failed to load plan snapshot:', error);
-      return null;
-    }
-  },
+    },
 
-  clearPlanSnapshot: (): void => {
-    if (hasDb()) {
-      window
-        .electronAPI!.db.snapshot.clear()
-        .catch((err) => log.error('Failed to clear plan snapshot from SQLite:', err));
-      // Also clear localStorage in case there's a stale entry from pre-migration
-      try {
-        localStorage.removeItem(PLAN_SNAPSHOT_KEY);
-      } catch {
-        /* ignore */
-      }
-      return;
-    }
-    try {
-      localStorage.removeItem(PLAN_SNAPSHOT_KEY);
-    } catch (error) {
-      log.error('Failed to clear plan snapshot:', error);
-    }
-  },
-};
+    clearPlanSnapshot(): void {
+      db.snapshot.clear().catch((err) => log.error('Failed to clear plan snapshot:', err));
+    },
+  };
+}
+
+export const persistenceService = createPersistenceService(defaultDb);

@@ -14,11 +14,7 @@ import {
   type StopwatchEvent,
 } from '@/features/timer/engine/stopwatch';
 import { notificationService } from '@/services/notificationService';
-import { persistenceService } from '@/services/persistenceService';
 import { useTickSound } from './useTickSound';
-
-const TIMER_SNAPSHOT_KEY = 'TIMER_SNAPSHOT';
-const STOPWATCH_SNAPSHOT_KEY = 'STOPWATCH_SNAPSHOT';
 
 /** Re-samples the clock every `intervalMs` while `active`; returns the latest reading. */
 function useNow(active: boolean, intervalMs: number): [number, (now: number) => void] {
@@ -44,7 +40,6 @@ export function useCountdown() {
       stateRef.current = next;
       setState(next);
       setNow('now' in event ? event.now : Date.now());
-      if (effects.includes('cleared')) persistenceService.clearSnapshot(TIMER_SNAPSHOT_KEY);
       if (effects.includes('finished')) {
         notificationService.showNotification({
           type: 'session_complete',
@@ -96,7 +91,6 @@ export function useStopwatch() {
     (event: StopwatchEvent) => {
       setState((prev) => stopwatchTransition(prev, event));
       setNow('now' in event ? event.now : Date.now());
-      if (event.type === 'RESET') persistenceService.clearSnapshot(STOPWATCH_SNAPSHOT_KEY);
     },
     [setNow],
   );
