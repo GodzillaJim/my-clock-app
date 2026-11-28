@@ -1,27 +1,15 @@
 import { ipcRenderer, contextBridge } from 'electron';
 
-// --------- Expose some API to the Renderer process ---------
-contextBridge.exposeInMainWorld('ipcRenderer', {
-  on(...args: Parameters<typeof ipcRenderer.on>) {
-    const [channel, listener] = args;
-    return ipcRenderer.on(channel, (event, ...args) => listener(event, ...args));
-  },
-  off(...args: Parameters<typeof ipcRenderer.off>) {
-    const [channel, ...omit] = args;
-    return ipcRenderer.off(channel, ...omit);
-  },
-  send(...args: Parameters<typeof ipcRenderer.send>) {
-    const [channel, ...omit] = args;
-    return ipcRenderer.send(channel, ...omit);
-  },
-  invoke(...args: Parameters<typeof ipcRenderer.invoke>) {
-    const [channel, ...omit] = args;
-    return ipcRenderer.invoke(channel, ...omit);
-  },
-
-  // You can expose other APTs you need here.
-  // ...
-});
+// Only named, purpose-built functions are exposed; the renderer never gets raw
+// ipcRenderer access. Listeners receive no IPC event object and return an
+// unsubscribe function.
+const subscribe = (channel: string) => (callback: () => void) => {
+  const listener = () => callback();
+  ipcRenderer.on(channel, listener);
+  return () => {
+    ipcRenderer.removeListener(channel, listener);
+  };
+};
 
 // --------- Expose Focus Sessions Electron API ---------
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -36,24 +24,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sessionNotification: (notification: { title: string; body: string }) =>
     ipcRenderer.invoke('session-notification', notification),
 
-  // Event listeners for tray actions
-  onTrayStartSession: (callback: () => void) => {
-    ipcRenderer.on('tray-start-session', callback);
-  },
-  onTrayOpenSettings: (callback: () => void) => {
-    ipcRenderer.on('tray-open-settings', callback);
-  },
-  onTrayOpenHistory: (callback: () => void) => {
-    ipcRenderer.on('tray-open-history', callback);
-  },
-  onGlobalShortcutStartSession: (callback: () => void) => {
-    ipcRenderer.on('global-shortcut-start-session', callback);
-  },
-
-  // Remove listeners
-  removeAllListeners: (channel: string) => {
-    ipcRenderer.removeAllListeners(channel);
-  },
+  // Tray and global-shortcut events; each returns an unsubscribe function
+  onTrayStartSession: subscribe('tray-start-session'),
+  onTrayOpenSettings: subscribe('tray-open-settings'),
+  onTrayOpenHistory: subscribe('tray-open-history'),
+  onGlobalShortcutStartSession: subscribe('global-shortcut-start-session'),
 
   // SQLite database API
   db: {

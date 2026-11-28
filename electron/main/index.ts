@@ -18,6 +18,7 @@ import os from 'node:os';
 import { update } from './update';
 import { APP_ORIGIN, resolveAppRequest } from './appProtocol';
 import { PRODUCTION_CSP, developmentCsp, withCsp } from './csp';
+import { isAllowedNavigation, isAllowedPermission, isExternalLink } from './security';
 import { getDatabase, closeDatabase } from './database/connection';
 import { runMigrations, migrateLegacyData } from './database/migrations';
 import { registerDatabaseHandlers } from './database/ipcHandlers';
@@ -100,6 +101,14 @@ app.whenReady().then(() => {
       });
     });
   }
+  // Deny every web permission except notifications (no camera, mic, location, ...)
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) =>
+    callback(isAllowedPermission(permission)),
+  );
+  session.defaultSession.setPermissionCheckHandler((_wc, permission) =>
+    isAllowedPermission(permission),
+  );
+
   createWindow();
 });
 
@@ -269,8 +278,9 @@ async function createWindow() {
       preload,
       nodeIntegration: false,
       contextIsolation: true,
-      // Explicit: the ESM preload needs an unsandboxed renderer (sandboxing is #40)
-      sandbox: false,
+      sandbox: true,
+      webSecurity: true,
+      webviewTag: false,
     },
   });
 
@@ -304,10 +314,16 @@ async function createWindow() {
     }
   });
 
-  // Make all links open with the browser, not with the application
+  // The window only ever shows the app; https links open in the default browser
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https:')) shell.openExternal(url);
+    if (isExternalLink(url)) shell.openExternal(url);
     return { action: 'deny' };
+  });
+  win.webContents.on('will-navigate', (event, url) => {
+    if (!isAllowedNavigation(url, VITE_DEV_SERVER_URL)) {
+      event.preventDefault();
+      log.warn('Blocked navigation to', url);
+    }
   });
 
   // Setup global shortcuts and tray

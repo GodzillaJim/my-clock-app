@@ -55,12 +55,22 @@ if (process.platform === 'linux') {
       expect(path.resolve(userData)).toBe(path.resolve(userDataDir));
     });
 
-    test('runs the renderer with web security enabled', async () => {
-      const webSecurity = await electronApp.evaluate(
-        ({ BrowserWindow }) =>
-          BrowserWindow.getAllWindows()[0].webContents.getLastWebPreferences()?.webSecurity,
-      );
-      expect(webSecurity).toBe(true);
+    test('runs the renderer sandboxed, isolated and with web security', async () => {
+      const prefs = await electronApp.evaluate(({ BrowserWindow }) => {
+        const p = BrowserWindow.getAllWindows()[0].webContents.getLastWebPreferences();
+        return {
+          sandbox: p?.sandbox,
+          contextIsolation: p?.contextIsolation,
+          nodeIntegration: p?.nodeIntegration,
+          webSecurity: p?.webSecurity,
+        };
+      });
+      expect(prefs).toEqual({
+        sandbox: true,
+        contextIsolation: true,
+        nodeIntegration: false,
+        webSecurity: true,
+      });
       expect(page.url()).toBe('app://bundle/index.html');
     });
 
@@ -75,28 +85,51 @@ if (process.platform === 'linux') {
       expect(statuses).toEqual({ index: 200, traversal: 404 });
     });
 
-    test('gives the renderer no file-system access', async () => {
-      // Outside the app data directory: the old storage IPC accepted any path
-      const target = path.join(os.tmpdir(), `focus-e2e-escape-${Date.now()}.txt`);
-      const result = await page.evaluate(async (target) => {
+    test('exposes only the named bridge API, without raw IPC or Node', async () => {
+      const surface = await page.evaluate(() => {
         const w = window as any;
-        const attempts = await Promise.allSettled([
-          w.ipcRenderer.invoke('storage-write', target, 'written by the renderer'),
-          w.ipcRenderer.invoke('storage-read', target),
-          w.ipcRenderer.invoke('storage-delete', target),
-          w.ipcRenderer.invoke('get-storage-path', '../../escape'),
-          w.ipcRenderer.invoke('get-user-data-path'),
-        ]);
         return {
-          fileApis: Object.keys(w.electronAPI).filter((k) => /storage|path/i.test(k)),
-          statuses: attempts.map((a) => a.status),
+          ipcRenderer: typeof w.ipcRenderer,
+          require: typeof w.require,
+          process: typeof w.process,
+          api: Object.keys(w.electronAPI).sort(),
         };
-      }, target);
-      expect(result.fileApis).toEqual([]);
-      expect(result.statuses).toEqual(Array(5).fill('rejected'));
-      expect(fs.existsSync(target)).toBe(false);
+      });
+      expect(surface).toEqual({
+        ipcRenderer: 'undefined',
+        require: 'undefined',
+        process: 'undefined',
+        api: [
+          'db',
+          'log',
+          'minimizeToTray',
+          'onGlobalShortcutStartSession',
+          'onTrayOpenHistory',
+          'onTrayOpenSettings',
+          'onTrayStartSession',
+          'sessionNotification',
+          'showWindow',
+          'updateTrayStatus',
+        ],
+      });
     });
 
+    test('has no file-system storage handlers in the main process', async () => {
+      // The old storage-* channels accepted any absolute path from the renderer.
+      // Registering a handler throws if one already exists for that channel.
+      const registered = await electronApp.evaluate(({ ipcMain }) =>
+        ['storage-read', 'storage-write', 'storage-delete', 'get-storage-path'].filter((ch) => {
+          try {
+            ipcMain.handle(ch, () => null);
+            ipcMain.removeHandler(ch);
+            return false;
+          } catch {
+            return true;
+          }
+        }),
+      );
+      expect(registered).toEqual([]);
+    });
     test('initializes the SQLite database', async () => {
       // Fails if better-sqlite3 was not rebuilt for Electron's ABI — the app
       // would otherwise fall back to localStorage silently.
@@ -172,6 +205,24 @@ if (process.platform === 'linux') {
       await page.getByText('READY', { exact: true }).waitFor({ timeout: 10000 });
     }, 30000);
 
+    test('opens settings and history from the tray menu', async () => {
+      const send = (channel: string) =>
+        electronApp.evaluate(
+          ({ BrowserWindow }, ch) => BrowserWindow.getAllWindows()[0].webContents.send(ch),
+          channel,
+        );
+
+      await send('tray-open-settings');
+      await page.getByText('Focus Sessions Settings').waitFor({ timeout: 10000 });
+      await page.keyboard.press('Escape');
+      await page.getByText('Focus Sessions Settings').waitFor({ state: 'hidden', timeout: 10000 });
+
+      await send('tray-open-history');
+      const back = page.getByRole('button', { name: 'Back' });
+      await back.waitFor({ timeout: 10000 });
+      await back.click();
+      await back.waitFor({ state: 'hidden', timeout: 10000 });
+    }, 30000);
     test('retains every session from the last 90 days and prunes older ones', async () => {
       const result = await page.evaluate(async () => {
         const sessions = (window as any).electronAPI.db.sessions;
