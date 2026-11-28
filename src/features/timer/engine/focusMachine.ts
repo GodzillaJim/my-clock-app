@@ -57,6 +57,8 @@ export type FocusEvent =
   | { type: 'SKIP'; now: number }
   | { type: 'STOP'; now: number }
   | { type: 'RESET' }
+  /** Write the crash-recovery snapshot now (before unload, after an error). */
+  | { type: 'SNAPSHOT'; now: number }
   /** Development aid: jump `seconds` ahead in the current segment. */
   | { type: 'FAST_FORWARD'; now: number; seconds: number };
 
@@ -414,6 +416,15 @@ export function transition(state: FocusState, event: FocusEvent, deps: FocusDeps
           { type: 'clearSessionSnapshot' },
           { type: 'recalculateStats' },
         ],
+      };
+    }
+
+    case 'SNAPSHOT': {
+      if (state.phase !== 'running' && state.phase !== 'paused') return unchanged(state);
+      const plan = withProgress(state, event.now);
+      return {
+        state: { ...state, plan, lastSnapshotAt: event.now },
+        effects: [{ type: 'savePlanSnapshot', plan }],
       };
     }
 

@@ -10,6 +10,7 @@ import {
   protocol,
   net,
   session,
+  dialog,
 } from 'electron';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
@@ -21,6 +22,7 @@ import { getDatabase, closeDatabase } from './database/connection';
 import { runMigrations, migrateLegacyData } from './database/migrations';
 import { registerDatabaseHandlers } from './database/ipcHandlers';
 import { handle } from './ipc';
+import { crashAction, recordReload } from './crashRecovery';
 import { createLogger, initLogging } from './logger';
 
 const log = createLogger('main');
@@ -326,6 +328,8 @@ async function createWindow() {
     if (isExternalLink(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
+  watchRendererHealth(win);
+
   win.webContents.on('will-navigate', (event, url) => {
     if (!isAllowedNavigation(url, VITE_DEV_SERVER_URL)) {
       event.preventDefault();
@@ -338,7 +342,45 @@ async function createWindow() {
   createTray();
 }
 
-// Protocol registration and window creation handled above
+let recentReloads: number[] = [];
+
+/**
+ * Recovers from renderer crashes by reloading (the recovery banner then offers
+ * the interrupted session), and asks the user once crashes repeat.
+ */
+function watchRendererHealth(window: BrowserWindow) {
+  window.webContents.on('render-process-gone', async (_event, details) => {
+    const now = Date.now();
+    const action = crashAction(details.reason, recentReloads, now);
+    log.error(
+      `Renderer process gone (${details.reason}, exit code ${details.exitCode}); ${action}`,
+    );
+    if (action === 'ignore' || window.isDestroyed()) return;
+
+    if (action === 'ask') {
+      const { response } = await dialog.showMessageBox(window, {
+        type: 'error',
+        title: 'Focus Sessions',
+        message: 'Focus Sessions keeps crashing.',
+        detail: `Your progress is saved. The log is at ${path.join(app.getPath('userData'), 'logs', 'main.log')}.`,
+        buttons: ['Reload', 'Quit'],
+        defaultId: 0,
+        cancelId: 1,
+      });
+      if (response === 1) {
+        isQuitting = true;
+        app.quit();
+        return;
+      }
+    }
+    if (window.isDestroyed()) return;
+    recentReloads = recordReload(recentReloads, now);
+    window.webContents.reload();
+  });
+
+  window.webContents.on('unresponsive', () => log.warn('Renderer is unresponsive'));
+  window.webContents.on('responsive', () => log.info('Renderer is responsive again'));
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

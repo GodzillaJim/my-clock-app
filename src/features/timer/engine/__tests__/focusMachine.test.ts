@@ -302,6 +302,26 @@ describe('RESET', () => {
   });
 });
 
+describe('SNAPSHOT', () => {
+  it('writes the current progress immediately, running or paused', () => {
+    const { state, effects } = run([start(), { type: 'SNAPSHOT', now: T0 + 2000 }]);
+    expect(of(effects, 'savePlanSnapshot').at(-1)!.plan.segments[0].elapsedAtLastUpdate).toBe(2);
+    expect(state.lastSnapshotAt).toBe(T0 + 2000);
+
+    const paused = run([{ type: 'PAUSE', now: T0 + 3000 }], state).state;
+    const flushed = transition(paused, { type: 'SNAPSHOT', now: T0 + 9000 }, deps());
+    expect(of(flushed.effects, 'savePlanSnapshot')[0].plan.segments[0].elapsedAtLastUpdate).toBe(3);
+  });
+
+  it('has nothing to save when idle or complete', () => {
+    expect(transition(initialFocusState, { type: 'SNAPSHOT', now: T0 }, deps()).effects).toEqual(
+      [],
+    );
+    const complete = run([start(1), { type: 'TICK', now: T0 + MIN }]).state;
+    expect(transition(complete, { type: 'SNAPSHOT', now: T0 + MIN }, deps()).effects).toEqual([]);
+  });
+});
+
 describe('FAST_FORWARD', () => {
   it('jumps ahead but always leaves the last second', () => {
     const { state } = run([start(1), { type: 'FAST_FORWARD', now: T0, seconds: 30 }]);
