@@ -3,6 +3,7 @@ import {
   isAllowedNavigation,
   isAllowedPermission,
   isExternalLink,
+  isTrustedSender,
 } from '../electron/main/security';
 
 describe('window security policy', () => {
@@ -25,6 +26,16 @@ describe('window security policy', () => {
     expect(isAllowedNavigation('http://localhost:7777/', 'http://localhost:7777/')).toBe(true);
     expect(isAllowedNavigation('http://localhost:7777/')).toBe(false);
     expect(isAllowedNavigation('http://localhost:9999/', 'http://localhost:7777/')).toBe(false);
+  });
+
+  it('accepts IPC only from the app page itself', () => {
+    expect(isTrustedSender('app://bundle/index.html', true)).toBe(true);
+    // A subframe of the app page, another origin, or a vanished frame
+    expect(isTrustedSender('app://bundle/index.html', false)).toBe(false);
+    expect(isTrustedSender('https://example.com/', true)).toBe(false);
+    expect(isTrustedSender('data:text/html,<p>hi</p>', true)).toBe(false);
+    expect(isTrustedSender(undefined, true)).toBe(false);
+    expect(isTrustedSender('http://localhost:7777/', true, 'http://localhost:7777/')).toBe(true);
   });
 
   it('opens only https links externally', () => {

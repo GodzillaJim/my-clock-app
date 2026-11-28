@@ -28,6 +28,18 @@ function sameSite(a: URL, b: URL): boolean {
   return a.protocol === b.protocol && a.host === b.host;
 }
 
+/**
+ * IPC is only accepted from the app's own top-level page. `frameUrl` is the
+ * sender frame's URL; a missing frame (navigated away or destroyed) is refused.
+ */
+export function isTrustedSender(
+  frameUrl: string | undefined,
+  isMainFrame: boolean,
+  devServerUrl?: string,
+): boolean {
+  return !!frameUrl && isMainFrame && isAllowedNavigation(frameUrl, devServerUrl);
+}
+
 /** Only https links are handed to the default browser. */
 export function isExternalLink(url: string): boolean {
   try {

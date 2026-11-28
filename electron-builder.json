@@ -5,6 +5,16 @@
   "copyright": "Copyright © 2025-2026 Jimna Njoroge",
   "asar": true,
   "asarUnpack": ["node_modules/better-sqlite3/**"],
+  "electronFuses": {
+    "runAsNode": false,
+    "enableCookieEncryption": true,
+    "enableNodeOptionsEnvironmentVariable": false,
+    "enableNodeCliInspectArguments": false,
+    "enableEmbeddedAsarIntegrityValidation": true,
+    "onlyLoadAppFromAsar": true,
+    "loadBrowserProcessSpecificV8Snapshot": false,
+    "grantFileProtocolExtraPrivileges": false
+  },
   "directories": {
     "output": "release/${version}",
     "buildResources": "build"
@@ -32,8 +42,7 @@
         "arch": ["x64"]
       }
     ],
-    "artifactName": "${productName}_${version}.${ext}",
-    "verifyUpdateCodeSignature": false
+    "artifactName": "${productName}_${version}.${ext}"
   },
   "nsis": {
     "oneClick": false,

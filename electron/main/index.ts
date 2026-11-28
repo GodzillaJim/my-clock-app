@@ -14,7 +14,6 @@ import {
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
-import { update } from './update';
 import { APP_ORIGIN, resolveAppRequest } from './appProtocol';
 import { PRODUCTION_CSP, developmentCsp, withCsp } from './csp';
 import { isAllowedNavigation, isAllowedPermission, isExternalLink } from './security';
@@ -74,6 +73,12 @@ initLogging();
 protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } },
 ]);
+
+// Every webContents (including any created later): no <webview>, no new windows.
+app.on('web-contents-created', (_event, contents) => {
+  contents.on('will-attach-webview', (event) => event.preventDefault());
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+});
 
 app.whenReady().then(() => {
   // Initialize SQLite database before creating window
@@ -329,9 +334,6 @@ async function createWindow() {
   // Setup global shortcuts and tray
   setupGlobalShortcuts();
   createTray();
-
-  // Auto update
-  update(win);
 }
 
 // Protocol registration and window creation handled above

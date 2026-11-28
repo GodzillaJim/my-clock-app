@@ -253,6 +253,27 @@ if (process.platform === 'linux') {
       const log = fs.readFileSync(path.join(userDataDir, 'logs', 'main.log'), 'utf8');
       expect(log).toMatch(/\(ipc\)\s*Invalid arguments for db:sessions:getByDate/);
     });
+    test('refuses IPC from pages other than the app', async () => {
+      // Another origin that somehow got the preload must not reach the handlers
+      const preload = path.join(root, 'dist-electron', 'preload', 'index.cjs');
+      const result = await electronApp.evaluate(async ({ BrowserWindow }, preloadPath) => {
+        const intruder = new BrowserWindow({
+          show: false,
+          webPreferences: { preload: preloadPath, sandbox: true, contextIsolation: true },
+        });
+        try {
+          await intruder.loadURL('data:text/html,<p>intruder</p>');
+          return await intruder.webContents.executeJavaScript(
+            `window.electronAPI.db.kv.get('app_state').then(() => 'resolved', (e) => e.message)`,
+          );
+        } finally {
+          intruder.destroy();
+        }
+      }, preload);
+      expect(result).toContain('Untrusted sender for db:kv:get');
+      const log = fs.readFileSync(path.join(userDataDir, 'logs', 'main.log'), 'utf8');
+      expect(log).toMatch(/Rejected IPC from untrusted sender:\s*data:text\/html/);
+    });
     test('retains every session from the last 90 days and prunes older ones', async () => {
       const result = await page.evaluate(async () => {
         const sessions = (window as unknown as ProbeWindow).electronAPI.db.sessions;
