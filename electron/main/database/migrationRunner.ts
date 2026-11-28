@@ -28,8 +28,8 @@ export const MIGRATIONS: Migration[] = [
 
 export const LATEST_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 
-/** How many pre-migration backups to keep. */
-export const BACKUPS_TO_KEEP = 5;
+/** How many backups to keep (pre-migration, manual, pre-import and pre-restore share the folder). */
+export const BACKUPS_TO_KEEP = 10;
 
 function ensureVersionTable(db: Database.Database): void {
   db.exec(`
@@ -87,12 +87,13 @@ export interface MigrationResult {
 
 /**
  * Brings `db` up to the latest schema. An existing database (version > 0)
- * with pending migrations is backed up into `backupDir` first.
+ * with pending migrations is backed up into `backupDir` first (`null`: no backup,
+ * for scratch databases).
  * Throws if a migration fails; that migration is rolled back.
  */
 export function migrate(
   db: Database.Database,
-  backupDir: string,
+  backupDir: string | null,
   now = Date.now(),
   migrations: Migration[] = MIGRATIONS,
 ): MigrationResult {
@@ -108,7 +109,7 @@ export function migrate(
   };
   if (pending.length === 0) return result;
 
-  if (from > 0) result.backup = backupDatabase(db, backupDir, `v${from}`, now);
+  if (from > 0 && backupDir) result.backup = backupDatabase(db, backupDir, `v${from}`, now);
 
   for (const migration of pending) {
     db.transaction(() => {

@@ -26,6 +26,7 @@ import { registerDatabaseHandlers } from './database/ipcHandlers';
 import { handle } from './ipc';
 import { crashAction, recordReload } from './crashRecovery';
 import { forwardPowerEvents } from './power';
+import { registerDataHandlers } from './dataHandlers';
 import { createLogger, initLogging, logFilePath } from './logger';
 import { buildIssueUrl } from './reportProblem';
 import pkg from '../../package.json';
@@ -103,6 +104,7 @@ app.whenReady().then(() => {
     }
     migrateLegacyData(db);
     registerDatabaseHandlers(db);
+    registerDataHandlers(db, () => win);
     log.info('SQLite database initialized');
   } catch (err) {
     log.error('Failed to initialize database:', err);

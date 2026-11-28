@@ -24,6 +24,21 @@ async function launch(): Promise<{ app: ElectronApplication; page: Page }> {
   return { app, page };
 }
 
+/**
+ * Relaunches after a crash. Windows may take a moment to release the killed
+ * processes' handles on the profile, as it would for a user relaunching, so retry briefly.
+ */
+async function relaunch(): Promise<{ app: ElectronApplication; page: Page }> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await launch();
+    } catch (error) {
+      if (attempt >= 10) throw error;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  }
+}
+
 /** Kills a process and all its children immediately. */
 function killTree(pid: number) {
   if (process.platform === 'win32') {
@@ -49,7 +64,8 @@ beforeAll(() => {
 
 afterAll(async () => {
   await app?.close().catch(() => {});
-  fs.rmSync(userDataDir, { recursive: true, force: true });
+  // Killed processes may release their file handles a little late
+  fs.rmSync(userDataDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 });
 });
 
 describe('crash recovery', () => {
@@ -68,7 +84,7 @@ describe('crash recovery', () => {
     app = null;
 
     // 3. Relaunch on the same profile: the interrupted session is offered
-    ({ app: running, page } = await launch());
+    ({ app: running, page } = await relaunch());
     await page.getByText('Session Interrupted').waitFor({ timeout: 15000 });
     const banner = page.getByRole('alert').filter({ hasText: 'Session Interrupted' });
     await expect(banner.innerText()).resolves.toMatch(/0\/1 segments/);

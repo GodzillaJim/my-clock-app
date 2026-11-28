@@ -37,6 +37,14 @@ const api: ElectronAPI = {
   sessionNotification: invoke('session-notification'),
   reportProblem: invoke('app:reportProblem'),
 
+  data: {
+    export: invoke('data:export'),
+    import: invoke('data:import'),
+    backupNow: invoke('data:backupNow'),
+    listBackups: invoke('data:listBackups'),
+    restoreBackup: invoke('data:restoreBackup'),
+  },
+
   // Tray and global-shortcut events
   onTrayStartSession: subscribe('tray-start-session'),
   onTrayOpenSettings: subscribe('tray-open-settings'),
