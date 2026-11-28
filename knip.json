@@ -12,11 +12,12 @@
   "vitest": {
     "config": [
       "vitest.config.ts",
-      "vitest.config.e2e.ts"
+      "vitest.workspace.ts"
     ],
     "entry": [
       "src/**/*.test.{ts,tsx}",
       "src/__tests__/setup.ts",
+      "test/**/*.test.ts",
       "test/**/*.spec.ts"
     ]
   },

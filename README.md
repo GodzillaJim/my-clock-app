@@ -73,7 +73,9 @@ npm run check       # everything below, in order; stops at the first failure
 
 npm run typecheck   # tsc --noEmit
 npm run knip        # no unused files, dependencies or exports
-npm test            # builds the app in test mode, then runs unit (jsdom) and e2e (Electron) suites
+npm test            # test:unit, then test:e2e
+  npm run test:unit #   unit tests (jsdom), a few seconds, no build needed
+  npm run test:e2e  #   builds in test mode, then drives the real Electron app with Playwright
 npx vite build      # production build
 ```
 
@@ -88,7 +90,9 @@ never touches your own Focus Sessions data, and works while the app is open.
 | `npm run check` | Typecheck, knip, all tests and production build — run before every push |
 | `npm run typecheck` | TypeScript type check |
 | `npm run knip` | Find unused files, dependencies and exports |
-| `npm test` | Build in test mode, then run unit and e2e tests |
+| `npm test` | Unit tests, then e2e tests |
+| `npm run test:unit` | Unit tests only (jsdom) — fast, no build |
+| `npm run test:e2e` | Build in test mode, then e2e tests against the real Electron app |
 | `npm run build` | Typecheck, build and package for Windows |
 | `npm run dist` | Same as `build`, never publishes |
 | `npm run preview` | Preview the renderer build in a browser |

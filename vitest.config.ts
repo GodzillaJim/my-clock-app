@@ -1,18 +1,7 @@
 import { defineConfig } from 'vitest/config'
-import path from 'path'
 
+// Test projects (unit, e2e) are defined in vitest.workspace.ts.
+// This file holds options that apply to the whole run.
 export default defineConfig({
-  test: {
-    root: __dirname,
-    include: ['src/**/*.test.{ts,tsx}', 'test/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
-    testTimeout: 1000 * 29,
-    setupFiles: [path.resolve(__dirname, 'src/__tests__/setup.ts')],
-    environment: 'jsdom',
-    globals: true,
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
+  test: {},
 })
