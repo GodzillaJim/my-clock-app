@@ -5,14 +5,16 @@ import { type ElectronApplication, type Page, _electron as electron } from 'play
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import type { ElectronAPI } from '../electron/ipc/contract';
 
+/** The timer's status word (Focus, Break, Paused, Ready), matched case-insensitively. */
+const timerStatus = (page: Page, text: string) =>
+  page.getByTestId('timer-status').filter({ hasText: new RegExp(`^${text}$`, 'i') });
+
 const root = path.join(__dirname, '..');
 let app: ElectronApplication;
 let page: Page;
 let userDataDir: string;
 
 type BridgeWindow = Window & { electronAPI: ElectronAPI };
-
-const label = (text: string) => page.getByText(text, { exact: true });
 
 /** Picks a layout in Settings → Appearance and saves. */
 async function switchLayout(option: RegExp) {
@@ -29,7 +31,7 @@ async function switchLayout(option: RegExp) {
 
 const start = () =>
   page
-    .getByRole('button', { name: /^Start \d+m Focus$/ })
+    .getByRole('button', { name: /^Start (\d+m )?focus$/i })
     .first()
     .click();
 
@@ -49,7 +51,7 @@ beforeAll(async () => {
     env: { ...process.env, NODE_ENV: 'test', FOCUS_USER_DATA_DIR: userDataDir },
   });
   page = await app.firstWindow();
-  await label('READY').waitFor({ timeout: 20000 });
+  await timerStatus(page, 'Ready').waitFor({ timeout: 20000 });
 }, 60000);
 
 afterAll(async () => {
@@ -63,21 +65,21 @@ describe('layouts', () => {
     await page.getByRole('button', { name: 'Stopwatch' }).waitFor({ timeout: 10000 });
 
     await start();
-    await label('FOCUS').waitFor({ timeout: 10000 });
+    await timerStatus(page, 'Focus').waitFor({ timeout: 10000 });
     await page.getByRole('button', { name: 'Pause' }).click();
     await page.getByRole('button', { name: 'Resume' }).click();
-    await label('FOCUS').waitFor({ timeout: 10000 });
+    await timerStatus(page, 'Focus').waitFor({ timeout: 10000 });
 
     // Away to the stopwatch and back: the session kept running
     await page.getByRole('button', { name: 'Stopwatch' }).click();
     await page.getByRole('button', { name: /^start$/i }).waitFor({ timeout: 10000 });
     await page.getByRole('button', { name: 'Focus' }).click();
-    await label('FOCUS').waitFor({ timeout: 10000 });
+    await timerStatus(page, 'Focus').waitFor({ timeout: 10000 });
 
     // While running, the focus view shows its controls on hover
-    await label('FOCUS').hover();
+    await timerStatus(page, 'Focus').hover();
     await page.getByRole('button', { name: 'Stop session' }).first().click();
-    await label('READY').waitFor({ timeout: 10000 });
+    await timerStatus(page, 'Ready').waitFor({ timeout: 10000 });
     expect(await planStatuses()).toEqual(['abandoned']);
   }, 60000);
 
@@ -102,11 +104,11 @@ describe('layouts', () => {
 
     await switchLayout(/^Zen Minimal/);
     // The Zen view picks up the same running session
-    await label('FOCUS').waitFor({ timeout: 10000 });
+    await timerStatus(page, 'Focus').waitFor({ timeout: 10000 });
     expect(await planStatuses()).toEqual(['abandoned', 'abandoned', 'active']);
 
-    await label('FOCUS').hover();
+    await timerStatus(page, 'Focus').hover();
     await page.getByRole('button', { name: 'Stop session' }).first().click();
-    await label('READY').waitFor({ timeout: 10000 });
+    await timerStatus(page, 'Ready').waitFor({ timeout: 10000 });
   }, 60000);
 });

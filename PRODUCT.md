@@ -32,8 +32,8 @@ acknowledgement, not from decoration or rewards. Calm by default; never cute, ne
 - **Gamified productivity**: badges, confetti, points, streak fireworks, cartoon mascots. Progress is
   acknowledged, not rewarded.
 - **The neon / glass "AI" look**: glassmorphism as decoration, glows, gradient text, purple-blue
-  neon. (The current Aerogel style and the Deep Focus text glows drift here; the M4 design pass
-  should bring both back in line.)
+  neon. (The old Aerogel and Deep Focus styles drifted here; the M4 design pass replaced both
+  with one warm style in light and dark.)
 - **Cluttered Pomodoro apps**: many buttons, settings on the main screen, dense controls around the
   timer.
 

@@ -41,8 +41,8 @@ Built with Electron, React and TypeScript, with all data stored locally in SQLit
 **Look and feel**
 
 - Three layouts: _Zen_ (centered timer), _Dashboard_ (sidebar + stats), _Command Center_ (all-in-one with timeline)
-- Two visual styles: _Deep Focus_ (dark, OLED-friendly) and _Aerogel_ (glassy pastels, light, dark or
-  following the system theme)
+- One calm style in light and dark: warm neutrals, a terracotta accent for focus and sage for
+  breaks. It follows the Windows theme unless you pick one
 - Lives in the system tray, whose _Start Focus Session_ item starts (or resumes) the timer
 - Global shortcuts, from any app: **Ctrl+Shift+Alt+T** brings the window to the front,
   **Ctrl+Shift+Alt+S** starts (or resumes) a focus session

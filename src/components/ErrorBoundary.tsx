@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Button, Typography } from '@mui/material';
 import { ErrorOutlined } from '@mui/icons-material';
 import { createLogger } from '@/services/logger';
-import { defaultScheme as scheme, typography } from '@/theme/tokens';
+import { systemScheme, typography } from '@/theme/tokens';
 
 const log = createLogger('ErrorBoundary');
 
@@ -62,6 +62,8 @@ interface CrashScreenProps {
 }
 
 function CrashScreen({ error, onRetry, onReload }: CrashScreenProps) {
+  // May render outside the theme provider, so it reads the tokens directly
+  const scheme = systemScheme();
   return (
     <Box
       role="alert"

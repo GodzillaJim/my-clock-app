@@ -1,8 +1,25 @@
-import { DEFAULT_SETTINGS, getTodayDateString, type AppState } from '@/features/timer/types';
+import {
+  DEFAULT_SETTINGS,
+  getTodayDateString,
+  type AppSettings,
+  type AppState,
+} from '@/features/timer/types';
 import type { FocusDb } from '../db';
 import { createLogger } from '@/services/logger';
 
 const log = createLogger('settings');
+
+/**
+ * Saved settings brought up to the current shape: settings added in newer versions get
+ * their defaults, and the retired visual styles (`uiTheme`) map onto the one style.
+ * Deep Focus was always dark, so it becomes the dark theme; Aerogel keeps its setting.
+ */
+export function migrateSettings(saved: unknown): AppSettings {
+  const { uiTheme, ...rest } = (saved ?? {}) as Partial<AppSettings> & { uiTheme?: unknown };
+  const settings: AppSettings = { ...DEFAULT_SETTINGS, ...rest };
+  if (uiTheme === 'deepFocus') settings.theme = 'dark';
+  return settings;
+}
 
 /** App state and settings, stored as one key-value document. */
 export function createSettingsService(db: FocusDb) {
@@ -22,8 +39,7 @@ export function createSettingsService(db: FocusDb) {
         const state: AppState = {
           ...defaults,
           ...saved,
-          // Settings added in newer versions get their defaults
-          settings: { ...DEFAULT_SETTINGS, ...saved.settings },
+          settings: migrateSettings(saved.settings),
         };
         if (state.lastActiveDate !== getTodayDateString()) {
           state.currentSession = null;

@@ -8,6 +8,10 @@ import type { ElectronAPI } from '../electron/ipc/contract';
 /** The page's window as tests probe it: the bridge plus arbitrary globals. */
 type ProbeWindow = Window & Record<string, unknown> & { electronAPI: ElectronAPI };
 
+/** The timer's status word (Focus, Break, Paused, Ready), matched case-insensitively. */
+const timerStatus = (page: Page, text: string) =>
+  page.getByTestId('timer-status').filter({ hasText: new RegExp(`^${text}$`, 'i') });
+
 const root = path.join(__dirname, '..');
 const screenshotDir = path.join(root, 'test', 'screenshots');
 let electronApp: ElectronApplication;
@@ -199,24 +203,24 @@ if (process.platform === 'linux') {
     });
 
     test('renders the idle focus timer', async () => {
-      await page.getByText('READY', { exact: true }).waitFor({ timeout: 15000 });
+      await timerStatus(page, 'Ready').waitFor({ timeout: 15000 });
 
-      const startButton = page.getByRole('button', { name: /^Start \d+m Focus$/ }).first();
+      const startButton = page.getByRole('button', { name: /^Start (\d+m )?focus$/i }).first();
       await startButton.waitFor({ state: 'visible', timeout: 15000 });
       expect(await startButton.isEnabled()).toBe(true);
     });
 
     test('starts a focus session and stops it again', async () => {
       await page
-        .getByRole('button', { name: /^Start \d+m Focus$/ })
+        .getByRole('button', { name: /^Start (\d+m )?focus$/i })
         .first()
         .click();
 
-      await page.getByText('FOCUS', { exact: true }).waitFor({ timeout: 10000 });
+      await timerStatus(page, 'Focus').waitFor({ timeout: 10000 });
 
       // Stop so the run doesn't leave an active plan behind
       await page.getByRole('button', { name: 'Stop session' }).first().click();
-      await page.getByText('READY', { exact: true }).waitFor({ timeout: 10000 });
+      await timerStatus(page, 'Ready').waitFor({ timeout: 10000 });
     }, 30000);
 
     test('tray Start, the global shortcut and Space control the timer', async () => {
@@ -225,11 +229,10 @@ if (process.platform === 'linux') {
           ({ BrowserWindow }, ch) => BrowserWindow.getAllWindows()[0].webContents.send(ch),
           channel,
         );
-      const label = (text: string) => page.getByText(text, { exact: true });
 
       // Tray "Start Focus Session" starts a session
       await send('tray-start-session');
-      await label('FOCUS').waitFor({ timeout: 10000 });
+      await timerStatus(page, 'Focus').waitFor({ timeout: 10000 });
 
       // Space (with nothing focused) pauses and resumes it
       await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
@@ -237,23 +240,23 @@ if (process.platform === 'linux') {
       await page.getByRole('button', { name: 'Resume' }).waitFor({ timeout: 10000 });
       await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
       await page.keyboard.press('Space');
-      await label('FOCUS').waitFor({ timeout: 10000 });
+      await timerStatus(page, 'Focus').waitFor({ timeout: 10000 });
 
       // Switching tools does not drop the running session
       await page.keyboard.press('Control+3');
       await page.getByRole('button', { name: /^start$/i }).waitFor({ timeout: 10000 });
       await page.keyboard.press('Control+1');
-      await label('FOCUS').waitFor({ timeout: 10000 });
+      await timerStatus(page, 'Focus').waitFor({ timeout: 10000 });
 
       // The global shortcut resumes a paused session
       await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
       await page.keyboard.press('Space');
       await page.getByRole('button', { name: 'Resume' }).waitFor({ timeout: 10000 });
       await send('global-shortcut-start-session');
-      await label('FOCUS').waitFor({ timeout: 10000 });
+      await timerStatus(page, 'Focus').waitFor({ timeout: 10000 });
 
       await page.getByRole('button', { name: 'Stop session' }).first().click();
-      await label('READY').waitFor({ timeout: 10000 });
+      await timerStatus(page, 'Ready').waitFor({ timeout: 10000 });
     }, 30000);
     test('Report a problem opens a pre-filled issue and reveals the log', async () => {
       // Stub the shell in main so the test never opens a real browser or Explorer
@@ -288,10 +291,10 @@ if (process.platform === 'linux') {
     });
     test('pauses a running session when the system goes to sleep', async () => {
       await page
-        .getByRole('button', { name: /^Start \d+m Focus$/ })
+        .getByRole('button', { name: /^Start (\d+m )?focus$/i })
         .first()
         .click();
-      await page.getByText('FOCUS', { exact: true }).waitFor({ timeout: 10000 });
+      await timerStatus(page, 'Focus').waitFor({ timeout: 10000 });
 
       // What Windows sends just before sleeping, through the real main-process handler
       await electronApp.evaluate(({ powerMonitor }) => powerMonitor.emit('suspend'));
@@ -300,7 +303,7 @@ if (process.platform === 'linux') {
       expect(log).toContain('System suspending');
 
       await page.getByRole('button', { name: 'Stop session' }).first().click();
-      await page.getByText('READY', { exact: true }).waitFor({ timeout: 10000 });
+      await timerStatus(page, 'Ready').waitFor({ timeout: 10000 });
     }, 30000);
     test('exports, backs up, imports and restores all data from Settings → Data', async () => {
       const exportFile = path.join(userDataDir, 'export-e2e.json');
@@ -348,7 +351,7 @@ if (process.platform === 'linux') {
       }, before[0]);
       expect(await sessionIds()).toHaveLength(before.length - 1);
       await page.getByRole('button', { name: 'Import data…' }).click();
-      await page.getByText('READY', { exact: true }).waitFor({ timeout: 15000 });
+      await timerStatus(page, 'Ready').waitFor({ timeout: 15000 });
       expect(await sessionIds()).toEqual(before);
 
       // Restore the manual backup (also the full data set) from the list
@@ -359,7 +362,7 @@ if (process.platform === 'linux') {
       await page.getByText(/Before an import/).waitFor({ timeout: 10000 });
       const manual = page.getByRole('listitem').filter({ hasText: 'Manual backup' });
       await manual.getByRole('button', { name: /Restore backup/ }).click();
-      await page.getByText('READY', { exact: true }).waitFor({ timeout: 15000 });
+      await timerStatus(page, 'Ready').waitFor({ timeout: 15000 });
       expect(await sessionIds()).toEqual(before);
     }, 60000);
     test('opens settings and history from the tray menu', async () => {
@@ -468,9 +471,7 @@ if (process.platform === 'linux') {
         reloaded = await electronApp.evaluate(async ({ BrowserWindow }) => {
           const wc = BrowserWindow.getAllWindows()[0].webContents;
           if (wc.isCrashed() || wc.isLoading()) return false;
-          return wc
-            .executeJavaScript(`document.body.innerText.includes('READY')`)
-            .catch(() => false);
+          return wc.executeJavaScript(`/ready/i.test(document.body.innerText)`).catch(() => false);
         });
       }
       expect(reloaded).toBe(true);

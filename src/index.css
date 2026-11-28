@@ -4,15 +4,9 @@
 
 /* Clean, minimal global styles */
 body {
-  font-family:
-    'Inter',
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
+  font-family: var(--fs-font);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
 /* Improved focus styles - exclude MUI inputs which have their own focus styling, and
@@ -54,6 +48,16 @@ button:focus {
 
 /* Smooth transitions */
 * {
-  transition-duration: 150ms;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: var(--fs-motion-fast);
+  transition-timing-function: var(--fs-ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

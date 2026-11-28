@@ -149,13 +149,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
           mb: 3,
         }}
       >
-        <CircularTimerRing
-          progress={timer.progress}
-          size={200}
-          strokeWidth={6}
-          isRunning={isRunning}
-          isBreak={isBreak}
-        >
+        <CircularTimerRing progress={timer.progress} size={200} strokeWidth={6} isBreak={isBreak}>
           <Typography
             sx={{
               fontSize: '2.5rem',
@@ -166,7 +160,11 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
           >
             {displayTime}
           </Typography>
-          <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5 }}>
+          <Typography
+            variant="caption"
+            data-testid="timer-status"
+            sx={{ color: 'text.secondary', mt: 0.5 }}
+          >
             {isActive ? (isBreak ? 'BREAK' : 'FOCUS') : 'READY'}
           </Typography>
         </CircularTimerRing>
