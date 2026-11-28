@@ -1,0 +1,155 @@
+# Focus Sessions — Roadmap
+
+**Target:** a production-grade, sleek, industry-standard **Windows** desktop focus timer that doubles as a
+**portfolio showcase**. Code quality, architecture, tests and documentation are first-class deliverables.
+
+**Tracking:** each milestone is a [GitHub Milestone](https://github.com/GodzillaJim/my-clock-app/milestones); each item is an issue
+with context, tasks and acceptance criteria. PRs close issues with `Closes #N`, and the box here is ticked when it lands.
+Work milestones roughly in order; within a milestone, `priority:high` items go first.
+
+**Baseline (2026-11-28):** Electron 33 · React 18 · MUI 6 · Vite 5 · better-sqlite3 · TypeScript strict.
+~16.7k lines of app code, of which ~4.9k (33 files) are unreachable; typecheck clean; `npm test` 13/13 after #11;
+`main` CI red (deprecated actions).
+
+---
+
+## [M0 — Repo in Order](https://github.com/GodzillaJim/my-clock-app/milestone/1)
+
+*Exit criteria: CI green on main; no dead code or boilerplate leftovers; repo metadata reflects the product; Windows-only build config.*
+
+### CI & git hygiene
+- [ ] [PR #11](https://github.com/GodzillaJim/my-clock-app/pull/11) — ZenFocusTimer tests; e2e isolated from real user data
+- [ ] [#12](https://github.com/GodzillaJim/my-clock-app/issues/12) replace boilerplate workflows with a Windows CI pipeline **(priority)**
+- [ ] [#13](https://github.com/GodzillaJim/my-clock-app/issues/13) commit package-lock.json for reproducible installs **(priority)**
+- [ ] [#14](https://github.com/GodzillaJim/my-clock-app/issues/14) untrack .claude/settings.local.json
+- [ ] [#15](https://github.com/GodzillaJim/my-clock-app/issues/15) close stale Dependabot PRs and reconfigure Dependabot
+
+### Dead code & boilerplate removal
+- [ ] [#16](https://github.com/GodzillaJim/my-clock-app/issues/16) delete unreferenced modules
+- [ ] [#17](https://github.com/GodzillaJim/my-clock-app/issues/17) remove unused dependencies
+- [ ] [#18](https://github.com/GodzillaJim/my-clock-app/issues/18) remove electron-vite-react template leftovers
+- [ ] [#19](https://github.com/GodzillaJim/my-clock-app/issues/19) remove the open-win IPC handler
+
+### Identity & config
+- [ ] [#20](https://github.com/GodzillaJim/my-clock-app/issues/20) fix package and installer metadata
+- [ ] [#21](https://github.com/GodzillaJim/my-clock-app/issues/21) make packaging Windows-only
+- [ ] [#22](https://github.com/GodzillaJim/my-clock-app/issues/22) rename repository to match the product
+- [ ] [#23](https://github.com/GodzillaJim/my-clock-app/issues/23) rewrite README to match the current app
+
+### Known bugs
+- [ ] [#24](https://github.com/GodzillaJim/my-clock-app/issues/24) replace 1000-session cap with 90-day retention
+- [ ] [#25](https://github.com/GodzillaJim/my-clock-app/issues/25) notification sounds setting has no sound files
+
+---
+
+## [M1 — Engineering Foundations](https://github.com/GodzillaJim/my-clock-app/milestone/2)
+
+*Exit criteria: Every PR is gated by lint, format, typecheck, tests with coverage, and a build; dependencies are current.*
+
+### Quality gates
+- [ ] [#26](https://github.com/GodzillaJim/my-clock-app/issues/26) add ESLint flat config and fix violations
+- [ ] [#27](https://github.com/GodzillaJim/my-clock-app/issues/27) add Prettier with a pre-commit hook
+- [ ] [#28](https://github.com/GodzillaJim/my-clock-app/issues/28) split unit and e2e into separate Vitest projects
+- [ ] [#29](https://github.com/GodzillaJim/my-clock-app/issues/29) coverage reporting with a ratcheting threshold
+- [ ] [#30](https://github.com/GodzillaJim/my-clock-app/issues/30) conventional commits and release-please
+
+### Dependency upgrades
+- [ ] [#31](https://github.com/GodzillaJim/my-clock-app/issues/31) upgrade Electron to the latest stable
+- [ ] [#32](https://github.com/GodzillaJim/my-clock-app/issues/32) upgrade Vite and Vite Electron plugins
+- [ ] [#33](https://github.com/GodzillaJim/my-clock-app/issues/33) upgrade React to 19
+- [ ] [#34](https://github.com/GodzillaJim/my-clock-app/issues/34) upgrade MUI to the current major
+- [ ] [#35](https://github.com/GodzillaJim/my-clock-app/issues/35) upgrade electron-builder
+
+### Code hygiene
+- [ ] [#36](https://github.com/GodzillaJim/my-clock-app/issues/36) structured logging with electron-log
+- [ ] [#37](https://github.com/GodzillaJim/my-clock-app/issues/37) eliminate `any` usages
+
+---
+
+## [M2 — Architecture & Security](https://github.com/GodzillaJim/my-clock-app/milestone/3)
+
+*Exit criteria: One storage path, a typed IPC contract, a pure tested timer engine, no source file over ~400 lines, and the Electron security checklist passing.*
+
+### Security (highest priority)
+- [ ] [#38](https://github.com/GodzillaJim/my-clock-app/issues/38) restrict storage IPC to a sandboxed directory **(priority)**
+- [ ] [#39](https://github.com/GodzillaJim/my-clock-app/issues/39) add a Content-Security-Policy
+- [ ] [#40](https://github.com/GodzillaJim/my-clock-app/issues/40) enable renderer sandbox and minimize the preload surface
+- [ ] [#41](https://github.com/GodzillaJim/my-clock-app/issues/41) validate IPC inputs with schemas
+- [ ] [#42](https://github.com/GodzillaJim/my-clock-app/issues/42) run a security review and document the results
+
+### Architecture
+- [ ] [#43](https://github.com/GodzillaJim/my-clock-app/issues/43) make SQLite the single storage path
+- [ ] [#44](https://github.com/GodzillaJim/my-clock-app/issues/44) typed IPC contract shared by main, preload and renderer
+- [ ] [#45](https://github.com/GodzillaJim/my-clock-app/issues/45) extract the timer into a pure state machine
+- [ ] [#46](https://github.com/GodzillaJim/my-clock-app/issues/46) split focusStorage into domain services
+- [ ] [#47](https://github.com/GodzillaJim/my-clock-app/issues/47) break up oversized components
+- [ ] [#50](https://github.com/GodzillaJim/my-clock-app/issues/50) error boundaries and process crash handling
+- [ ] [#51](https://github.com/GodzillaJim/my-clock-app/issues/51) architecture decision records
+
+### Decisions
+- [ ] [#48](https://github.com/GodzillaJim/my-clock-app/issues/48) layout strategy (Zen / Dashboard / Command Center)
+- [ ] [#49](https://github.com/GodzillaJim/my-clock-app/issues/49) keep, polish or cut Challenges and Feedback
+
+---
+
+## [M3 — Reliability & Data Integrity](https://github.com/GodzillaJim/my-clock-app/milestone/4)
+
+*Exit criteria: User data survives crashes, upgrades and migrations — proven by tests.*
+
+- [ ] [#52](https://github.com/GodzillaJim/my-clock-app/issues/52) repository integration tests against real SQLite
+- [ ] [#53](https://github.com/GodzillaJim/my-clock-app/issues/53) migration tests and automatic pre-migration backup
+- [ ] [#54](https://github.com/GodzillaJim/my-clock-app/issues/54) crash-recovery e2e (kill mid-session, relaunch, resume)
+- [ ] [#55](https://github.com/GodzillaJim/my-clock-app/issues/55) data export/import and backup/restore
+- [ ] [#56](https://github.com/GodzillaJim/my-clock-app/issues/56) timer accuracy across sleep/hibernate and clock changes
+- [ ] [#57](https://github.com/GodzillaJim/my-clock-app/issues/57) performance budget tracked in CI
+
+---
+
+## [M4 — Product Polish](https://github.com/GodzillaJim/my-clock-app/milestone/5)
+
+*Exit criteria: Design review and a WCAG 2.1 AA audit both pass; the first-run experience is guided.*
+
+- [ ] [#58](https://github.com/GodzillaJim/my-clock-app/issues/58) design tokens as the single theme source
+- [ ] [#59](https://github.com/GodzillaJim/my-clock-app/issues/59) visual design pass across all screens
+- [ ] [#60](https://github.com/GodzillaJim/my-clock-app/issues/60) first-run onboarding and empty states
+- [ ] [#61](https://github.com/GodzillaJim/my-clock-app/issues/61) simplify and group settings
+- [ ] [#62](https://github.com/GodzillaJim/my-clock-app/issues/62) micro-interactions with reduced-motion support
+- [ ] [#63](https://github.com/GodzillaJim/my-clock-app/issues/63) WCAG 2.1 AA pass
+- [ ] [#64](https://github.com/GodzillaJim/my-clock-app/issues/64) shortcut overlay / command palette
+- [ ] [#65](https://github.com/GodzillaJim/my-clock-app/issues/65) Windows-native integration
+
+---
+
+## [M5 — Release Engineering (Windows)](https://github.com/GodzillaJim/my-clock-app/milestone/6)
+
+*Exit criteria: Tagging a version produces a published, auto-updating Windows release with no manual steps.*
+
+- [ ] [#66](https://github.com/GodzillaJim/my-clock-app/issues/66) release workflow publishing to GitHub Releases
+- [ ] [#67](https://github.com/GodzillaJim/my-clock-app/issues/67) auto-update from GitHub Releases
+- [ ] [#68](https://github.com/GodzillaJim/my-clock-app/issues/68) code signing
+- [ ] [#69](https://github.com/GodzillaJim/my-clock-app/issues/69) installer data-retention choice and upgrade-in-place test
+- [ ] [#70](https://github.com/GodzillaJim/my-clock-app/issues/70) smoke-test the packaged app in CI
+
+---
+
+## [M6 — Portfolio Presentation](https://github.com/GodzillaJim/my-clock-app/milestone/7)
+
+*Exit criteria: A visitor understands what it is, why it's well built, and can install it in under a minute.*
+
+- [ ] [#71](https://github.com/GodzillaJim/my-clock-app/issues/71) showcase README
+- [ ] [#72](https://github.com/GodzillaJim/my-clock-app/issues/72) architecture, data model, IPC and testing docs
+- [ ] [#73](https://github.com/GodzillaJim/my-clock-app/issues/73) demo mode with seeded data
+- [ ] [#74](https://github.com/GodzillaJim/my-clock-app/issues/74) landing page on GitHub Pages
+- [ ] [#75](https://github.com/GodzillaJim/my-clock-app/issues/75) community health files
+- [ ] [#76](https://github.com/GodzillaJim/my-clock-app/issues/76) v1.0.0
+
+---
+
+## Open decisions
+
+| Decision | Milestone | Issue |
+|---|---|---|
+| rename repository to match the product | M0 | [#22](https://github.com/GodzillaJim/my-clock-app/issues/22) |
+| layout strategy (Zen / Dashboard / Command Center) | M2 | [#48](https://github.com/GodzillaJim/my-clock-app/issues/48) |
+| keep, polish or cut Challenges and Feedback | M2 | [#49](https://github.com/GodzillaJim/my-clock-app/issues/49) |
+| code signing | M5 | [#68](https://github.com/GodzillaJim/my-clock-app/issues/68) |
