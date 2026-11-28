@@ -36,7 +36,7 @@ import {
   Remove,
 } from '@mui/icons-material';
 import { AppSettings, DEFAULT_SETTINGS } from '@/features/timer/types';
-import { focusStorage } from '@/services/focusStorage';
+import { services } from '@/services/domain';
 import { notificationService } from '@/services/notificationService';
 import { SOUND_OPTIONS } from '@/services/sounds';
 import { reportProblem } from '@/services/reportProblem';
@@ -105,9 +105,9 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
     setSaveError(null);
 
     try {
-      const appState = await focusStorage.getAppState();
+      const appState = await services.settings.load();
       appState.settings = localSettings;
-      await focusStorage.saveAppState(appState);
+      await services.settings.save(appState);
       onSettingsChange(localSettings);
       setIsDirty(false);
 

@@ -6,7 +6,7 @@ import {
   CheckCircle,
   TrendingUp,
 } from '@mui/icons-material';
-import { focusStorage } from '@/services/focusStorage';
+import { services } from '@/services/domain';
 import { createLogger } from '@/services/logger';
 
 const log = createLogger('StatsPanel');
@@ -77,8 +77,8 @@ export const StatsPanel: React.FC = () => {
   const loadStats = async () => {
     try {
       const [history, lifetime] = await Promise.all([
-        focusStorage.getTodayHistory(),
-        focusStorage.getLifetimeStats(),
+        services.history.today(),
+        services.stats.get(),
       ]);
 
       if (history) {

@@ -9,7 +9,7 @@ import { ZenStopwatch } from './components/timer/ZenStopwatch';
 import { HistoryView } from './components/history/HistoryView';
 import { FocusSettings } from './components/settings/FocusSettings';
 import { AppSettings, DEFAULT_SETTINGS, SessionPlan } from './features/timer/types';
-import { focusStorage } from './services/focusStorage';
+import { services } from '@/services/domain';
 import { notificationService } from './services/notificationService';
 import { useRecovery } from './features/timer/hooks/useRecovery';
 import { RecoveryBanner } from './components/timer/RecoveryBanner';
@@ -86,11 +86,10 @@ const App: React.FC = () => {
 
   const initializeApp = async () => {
     try {
-      await focusStorage.initialize();
       // Finalize any plans left `active` by an abrupt shutdown so they don't
       // linger as ghosts in history and remain resumable.
-      await focusStorage.reconcileOrphanedPlans();
-      const appState = await focusStorage.getAppState();
+      await services.plans.reconcileOrphans();
+      const appState = await services.settings.load();
       setSettings(appState.settings);
       notificationService.setSettings(appState.settings);
 

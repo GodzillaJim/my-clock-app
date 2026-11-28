@@ -14,7 +14,7 @@ import {
 } from '@/features/timer/engine/focusMachine';
 import type { PlanSettings } from '@/features/timer/engine/plan';
 import type { SessionPlan } from '@/features/timer/types';
-import { focusStorage } from '@/services/focusStorage';
+import { services } from '@/services/domain';
 import { notificationService } from '@/services/notificationService';
 import { persistenceService } from '@/services/persistenceService';
 import { createLogger } from '@/services/logger';
@@ -29,9 +29,7 @@ const TICK_MS = 250;
 export function runFocusEffect(effect: FocusEffect): void {
   switch (effect.type) {
     case 'savePlan':
-      focusStorage
-        .saveSessionPlan(effect.plan)
-        .catch((err) => log.error('Failed to save plan:', err));
+      services.plans.save(effect.plan).catch((err) => log.error('Failed to save plan:', err));
       break;
     case 'savePlanSnapshot':
       persistenceService.savePlanSnapshot(effect.plan);
@@ -40,17 +38,15 @@ export function runFocusEffect(effect: FocusEffect): void {
       persistenceService.clearPlanSnapshot();
       break;
     case 'recordSession':
-      focusStorage
-        .addSession(effect.record)
+      services.sessions
+        .add(effect.record)
         .catch((err) => log.error('Failed to save session record:', err));
       break;
     case 'notify':
       notificationService.showNotification({ ...effect.notification, timestamp: new Date() });
       break;
     case 'recalculateStats':
-      focusStorage
-        .recalculateLifetimeStats()
-        .catch((err) => log.error('Failed to recalculate stats:', err));
+      services.stats.recalculate().catch((err) => log.error('Failed to recalculate stats:', err));
       break;
   }
 }

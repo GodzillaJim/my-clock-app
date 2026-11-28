@@ -96,7 +96,7 @@ _Exit criteria: One storage path, a typed IPC contract, a pure tested timer engi
 - [x] [#44](https://github.com/GodzillaJim/my-clock-app/issues/44) typed IPC contract shared by main, preload and renderer
 - [x] [#45](https://github.com/GodzillaJim/my-clock-app/issues/45) extract the timer into a pure state machine
 - [x] [#82](https://github.com/GodzillaJim/my-clock-app/issues/82) tray Start, Ctrl+Shift+S and Space don't control the timer
-- [ ] [#46](https://github.com/GodzillaJim/my-clock-app/issues/46) split focusStorage into domain services
+- [x] [#46](https://github.com/GodzillaJim/my-clock-app/issues/46) split focusStorage into domain services
 - [ ] [#47](https://github.com/GodzillaJim/my-clock-app/issues/47) break up oversized components
 - [x] [#50](https://github.com/GodzillaJim/my-clock-app/issues/50) error boundaries and process crash handling
 - [x] [#51](https://github.com/GodzillaJim/my-clock-app/issues/51) architecture decision records ([docs/adr](docs/adr/README.md))

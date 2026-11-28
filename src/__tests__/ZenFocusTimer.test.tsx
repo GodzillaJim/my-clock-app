@@ -21,7 +21,13 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@/services/focusStorage', () => ({ focusStorage: mocks.focusStorage }));
+vi.mock('@/services/domain', () => ({
+  services: {
+    sessions: { add: mocks.focusStorage.addSession },
+    plans: { save: mocks.focusStorage.saveSessionPlan },
+    stats: { recalculate: mocks.focusStorage.recalculateLifetimeStats },
+  },
+}));
 vi.mock('@/services/persistenceService', () => ({ persistenceService: mocks.persistenceService }));
 vi.mock('@/services/notificationService', () => ({
   notificationService: mocks.notificationService,
