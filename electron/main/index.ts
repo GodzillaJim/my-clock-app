@@ -2,7 +2,6 @@ import { app, BrowserWindow, shell, ipcMain, Tray, Menu, nativeImage, globalShor
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import url from 'node:url'
 import os from 'node:os'
 import { update } from './update'
 import { getDatabase, closeDatabase } from './database/connection'
@@ -75,7 +74,6 @@ let win: BrowserWindow | null = null
 let tray: Tray | null = null
 let isQuitting = false
 const preload = path.join(__dirname, '../preload/index.mjs')
-const indexHtml = path.join(RENDERER_DIST, 'index.html')
 
 function getIconPath(iconName: string): string {
   if (app.isPackaged) {
@@ -87,7 +85,8 @@ function getIconPath(iconName: string): string {
   }
 }
 
-function createTrayIcon(isActive: boolean = false): Electron.NativeImage {
+// TODO(#65): show a distinct tray icon while a session is active
+function createTrayIcon(_isActive: boolean = false): Electron.NativeImage {
   // Use .ico for Windows tray (better support), .png for others
   const iconName = process.platform === 'win32' ? 'hour_glass.ico' : 'hour_glass.png';
   const iconPath = getIconPath(iconName);
@@ -101,11 +100,6 @@ function createTrayIcon(isActive: boolean = false): Electron.NativeImage {
 function createAppIcon(): Electron.NativeImage {
   const iconPath = getIconPath('hour_glass.png');
   return nativeImage.createFromPath(iconPath);
-}
-
-function createSimpleTrayIcon(): Electron.NativeImage {
-  // Create the absolute simplest possible icon
-  return nativeImage.createEmpty().resize({ width: 16, height: 16 })
 }
 
 function updateTrayIcon(isActive: boolean = false) {

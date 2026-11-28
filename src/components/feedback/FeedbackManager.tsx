@@ -27,11 +27,9 @@ import {
   Card,
   CardContent,
   Grid,
-  Alert
 } from '@mui/material';
 import {
   Visibility,
-  Edit,
   Delete,
   Download,
   Refresh,
@@ -130,6 +128,8 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
 
   useEffect(() => {
     applyFilters();
+    // applyFilters reads only `feedback` and `filters`, which are the deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feedback, filters]);
 
   const loadFeedback = async () => {

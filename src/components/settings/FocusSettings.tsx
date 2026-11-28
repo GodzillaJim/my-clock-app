@@ -24,7 +24,6 @@ import {
   Card,
   CardContent,
   Chip,
-  IconButton,
   Stack
 } from '@mui/material';
 import {
@@ -154,13 +153,6 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
 
   const handlePresetRemove = (value: number) => {
     const newPresets = localSettings.quickPresets.filter(preset => preset !== value);
-    handleSettingChange('quickPresets', newPresets);
-  };
-
-  const handlePresetEdit = (oldValue: number, newValue: number) => {
-    const newPresets = localSettings.quickPresets
-      .map(preset => preset === oldValue ? newValue : preset)
-      .sort((a, b) => a - b);
     handleSettingChange('quickPresets', newPresets);
   };
 

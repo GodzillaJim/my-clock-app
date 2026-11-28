@@ -206,7 +206,10 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       }, 0);
       setNextSessionExpiry(null); // Reset the trigger
     }
-  }, [nextSessionExpiry]); // Removed restart from deps since it's stable
+    // Fires only when a new expiry is queued. `restart` from react-timer-hook is not
+    // referentially stable; depending on it would re-run this on every tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nextSessionExpiry]);
 
   const recordSession = async (status: CompletionStatus) => {
     const currentSession = sessions[currentSessionIndex];
@@ -301,7 +304,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
             console.error('Failed to persist plan:', err));
         } else {
           // Last segment — plan is completed
-          const updated = updatePlanSegment(plan, currentIndex, segUpdates, {
+          updatePlanSegment(plan, currentIndex, segUpdates, {
             status: 'completed',
             actualEndTime: nowTs,
           });
@@ -586,6 +589,8 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       resumeFromPlan(resumePlan);
       onResumeConsumed?.();
     }
+    // Trigger only when a new plan is handed in; the guards read current state at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resumePlan]);
 
   const pauseSession = () => {

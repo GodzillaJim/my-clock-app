@@ -50,10 +50,14 @@ const App: React.FC = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
+    // Mount-only: one-time init and listener registration; handleKeyDown only calls state setters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     updateTheme();
+    // updateTheme reads only settings.theme / settings.uiTheme, which are the deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.theme, settings.uiTheme]);
 
   const initializeApp = async () => {
@@ -445,21 +449,15 @@ const App: React.FC = () => {
       return;
     }
 
+    // Registered once on mount, so only state setters may be used here (state values would be stale).
+    // Space-to-start/pause is not wired yet (#82); it must not preventDefault, or Space stops
+    // activating focused buttons.
     switch (event.key.toLowerCase()) {
-      case ' ':
-        event.preventDefault();
-        // Start/pause functionality would be handled by the timer component
-        break;
       case 'escape':
-        if (settingsOpen) {
-          setSettingsOpen(false);
-        } else if (historyOpen) {
-          setHistoryOpen(false);
-        } else if (feedbackOpen) {
-          setFeedbackOpen(false);
-        } else if (feedbackManagerOpen) {
-          setFeedbackManagerOpen(false);
-        }
+        setSettingsOpen(false);
+        setHistoryOpen(false);
+        setFeedbackOpen(false);
+        setFeedbackManagerOpen(false);
         break;
       case 's':
         if (event.ctrlKey || event.metaKey) {

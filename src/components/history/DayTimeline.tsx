@@ -64,7 +64,7 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ dateLabel, plans, sett
 
     const minStart = Math.min(...bl.map(b => b.start));
     const maxEnd = Math.max(...bl.map(b => b.end));
-    let aStart = Math.floor(minStart / HOUR) * HOUR;
+    const aStart = Math.floor(minStart / HOUR) * HOUR;
     let aEnd = Math.ceil(maxEnd / HOUR) * HOUR;
     if (aEnd - aStart < HOUR) aEnd = aStart + HOUR;
 

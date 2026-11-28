@@ -702,7 +702,7 @@ class FocusStorageService {
     }
 
     currentDayStreak = 0;
-    let checkDate = new Date(today);
+    const checkDate = new Date(today);
     while (true) {
       const dateStr = checkDate.toISOString().split('T')[0];
       if (sortedDates.includes(dateStr)) {

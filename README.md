@@ -38,7 +38,8 @@ Built with Electron, React and TypeScript, with all data stored locally in SQLit
 - Two visual styles: *Deep Focus* (dark, OLED-friendly) and *Aerogel* (glassy pastels, light, dark or
   following the system theme)
 - Lives in the system tray; **Ctrl+Shift+Alt+T** brings the window to the front from anywhere
-- In-app shortcuts: **Ctrl+S** settings, **Ctrl+H** history, **Ctrl+F** feedback, **Esc** closes dialogs
+- In-app shortcuts: **Ctrl+1–4** switch tool, **Ctrl+S** settings, **Ctrl+H** history, **Ctrl+F** feedback,
+  **Esc** closes dialogs
 
 **Known gaps** (tracked on the roadmap): the tray's *Start Focus Session* item, **Ctrl+Shift+S** and
 **Space** don't control the timer yet ([#82](https://github.com/GodzillaJim/my-clock-app/issues/82)); there's
@@ -72,6 +73,7 @@ before a PR is merged.
 npm run check       # everything below, in order; stops at the first failure
 
 npm run typecheck   # tsc --noEmit
+npm run lint        # ESLint (typescript-eslint, react-hooks, jsx-a11y), zero warnings allowed
 npm run knip        # no unused files, dependencies or exports
 npm test            # test:unit, then test:e2e
   npm run test:unit #   unit tests (jsdom), a few seconds, no build needed
@@ -87,8 +89,9 @@ never touches your own Focus Sessions data, and works while the app is open.
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Run the app in development with hot reload |
-| `npm run check` | Typecheck, knip, all tests and production build — run before every push |
+| `npm run check` | Typecheck, lint, knip, all tests and production build — run before every push |
 | `npm run typecheck` | TypeScript type check |
+| `npm run lint` | ESLint with zero warnings allowed |
 | `npm run knip` | Find unused files, dependencies and exports |
 | `npm test` | Unit tests, then e2e tests |
 | `npm run test:unit` | Unit tests only (jsdom) — fast, no build |

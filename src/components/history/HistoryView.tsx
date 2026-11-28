@@ -6,7 +6,6 @@ import {
   SessionPlan,
   SessionPlanSegment,
   SegmentStatus,
-  SessionType,
   CompletionStatus,
   AppSettings,
   getTodayDateString,
@@ -90,12 +89,10 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ settings, onClose, onR
 
   useEffect(() => {
     loadOverview();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     loadDay(selectedDate);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
   const loadOverview = async () => {
