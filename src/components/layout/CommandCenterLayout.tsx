@@ -18,6 +18,8 @@ import { useFocusTimerContext } from '@/features/timer/FocusTimerContext';
 import { formatClock } from '@/features/timer/engine/format';
 import dayjs from 'dayjs';
 import { createLogger } from '@/services/logger';
+import { RecentSessionsPanel } from './commandCenter/RecentSessionsPanel';
+import { TodayStatsPanel } from './commandCenter/TodayStatsPanel';
 
 const log = createLogger('CommandCenterLayout');
 
@@ -216,97 +218,8 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
 
       {/* Two Column Section */}
       <Box sx={{ display: 'flex', gap: 3, flex: 1, minHeight: 0 }}>
-        {/* Recent Sessions */}
-        <Paper
-          sx={{
-            flex: 1,
-            p: 2,
-            backgroundColor: 'rgba(24, 24, 28, 0.9)',
-            backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          <Typography variant="overline" sx={{ color: 'text.secondary', mb: 1 }}>
-            Recent Sessions
-          </Typography>
-          <Box sx={{ flex: 1, overflowY: 'auto' }}>
-            {recentSessions.length === 0 ? (
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                No sessions yet today
-              </Typography>
-            ) : (
-              recentSessions.map((session, index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    py: 1,
-                    borderBottom:
-                      index < recentSessions.length - 1
-                        ? '1px solid rgba(255,255,255,0.05)'
-                        : 'none',
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box
-                      sx={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        backgroundColor:
-                          session.type === 'focus' ? 'primary.main' : 'secondary.main',
-                      }}
-                    />
-                    <Typography variant="body2">
-                      {session.type === 'focus' ? 'Focus' : 'Break'}
-                    </Typography>
-                  </Box>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    {Math.round(session.plannedDuration / 60)}m
-                  </Typography>
-                </Box>
-              ))
-            )}
-          </Box>
-        </Paper>
-
-        {/* Stats */}
-        <Paper
-          sx={{
-            flex: 1,
-            p: 2,
-            backgroundColor: 'rgba(24, 24, 28, 0.9)',
-            backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-          }}
-        >
-          <Typography variant="overline" sx={{ color: 'text.secondary', mb: 2, display: 'block' }}>
-            Today's Stats
-          </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Box>
-              <Typography variant="h4" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                {Math.floor(todayStats.focusTime / 60)}h {todayStats.focusTime % 60}m
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                Total Focus Time
-              </Typography>
-            </Box>
-            <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.08)' }} />
-            <Box>
-              <Typography variant="h4" sx={{ color: 'success.main', fontWeight: 600 }}>
-                {todayStats.completed}
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                Completed Sessions
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
+        <RecentSessionsPanel sessions={recentSessions} />
+        <TodayStatsPanel focusMinutes={todayStats.focusTime} completed={todayStats.completed} />
       </Box>
 
       {/* Bottom Control Bar */}
