@@ -1,6 +1,7 @@
 import React, { lazy, Suspense, useState, useEffect, useMemo, useRef } from 'react';
-import { Box, CssBaseline, ThemeProvider, useMediaQuery } from '@mui/material';
+import { Box, CssBaseline, GlobalStyles, ThemeProvider, useMediaQuery } from '@mui/material';
 import { buildAppTheme } from './theme/buildAppTheme';
+import { cssVariables } from './theme/tokens';
 import { ZenFocusTimer } from './components/timer/ZenFocusTimer';
 import { ZenCountdownTimer } from './components/timer/ZenCountdownTimer';
 import { ZenStopwatch } from './components/timer/ZenStopwatch';
@@ -12,7 +13,6 @@ import { RecoveryBanner } from './components/timer/RecoveryBanner';
 import { useFocusTimerContext } from './features/timer/FocusTimerContext';
 import { isTimerSpace } from './features/timer/isTimerSpace';
 import { reportProblem } from './services/reportProblem';
-import './App.css';
 import { createLogger } from '@/services/logger';
 
 const log = createLogger('App');
@@ -196,6 +196,8 @@ const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      {/* The active scheme as --fs-* variables, for CSS and DOM outside the theme */}
+      <GlobalStyles styles={{ ':root': cssVariables(theme.tokens) }} />
       <Box
         sx={{
           minHeight: '100vh',

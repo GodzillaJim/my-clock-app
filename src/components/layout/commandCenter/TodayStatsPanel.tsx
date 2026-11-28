@@ -12,9 +12,9 @@ export const TodayStatsPanel: React.FC<TodayStatsPanelProps> = ({ focusMinutes, 
     sx={{
       flex: 1,
       p: 2,
-      backgroundColor: 'rgba(24, 24, 28, 0.9)',
+      backgroundColor: (t) => t.tokens.surface.card,
       backdropFilter: 'blur(12px)',
-      border: '1px solid rgba(255, 255, 255, 0.08)',
+      border: (t) => `1px solid ${t.tokens.line.default}`,
     }}
   >
     <Typography variant="overline" sx={{ color: 'text.secondary', mb: 2, display: 'block' }}>
@@ -29,7 +29,7 @@ export const TodayStatsPanel: React.FC<TodayStatsPanelProps> = ({ focusMinutes, 
           Total Focus Time
         </Typography>
       </Box>
-      <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.08)' }} />
+      <Divider sx={{ borderColor: (t) => t.tokens.line.default }} />
       <Box>
         <Typography variant="h4" sx={{ color: 'success.main', fontWeight: 600 }}>
           {completed}

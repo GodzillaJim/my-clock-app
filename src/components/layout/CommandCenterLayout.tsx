@@ -157,7 +157,6 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
           isBreak={isBreak}
         >
           <Typography
-            className={isRunning ? (isBreak ? 'neon-text-secondary' : 'neon-text') : ''}
             sx={{
               fontSize: '2.5rem',
               fontWeight: 200,
@@ -186,9 +185,9 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
         sx={{
           p: 2,
           mb: 3,
-          backgroundColor: 'rgba(24, 24, 28, 0.9)',
+          backgroundColor: (t) => t.tokens.surface.card,
           backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          border: (t) => `1px solid ${t.tokens.line.default}`,
         }}
       >
         <Typography variant="overline" sx={{ color: 'text.secondary', mb: 1, display: 'block' }}>
@@ -227,9 +226,9 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
         sx={{
           mt: 3,
           p: 2,
-          backgroundColor: 'rgba(18, 18, 22, 0.95)',
+          backgroundColor: (t) => t.tokens.surface.panel,
           backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          border: (t) => `1px solid ${t.tokens.line.default}`,
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
@@ -256,7 +255,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
         <Divider
           orientation="vertical"
           flexItem
-          sx={{ borderColor: 'rgba(255, 255, 255, 0.08)', mx: 2 }}
+          sx={{ borderColor: (t) => t.tokens.line.default, mx: 2 }}
         />
 
         {/* Main Controls */}

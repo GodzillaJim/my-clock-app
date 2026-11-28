@@ -29,9 +29,9 @@ const StatCard: React.FC<StatCardProps> = ({
   <Paper
     sx={{
       p: 2,
-      backgroundColor: 'rgba(24, 24, 28, 0.9)',
+      backgroundColor: (t) => t.tokens.surface.card,
       backdropFilter: 'blur(12px)',
-      border: '1px solid rgba(255, 255, 255, 0.08)',
+      border: (t) => `1px solid ${t.tokens.line.default}`,
       borderRadius: 2,
       display: 'flex',
       flexDirection: 'column',
@@ -108,9 +108,9 @@ export const StatsPanel: React.FC = () => {
       sx={{
         width: 240,
         minHeight: '100vh',
-        backgroundColor: 'rgba(18, 18, 22, 0.6)',
+        backgroundColor: (t) => t.tokens.surface.panelMuted,
         backdropFilter: 'blur(8px)',
-        borderLeft: '1px solid rgba(255, 255, 255, 0.08)',
+        borderLeft: (t) => `1px solid ${t.tokens.line.default}`,
         p: 2,
         display: 'flex',
         flexDirection: 'column',
@@ -167,8 +167,8 @@ export const StatsPanel: React.FC = () => {
       <Paper
         sx={{
           p: 2,
-          backgroundColor: 'rgba(255, 255, 255, 0.03)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          backgroundColor: (t) => t.tokens.surface.inset,
+          border: (t) => `1px solid ${t.tokens.line.default}`,
           borderRadius: 2,
         }}
       >

@@ -14,6 +14,11 @@ import {
   CardContent,
 } from '@mui/material';
 import type { SettingsSectionProps } from './types';
+import { colorScheme, type ColorScheme } from '@/theme/tokens';
+
+/** A style's two accents, as the preview swatch. */
+const swatch = (s: ColorScheme) =>
+  `linear-gradient(135deg, ${s.primary.main}, ${s.secondary.main})`;
 
 /** Theme, visual style and layout. */
 export const AppearanceSection: React.FC<SettingsSectionProps> = ({ settings, onChange }) => {
@@ -45,7 +50,7 @@ export const AppearanceSection: React.FC<SettingsSectionProps> = ({ settings, on
                     width: 16,
                     height: 16,
                     borderRadius: 1,
-                    background: 'linear-gradient(135deg, #60A5FA, #A78BFA)',
+                    background: swatch(colorScheme('deepFocus', true)),
                   }}
                 />
                 <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
@@ -76,7 +81,7 @@ export const AppearanceSection: React.FC<SettingsSectionProps> = ({ settings, on
                     width: 16,
                     height: 16,
                     borderRadius: 1,
-                    background: 'linear-gradient(135deg, #6366F1, #EC4899)',
+                    background: swatch(colorScheme('aerogel', false)),
                   }}
                 />
                 <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>

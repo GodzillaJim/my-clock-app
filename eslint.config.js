@@ -47,6 +47,26 @@ export default tseslint.config(
     },
   },
 
+  // Colours come from the design tokens (src/theme/tokens.ts), never literals in components
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/theme/tokens.ts', '**/__tests__/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Literal[value=/(#[0-9a-fA-F]{3,8}\\b|rgba?\\()/]',
+          message:
+            'Use a design token (theme.tokens / palette / var(--fs-…)) instead of a colour literal.',
+        },
+        {
+          selector: 'TemplateElement[value.raw=/(#[0-9a-fA-F]{3,8}\\b|rgba?\\()/]',
+          message:
+            'Use a design token (theme.tokens / palette / var(--fs-…)) instead of a colour literal.',
+        },
+      ],
+    },
+  },
   // App code logs through the leveled loggers (src/services/logger.ts,
   // electron/main/logger.ts), which persist to the log file
   {
