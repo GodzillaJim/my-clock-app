@@ -56,11 +56,11 @@ _Exit criteria: `npm run check` (and a pre-commit hook) runs lint, format, typec
 
 ### Quality gates
 
-- [ ] [#26](https://github.com/GodzillaJim/my-clock-app/issues/26) add ESLint flat config and fix violations
-- [ ] [#27](https://github.com/GodzillaJim/my-clock-app/issues/27) add Prettier with a pre-commit hook
-- [ ] [#28](https://github.com/GodzillaJim/my-clock-app/issues/28) split unit and e2e into separate Vitest projects
-- [ ] [#29](https://github.com/GodzillaJim/my-clock-app/issues/29) coverage reporting with a ratcheting threshold
-- [ ] [#30](https://github.com/GodzillaJim/my-clock-app/issues/30) conventional commits and changelog generation
+- [x] [#26](https://github.com/GodzillaJim/my-clock-app/issues/26) add ESLint flat config and fix violations
+- [x] [#27](https://github.com/GodzillaJim/my-clock-app/issues/27) add Prettier with a pre-commit hook
+- [x] [#28](https://github.com/GodzillaJim/my-clock-app/issues/28) split unit and e2e into separate Vitest projects
+- [x] [#29](https://github.com/GodzillaJim/my-clock-app/issues/29) coverage reporting with a ratcheting threshold
+- [x] [#30](https://github.com/GodzillaJim/my-clock-app/issues/30) conventional commits and changelog generation
 
 ### Dependency upgrades
 
