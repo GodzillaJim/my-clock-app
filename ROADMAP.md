@@ -68,7 +68,7 @@ _Exit criteria: `npm run check` (and a pre-commit hook) runs lint, format, typec
 - [ ] [#32](https://github.com/GodzillaJim/my-clock-app/issues/32) upgrade Vite and Vite Electron plugins
 - [ ] [#33](https://github.com/GodzillaJim/my-clock-app/issues/33) upgrade React to 19
 - [ ] [#34](https://github.com/GodzillaJim/my-clock-app/issues/34) upgrade MUI to the current major
-- [ ] [#35](https://github.com/GodzillaJim/my-clock-app/issues/35) upgrade electron-builder
+- [x] [#35](https://github.com/GodzillaJim/my-clock-app/issues/35) upgrade electron-builder
 
 ### Code hygiene
 
