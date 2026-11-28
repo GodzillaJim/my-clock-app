@@ -85,7 +85,7 @@ _Exit criteria: One storage path, a typed IPC contract, a pure tested timer engi
 
 - [x] [#38](https://github.com/GodzillaJim/my-clock-app/issues/38) restrict storage IPC to a sandboxed directory **(priority)**
 - [x] [#80](https://github.com/GodzillaJim/my-clock-app/issues/80) re-enable webSecurity on the main window **(priority)**
-- [ ] [#39](https://github.com/GodzillaJim/my-clock-app/issues/39) add a Content-Security-Policy
+- [x] [#39](https://github.com/GodzillaJim/my-clock-app/issues/39) add a Content-Security-Policy
 - [ ] [#40](https://github.com/GodzillaJim/my-clock-app/issues/40) enable renderer sandbox and minimize the preload surface
 - [ ] [#41](https://github.com/GodzillaJim/my-clock-app/issues/41) validate IPC inputs with schemas
 - [ ] [#42](https://github.com/GodzillaJim/my-clock-app/issues/42) run a security review and document the results

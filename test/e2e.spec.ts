@@ -120,6 +120,37 @@ if (process.platform === 'linux') {
       expect(contents).toMatch(/\[warn\]\s*\(renderer:e2e\)\s*renderer log probe/);
     });
 
+    test('enforces the Content Security Policy without breaking the app', async () => {
+      const logFile = path.join(userDataDir, 'logs', 'main.log');
+      // The app itself (React, Emotion styles, the preload's loader) must not trip the policy
+      expect(fs.readFileSync(logFile, 'utf8')).not.toContain('CSP violation');
+
+      // (eval can't be probed from here: DevTools evaluation is exempt from CSP)
+      const probes = await page.evaluate(async () => {
+        const w = window as any;
+        const script = document.createElement('script');
+        script.textContent = 'window.__cspInlineProbe = true';
+        document.head.appendChild(script);
+        const res = await fetch('app://bundle/index.html');
+        return {
+          inlineRan: w.__cspInlineProbe === true,
+          header: res.headers.get('content-security-policy') ?? '',
+        };
+      });
+      expect(probes.inlineRan).toBe(false);
+      expect(probes.header).toContain("script-src 'self';");
+      expect(probes.header).not.toContain('unsafe-eval');
+
+      // The blocked inline script is reported to the log file
+      const deadline = Date.now() + 5000;
+      let contents = '';
+      while (Date.now() < deadline && !contents.includes('CSP violation')) {
+        await new Promise((r) => setTimeout(r, 100));
+        contents = fs.readFileSync(logFile, 'utf8');
+      }
+      expect(contents).toMatch(/CSP violation:\s*script-src/);
+    });
+
     test('renders the idle focus timer', async () => {
       await page.getByText('READY', { exact: true }).waitFor({ timeout: 15000 });
 
