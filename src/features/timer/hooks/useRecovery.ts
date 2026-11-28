@@ -167,11 +167,12 @@ export const useRecovery = () => {
 
     // 2. Fallback: an interrupted plan may still be resumable even if the
     // snapshot is gone (e.g. reconciled on a previous launch). Offer the most
-    // recent one from today that hasn't been dismissed.
+    // recent one from today that hasn't been dismissed. Only interrupted`n    // plans qualify: those were cut short by a crash or shutdown, while an
+    // bandoned plan was stopped on purpose (History can still resume it).
     try {
       const todaysPlans = await services.plans.forDate(getTodayDateString());
       const candidates = todaysPlans
-        .filter((p) => p.status !== 'completed' && p.id !== dismissedId && planHasRemaining(p))
+        .filter((p) => p.status === 'interrupted' && p.id !== dismissedId && planHasRemaining(p))
         .sort((a, b) => (b.lastUpdated || b.createdAt) - (a.lastUpdated || a.createdAt));
 
       if (candidates.length > 0) {
