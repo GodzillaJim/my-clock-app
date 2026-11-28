@@ -48,18 +48,18 @@ A modern, feature-rich Pomodoro Timer application built with Electron, React, an
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js (>= 18.0.0)
-- npm or yarn package manager
+- Windows 10 or later
+- Node.js 22 (see `.nvmrc`) and npm
 
 ### Installation & Development
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
-cd focus-sessions
+git clone https://github.com/GodzillaJim/my-clock-app.git
+cd my-clock-app
 
-# Install dependencies
-npm install
+# Install exact locked dependencies (also rebuilds better-sqlite3 for Electron)
+npm ci
 
 # Start development server
 npm run dev
@@ -180,18 +180,21 @@ export default {
 - **Accessibility**: Screen reader friendly interface
 - **Performance**: Optimized for minimal resource usage
 
-## 🧪 Testing
+## 🧪 Checks
+
+There is no hosted CI: checks run locally. **Run `npm run check` before every push** — it must pass
+before a PR is merged.
 
 ```bash
-# Run unit tests
-npm run test
+npm run check       # everything below, in order; stops at the first failure
 
-# Run E2E tests
-npm run test:e2e
-
-# Build for testing
-npm run pretest
+npm run typecheck   # tsc --noEmit
+npm test            # builds the app in test mode, then runs unit (jsdom) and e2e (Electron) suites
+npx vite build      # production build
 ```
+
+The e2e suite launches the real Electron app against a throwaway profile in your temp directory; it
+never touches your own Focus Sessions data, and works while the app is open.
 
 ## 📋 Available Scripts
 
@@ -205,7 +208,9 @@ npm run pretest
 | `npm run dist` | Create distribution package |
 | `npm run dist:win` | Create Windows installer |
 | `npm run preview` | Preview production build |
-| `npm run test` | Run unit tests |
+| `npm run check` | Typecheck, all tests and production build — run before every push |
+| `npm run typecheck` | TypeScript type check |
+| `npm test` | Build in test mode, then run unit and e2e tests |
 
 ## 🤝 Contributing
 

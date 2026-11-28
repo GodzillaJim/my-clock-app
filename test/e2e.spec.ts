@@ -65,6 +65,12 @@ if (process.platform === 'linux') {
       expect(path.resolve(userData)).toBe(path.resolve(userDataDir))
     })
 
+    test('initializes the SQLite database', async () => {
+      // Fails if better-sqlite3 was not rebuilt for Electron's ABI — the app
+      // would otherwise fall back to localStorage silently.
+      expect(fs.existsSync(path.join(userDataDir, 'focus-sessions.db'))).toBe(true)
+    })
+
     test('renders the idle focus timer', async () => {
       await page.getByText('READY', { exact: true }).waitFor({ timeout: 15000 })
 
