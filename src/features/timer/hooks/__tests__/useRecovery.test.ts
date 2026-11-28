@@ -159,6 +159,14 @@ describe('useRecovery', () => {
     await waitFor(async () => expect(await persistenceService.loadPlanSnapshot()).toBeNull());
   });
 
+  it('does not offer a session the user stopped on purpose', async () => {
+    const { useRecovery, services } = await load();
+    await services.plans.save(planInProgress('abandoned', 'stopped'));
+    const { result } = renderHook(() => useRecovery());
+    await act(async () => {});
+    expect(result.current.recoveryInfo).toBeNull();
+  });
+
   it('clears the snapshot of a plan the user already dismissed', async () => {
     const { useRecovery, persistenceService } = await load();
     localStorage.setItem('FOCUS_RECOVERY_DISMISSED_PLAN_ID', 'plan-1');
