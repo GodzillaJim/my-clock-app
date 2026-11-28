@@ -55,6 +55,26 @@ if (process.platform === 'linux') {
       expect(path.resolve(userData)).toBe(path.resolve(userDataDir));
     });
 
+    test('runs the renderer with web security enabled', async () => {
+      const webSecurity = await electronApp.evaluate(
+        ({ BrowserWindow }) =>
+          BrowserWindow.getAllWindows()[0].webContents.getLastWebPreferences()?.webSecurity,
+      );
+      expect(webSecurity).toBe(true);
+      expect(page.url()).toBe('app://bundle/index.html');
+    });
+
+    test('refuses app:// requests that escape the renderer folder', async () => {
+      const statuses = await page.evaluate(async () => {
+        const probe = async (p: string) => (await fetch(`app://bundle${p}`)).status;
+        return {
+          index: await probe('/index.html'),
+          traversal: await probe('/..%2F..%2Fpackage.json'),
+        };
+      });
+      expect(statuses).toEqual({ index: 200, traversal: 404 });
+    });
+
     test('initializes the SQLite database', async () => {
       // Fails if better-sqlite3 was not rebuilt for Electron's ABI — the app
       // would otherwise fall back to localStorage silently.

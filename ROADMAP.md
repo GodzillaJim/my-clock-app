@@ -64,7 +64,7 @@ _Exit criteria: `npm run check` (and a pre-commit hook) runs lint, format, typec
 
 ### Dependency upgrades
 
-- [ ] [#31](https://github.com/GodzillaJim/my-clock-app/issues/31) upgrade Electron to the latest stable
+- [x] [#31](https://github.com/GodzillaJim/my-clock-app/issues/31) upgrade Electron to the latest stable
 - [ ] [#32](https://github.com/GodzillaJim/my-clock-app/issues/32) upgrade Vite and Vite Electron plugins
 - [ ] [#33](https://github.com/GodzillaJim/my-clock-app/issues/33) upgrade React to 19
 - [ ] [#34](https://github.com/GodzillaJim/my-clock-app/issues/34) upgrade MUI to the current major
@@ -84,7 +84,7 @@ _Exit criteria: One storage path, a typed IPC contract, a pure tested timer engi
 ### Security (highest priority)
 
 - [ ] [#38](https://github.com/GodzillaJim/my-clock-app/issues/38) restrict storage IPC to a sandboxed directory **(priority)**
-- [ ] [#80](https://github.com/GodzillaJim/my-clock-app/issues/80) re-enable webSecurity on the main window **(priority)**
+- [x] [#80](https://github.com/GodzillaJim/my-clock-app/issues/80) re-enable webSecurity on the main window **(priority)**
 - [ ] [#39](https://github.com/GodzillaJim/my-clock-app/issues/39) add a Content-Security-Policy
 - [ ] [#40](https://github.com/GodzillaJim/my-clock-app/issues/40) enable renderer sandbox and minimize the preload surface
 - [ ] [#41](https://github.com/GodzillaJim/my-clock-app/issues/41) validate IPC inputs with schemas
