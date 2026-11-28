@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createLogger, serializeLogArg } from '../logger';
+import { captureGlobalErrors, createLogger, serializeLogArg } from '../logger';
 import { parseRendererLog } from '../../../electron/main/logMessage';
 
 describe('serializeLogArg', () => {
@@ -62,6 +62,42 @@ describe('createLogger', () => {
     } as unknown as NonNullable<Window['electronAPI']>;
     vi.spyOn(console, 'info').mockImplementation(() => {});
     expect(() => createLogger('x').info('hello')).not.toThrow();
+  });
+});
+
+describe('captureGlobalErrors', () => {
+  afterEach(() => {
+    delete window.electronAPI;
+    vi.restoreAllMocks();
+  });
+
+  it('logs uncaught errors, rejections and CSP violations', () => {
+    const send = vi.fn();
+    window.electronAPI = { log: send } as unknown as NonNullable<Window['electronAPI']>;
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    captureGlobalErrors();
+
+    window.dispatchEvent(new ErrorEvent('error', { message: 'boom' }));
+    const rejection = Object.assign(new Event('unhandledrejection'), { reason: 'nope' });
+    window.dispatchEvent(rejection);
+    const inline = Object.assign(new Event('securitypolicyviolation'), {
+      violatedDirective: 'script-src',
+      blockedURI: '',
+    });
+    document.dispatchEvent(inline);
+    const remote = Object.assign(new Event('securitypolicyviolation'), {
+      violatedDirective: 'img-src',
+      blockedURI: 'https://example.com/x.png',
+    });
+    document.dispatchEvent(remote);
+
+    expect(send.mock.calls).toEqual([
+      ['error', 'window', ['Uncaught error:', 'boom']],
+      ['error', 'window', ['Unhandled promise rejection:', 'nope']],
+      ['warn', 'window', ['CSP violation:', 'script-src', '(inline)']],
+      ['warn', 'window', ['CSP violation:', 'img-src', 'https://example.com/x.png']],
+    ]);
   });
 });
 

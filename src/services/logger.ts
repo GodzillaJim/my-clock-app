@@ -52,9 +52,12 @@ export function createLogger(scope: string): Logger {
   };
 }
 
-/** Sends uncaught renderer errors to the log file. */
+/** Sends uncaught renderer errors and CSP violations to the log file. */
 export function captureGlobalErrors(): void {
   const log = createLogger('window');
+  document.addEventListener('securitypolicyviolation', (event) => {
+    log.warn('CSP violation:', event.violatedDirective, event.blockedURI || '(inline)');
+  });
   window.addEventListener('error', (event) => {
     log.error('Uncaught error:', event.error ?? event.message);
   });

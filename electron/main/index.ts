@@ -10,12 +10,14 @@ import {
   Notification,
   protocol,
   net,
+  session,
 } from 'electron';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
 import { update } from './update';
 import { APP_ORIGIN, resolveAppRequest } from './appProtocol';
+import { PRODUCTION_CSP, developmentCsp, withCsp } from './csp';
 import { getDatabase, closeDatabase } from './database/connection';
 import { runMigrations, migrateLegacyData } from './database/migrations';
 import { registerDatabaseHandlers } from './database/ipcHandlers';
@@ -84,11 +86,20 @@ app.whenReady().then(() => {
     log.error('Failed to initialize database:', err);
   }
 
-  protocol.handle('app', (request) => {
+  protocol.handle('app', async (request) => {
     const filePath = resolveAppRequest(request.url, RENDERER_DIST);
     if (!filePath) return new Response('Not found', { status: 404 });
-    return net.fetch(pathToFileURL(filePath).toString());
+    return withCsp(await net.fetch(pathToFileURL(filePath).toString()), PRODUCTION_CSP);
   });
+
+  if (VITE_DEV_SERVER_URL) {
+    const devCsp = developmentCsp(VITE_DEV_SERVER_URL);
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [devCsp] },
+      });
+    });
+  }
   createWindow();
 });
 
