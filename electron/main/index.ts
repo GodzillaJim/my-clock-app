@@ -19,7 +19,8 @@ import { APP_ORIGIN, resolveAppRequest } from './appProtocol';
 import { PRODUCTION_CSP, developmentCsp, withCsp } from './csp';
 import { isAllowedNavigation, isAllowedPermission, isExternalLink } from './security';
 import { getDatabase, closeDatabase } from './database/connection';
-import { runMigrations, migrateLegacyData } from './database/migrations';
+import { migrateLegacyData } from './database/migrations';
+import { migrate } from './database/migrationRunner';
 import { registerDatabaseHandlers } from './database/ipcHandlers';
 import { handle } from './ipc';
 import { crashAction, recordReload } from './crashRecovery';
@@ -88,7 +89,16 @@ app.whenReady().then(() => {
   // Initialize SQLite database before creating window
   try {
     const db = getDatabase();
-    runMigrations(db);
+    const migration = migrate(db, path.join(app.getPath('userData'), 'backups'));
+    if (migration.applied.length > 0) {
+      log.info(
+        `Database migrated from v${migration.from} to v${migration.to}` +
+          (migration.backup ? `; backup at ${migration.backup}` : ''),
+      );
+    }
+    if (migration.newerThanApp) {
+      log.warn(`Database schema v${migration.from} is newer than this app understands`);
+    }
     migrateLegacyData(db);
     registerDatabaseHandlers(db);
     log.info('SQLite database initialized');
