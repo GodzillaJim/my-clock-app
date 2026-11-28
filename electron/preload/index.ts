@@ -1,9 +1,24 @@
 import { ipcRenderer, contextBridge } from 'electron';
+import type {
+  ElectronAPI,
+  EventChannel,
+  InvokeArgs,
+  InvokeChannel,
+  InvokeResult,
+  KvValues,
+} from '../ipc/contract';
 
-// Only named, purpose-built functions are exposed; the renderer never gets raw
-// ipcRenderer access. Listeners receive no IPC event object and return an
-// unsubscribe function.
-const subscribe = (channel: string) => (callback: () => void) => {
+// Only named, purpose-built functions from the IPC contract are exposed; the
+// renderer never gets raw ipcRenderer access.
+
+/** Typed `ipcRenderer.invoke` for a contract channel. */
+const invoke =
+  <C extends InvokeChannel>(channel: C) =>
+  (...args: InvokeArgs<C>) =>
+    ipcRenderer.invoke(channel, ...args) as Promise<InvokeResult<C>>;
+
+/** Listeners receive no IPC event object and return an unsubscribe function. */
+const subscribe = (channel: EventChannel) => (callback: () => void) => {
   const listener = () => callback();
   ipcRenderer.on(channel, listener);
   return () => {
@@ -11,85 +26,74 @@ const subscribe = (channel: string) => (callback: () => void) => {
   };
 };
 
-// --------- Expose Focus Sessions Electron API ---------
-contextBridge.exposeInMainWorld('electronAPI', {
+const api: ElectronAPI = {
   // Logging: forwarded to the main-process log file
-  log: (level: string, scope: string, args: unknown[]) =>
-    ipcRenderer.send('log:write', level, scope, args),
+  log: (level, scope, args) => ipcRenderer.send('log:write', level, scope, args),
 
-  // System tray functions
-  minimizeToTray: () => ipcRenderer.invoke('minimize-to-tray'),
-  showWindow: () => ipcRenderer.invoke('show-window'),
-  updateTrayStatus: (status: string) => ipcRenderer.invoke('update-tray-status', status),
-  sessionNotification: (notification: { title: string; body: string }) =>
-    ipcRenderer.invoke('session-notification', notification),
+  // Window and tray
+  minimizeToTray: invoke('minimize-to-tray'),
+  showWindow: invoke('show-window'),
+  updateTrayStatus: invoke('update-tray-status'),
+  sessionNotification: invoke('session-notification'),
 
-  // Tray and global-shortcut events; each returns an unsubscribe function
+  // Tray and global-shortcut events
   onTrayStartSession: subscribe('tray-start-session'),
   onTrayOpenSettings: subscribe('tray-open-settings'),
   onTrayOpenHistory: subscribe('tray-open-history'),
   onGlobalShortcutStartSession: subscribe('global-shortcut-start-session'),
 
-  // SQLite database API
+  // SQLite database
   db: {
     sessions: {
-      save: (session: any) => ipcRenderer.invoke('db:sessions:save', session),
-      getByDate: (date: string) => ipcRenderer.invoke('db:sessions:getByDate', date),
-      getHistory: (limit?: number) => ipcRenderer.invoke('db:sessions:getHistory', limit),
-      delete: (id: string) => ipcRenderer.invoke('db:sessions:delete', id),
-      deleteByDate: (date: string) => ipcRenderer.invoke('db:sessions:deleteByDate', date),
-      deleteAll: () => ipcRenderer.invoke('db:sessions:deleteAll'),
-      saveAndUpdateHistory: (session: any, historyData: any) =>
-        ipcRenderer.invoke('db:sessions:saveAndUpdateHistory', session, historyData),
+      save: invoke('db:sessions:save'),
+      getByDate: invoke('db:sessions:getByDate'),
+      getHistory: invoke('db:sessions:getHistory'),
+      delete: invoke('db:sessions:delete'),
     },
     plans: {
-      save: (plan: any) => ipcRenderer.invoke('db:plans:save', plan),
-      get: (id: string) => ipcRenderer.invoke('db:plans:get', id),
-      getByDate: (date: string) => ipcRenderer.invoke('db:plans:getByDate', date),
-      getByDateRange: (start: string, end: string) =>
-        ipcRenderer.invoke('db:plans:getByDateRange', start, end),
-      update: (id: string, updates: any) => ipcRenderer.invoke('db:plans:update', id, updates),
-      updateSegment: (segmentId: string, updates: any) =>
-        ipcRenderer.invoke('db:plans:updateSegment', segmentId, updates),
+      save: invoke('db:plans:save'),
+      get: invoke('db:plans:get'),
+      getByDate: invoke('db:plans:getByDate'),
+      getByDateRange: invoke('db:plans:getByDateRange'),
+      update: invoke('db:plans:update'),
     },
     history: {
-      save: (history: any) => ipcRenderer.invoke('db:history:save', history),
-      getByDate: (date: string) => ipcRenderer.invoke('db:history:getByDate', date),
-      getByRange: (start: string, end: string) =>
-        ipcRenderer.invoke('db:history:getByRange', start, end),
-      getAllDates: () => ipcRenderer.invoke('db:history:getAllDates'),
-      deleteByDate: (date: string) => ipcRenderer.invoke('db:history:deleteByDate', date),
-      deleteAll: () => ipcRenderer.invoke('db:history:deleteAll'),
-      clearToday: (date: string) => ipcRenderer.invoke('db:history:clearToday', date),
-      resetAll: () => ipcRenderer.invoke('db:history:resetAll'),
+      save: invoke('db:history:save'),
+      getByDate: invoke('db:history:getByDate'),
+      getByRange: invoke('db:history:getByRange'),
+      getAllDates: invoke('db:history:getAllDates'),
+      clearToday: invoke('db:history:clearToday'),
+      resetAll: invoke('db:history:resetAll'),
     },
     challenges: {
-      getAll: () => ipcRenderer.invoke('db:challenges:getAll'),
-      getById: (id: string) => ipcRenderer.invoke('db:challenges:getById', id),
-      save: (challenge: any) => ipcRenderer.invoke('db:challenges:save', challenge),
-      delete: (id: string) => ipcRenderer.invoke('db:challenges:delete', id),
-      markDay: (challengeId: string, date: string, status: string, note?: string) =>
-        ipcRenderer.invoke('db:challenges:markDay', challengeId, date, status, note),
+      getAll: invoke('db:challenges:getAll'),
+      getById: invoke('db:challenges:getById'),
+      save: invoke('db:challenges:save'),
+      delete: invoke('db:challenges:delete'),
     },
     feedback: {
-      getAll: (filters?: any) => ipcRenderer.invoke('db:feedback:getAll', filters),
-      save: (item: any) => ipcRenderer.invoke('db:feedback:save', item),
-      update: (id: string, updates: any) => ipcRenderer.invoke('db:feedback:update', id, updates),
-      delete: (id: string) => ipcRenderer.invoke('db:feedback:delete', id),
-      getStats: () => ipcRenderer.invoke('db:feedback:getStats'),
+      getAll: invoke('db:feedback:getAll'),
+      save: invoke('db:feedback:save'),
+      update: invoke('db:feedback:update'),
+      delete: invoke('db:feedback:delete'),
+      getStats: invoke('db:feedback:getStats'),
     },
     kv: {
-      get: (key: string) => ipcRenderer.invoke('db:kv:get', key),
-      set: (key: string, value: any) => ipcRenderer.invoke('db:kv:set', key, value),
+      // The channel carries a union of keys; the key decides the value's type
+      get: <K extends keyof KvValues>(key: K) =>
+        ipcRenderer.invoke('db:kv:get', key) as Promise<KvValues[K] | null>,
+      set: <K extends keyof KvValues>(key: K, value: KvValues[K]) =>
+        ipcRenderer.invoke('db:kv:set', key, value) as Promise<void>,
     },
     snapshot: {
-      save: (plan: any) => ipcRenderer.invoke('db:snapshot:save', plan),
-      load: () => ipcRenderer.invoke('db:snapshot:load'),
-      clear: () => ipcRenderer.invoke('db:snapshot:clear'),
+      save: invoke('db:snapshot:save'),
+      load: invoke('db:snapshot:load'),
+      clear: invoke('db:snapshot:clear'),
     },
   },
-});
+};
 
+contextBridge.exposeInMainWorld('electronAPI', api);
 // --------- Preload scripts loading ---------
 function domReady(condition: DocumentReadyState[] = ['complete', 'interactive']) {
   return new Promise((resolve) => {

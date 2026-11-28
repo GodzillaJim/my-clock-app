@@ -15,3 +15,21 @@ export interface FeedbackItem {
     currentSession?: boolean;
   };
 }
+
+export interface FeedbackFilters {
+  type?: FeedbackItem['type'];
+  status?: FeedbackItem['status'];
+  severity?: FeedbackItem['severity'];
+  limit?: number;
+}
+
+export type FeedbackUpdate = Partial<Pick<FeedbackItem, 'status'>>;
+
+export interface FeedbackStats {
+  total: number;
+  open: number;
+  resolved: number;
+  inProgress: number;
+  byType: Record<FeedbackItem['type'], number>;
+  bySeverity: Record<FeedbackItem['severity'], number>;
+}

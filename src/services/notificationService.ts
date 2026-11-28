@@ -15,7 +15,7 @@ class NotificationService {
 
   private initializeAudioContext(): void {
     try {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.audioContext = new AudioContext();
     } catch (error) {
       log.warn('Audio context not supported:', error);
     }

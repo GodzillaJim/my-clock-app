@@ -2,7 +2,6 @@ import {
   app,
   BrowserWindow,
   shell,
-  ipcMain,
   Tray,
   Menu,
   nativeImage,
@@ -22,6 +21,7 @@ import { isAllowedNavigation, isAllowedPermission, isExternalLink } from './secu
 import { getDatabase, closeDatabase } from './database/connection';
 import { runMigrations, migrateLegacyData } from './database/migrations';
 import { registerDatabaseHandlers } from './database/ipcHandlers';
+import { handle } from './ipc';
 import { createLogger, initLogging } from './logger';
 
 const log = createLogger('main');
@@ -372,13 +372,13 @@ app.on('activate', () => {
 });
 
 // IPC handlers for tray and session management
-ipcMain.handle('minimize-to-tray', () => {
+handle('minimize-to-tray', () => {
   if (win) {
     win.hide();
   }
 });
 
-ipcMain.handle('show-window', () => {
+handle('show-window', () => {
   if (win) {
     if (win.isMinimized()) win.restore();
     win.show();
@@ -386,7 +386,7 @@ ipcMain.handle('show-window', () => {
   }
 });
 
-ipcMain.handle('update-tray-status', (_, status: string) => {
+handle('update-tray-status', (status) => {
   if (tray) {
     tray.setToolTip(`Focus Sessions - ${status}`);
     // Update icon based on status
@@ -398,7 +398,7 @@ ipcMain.handle('update-tray-status', (_, status: string) => {
   updateWindowTitle(status);
 });
 
-ipcMain.handle('session-notification', (_, { title, body }: { title: string; body: string }) => {
+handle('session-notification', ({ title, body }) => {
   const notificationOptions: Electron.NotificationConstructorOptions = {
     title,
     body,

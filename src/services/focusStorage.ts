@@ -16,7 +16,7 @@ import {
   LifetimeStats,
   PeriodSummary,
 } from '@/features/timer/types';
-import { FeedbackItem } from '@/types/feedback';
+import { FeedbackFilters, FeedbackItem, FeedbackStats } from '@/types/feedback';
 import { createStorageService } from './storage';
 import { createLogger } from '@/services/logger';
 
@@ -892,12 +892,7 @@ class FocusStorageService {
     }
   }
 
-  async getFeedback(filters?: {
-    type?: string;
-    status?: string;
-    severity?: 'low' | 'medium' | 'high';
-    limit?: number;
-  }): Promise<FeedbackItem[]> {
+  async getFeedback(filters?: FeedbackFilters): Promise<FeedbackItem[]> {
     try {
       if (this.useDb) {
         return await this.db.feedback.getAll(filters);
@@ -948,7 +943,7 @@ class FocusStorageService {
     }
   }
 
-  async getFeedbackStats(): Promise<any> {
+  async getFeedbackStats(): Promise<FeedbackStats> {
     try {
       if (this.useDb) {
         return await this.db.feedback.getStats();

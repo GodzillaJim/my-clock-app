@@ -1,19 +1,36 @@
 import type Database from 'better-sqlite3';
+import type {
+  FeedbackFilters,
+  FeedbackItem,
+  FeedbackStats,
+  FeedbackUpdate,
+} from '../../../../src/types/feedback';
 
-function fromDbFeedback(row: any): any {
+interface FeedbackRow {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  severity: string;
+  category: string;
+  timestamp: string;
+  status: string;
+}
+
+function fromDbFeedback(row: FeedbackRow): FeedbackItem {
   return {
     id: row.id,
-    type: row.type,
+    type: row.type as FeedbackItem['type'],
     title: row.title,
     description: row.description,
-    severity: row.severity,
+    severity: row.severity as FeedbackItem['severity'],
     category: row.category,
     timestamp: new Date(row.timestamp),
-    status: row.status,
+    status: row.status as FeedbackItem['status'],
   };
 }
 
-export function insert(db: Database.Database, item: any): void {
+export function insert(db: Database.Database, item: FeedbackItem): void {
   db.prepare(
     `
     INSERT OR REPLACE INTO feedback (id, type, title, description, severity, category, timestamp, status)
@@ -27,14 +44,13 @@ export function insert(db: Database.Database, item: any): void {
     item.severity,
     item.category,
     new Date(item.timestamp).toISOString(),
-    item.status || 'open',
+    item.status,
   );
 }
 
-export function getAll(db: Database.Database, filters?: any): any[] {
-  let query = 'SELECT * FROM feedback';
+export function getAll(db: Database.Database, filters?: FeedbackFilters): FeedbackItem[] {
   const conditions: string[] = [];
-  const params: any[] = [];
+  const params: (string | number)[] = [];
 
   if (filters?.type) {
     conditions.push('type = ?');
@@ -49,24 +65,19 @@ export function getAll(db: Database.Database, filters?: any): any[] {
     params.push(filters.severity);
   }
 
-  if (conditions.length > 0) {
-    query += ' WHERE ' + conditions.join(' AND ');
-  }
-
+  let query = 'SELECT * FROM feedback';
+  if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
   query += ' ORDER BY timestamp DESC';
-
   if (filters?.limit) {
     query += ' LIMIT ?';
     params.push(filters.limit);
   }
 
-  return db
-    .prepare(query)
-    .all(...params)
-    .map(fromDbFeedback);
+  const rows = db.prepare(query).all(...params) as FeedbackRow[];
+  return rows.map(fromDbFeedback);
 }
 
-export function update(db: Database.Database, id: string, updates: any): void {
+export function update(db: Database.Database, id: string, updates: FeedbackUpdate): void {
   if (updates.status) {
     db.prepare('UPDATE feedback SET status = ? WHERE id = ?').run(updates.status, id);
   }
@@ -76,42 +87,38 @@ export function deleteById(db: Database.Database, id: string): void {
   db.prepare('DELETE FROM feedback WHERE id = ?').run(id);
 }
 
-export function getStats(db: Database.Database): any {
-  const total = (db.prepare('SELECT COUNT(*) as c FROM feedback').get() as any).c;
-  const open = (db.prepare("SELECT COUNT(*) as c FROM feedback WHERE status = 'open'").get() as any)
-    .c;
-  const resolved = (
-    db.prepare("SELECT COUNT(*) as c FROM feedback WHERE status = 'resolved'").get() as any
-  ).c;
-  const inProgress = (
-    db.prepare("SELECT COUNT(*) as c FROM feedback WHERE status = 'in-progress'").get() as any
-  ).c;
+function countBy(
+  db: Database.Database,
+  column: 'type' | 'severity' | 'status',
+): Map<string, number> {
+  const rows = db
+    .prepare(`SELECT ${column} AS value, COUNT(*) AS c FROM feedback GROUP BY ${column}`)
+    .all() as { value: string; c: number }[];
+  return new Map(rows.map((r) => [r.value, r.c]));
+}
+
+export function getStats(db: Database.Database): FeedbackStats {
+  const byStatus = countBy(db, 'status');
+  const byType = countBy(db, 'type');
+  const bySeverity = countBy(db, 'severity');
+  const total = (db.prepare('SELECT COUNT(*) AS c FROM feedback').get() as { c: number }).c;
 
   return {
     total,
-    open,
-    resolved,
-    inProgress,
+    open: byStatus.get('open') ?? 0,
+    resolved: byStatus.get('resolved') ?? 0,
+    inProgress: byStatus.get('in-progress') ?? 0,
     byType: {
-      bug: (db.prepare("SELECT COUNT(*) as c FROM feedback WHERE type = 'bug'").get() as any).c,
-      'feature-request': (
-        db.prepare("SELECT COUNT(*) as c FROM feedback WHERE type = 'feature-request'").get() as any
-      ).c,
-      issue: (db.prepare("SELECT COUNT(*) as c FROM feedback WHERE type = 'issue'").get() as any).c,
-      general: (
-        db.prepare("SELECT COUNT(*) as c FROM feedback WHERE type = 'general'").get() as any
-      ).c,
+      bug: byType.get('bug') ?? 0,
+      'feature-request': byType.get('feature-request') ?? 0,
+      issue: byType.get('issue') ?? 0,
+      general: byType.get('general') ?? 0,
     },
     bySeverity: {
-      low: (db.prepare("SELECT COUNT(*) as c FROM feedback WHERE severity = 'low'").get() as any).c,
-      medium: (
-        db.prepare("SELECT COUNT(*) as c FROM feedback WHERE severity = 'medium'").get() as any
-      ).c,
-      high: (db.prepare("SELECT COUNT(*) as c FROM feedback WHERE severity = 'high'").get() as any)
-        .c,
-      critical: (
-        db.prepare("SELECT COUNT(*) as c FROM feedback WHERE severity = 'critical'").get() as any
-      ).c,
+      low: bySeverity.get('low') ?? 0,
+      medium: bySeverity.get('medium') ?? 0,
+      high: bySeverity.get('high') ?? 0,
+      critical: bySeverity.get('critical') ?? 0,
     },
   };
 }

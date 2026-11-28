@@ -1,68 +1,62 @@
 import type Database from 'better-sqlite3';
+import type {
+  CompletionStatus,
+  SessionRecord,
+  SessionType,
+} from '../../../../src/features/timer/types';
 import { retentionCutoff } from '../retention';
 
-const SESSION_TYPE_TO_DB: Record<string, string> = {
-  FOCUS: 'focus',
-  SHORT_BREAK: 'shortBreak',
-  LONG_BREAK: 'longBreak',
-  focus: 'focus',
-  shortBreak: 'shortBreak',
-  longBreak: 'longBreak',
-};
-const DB_TO_SESSION_TYPE: Record<string, string> = {
-  focus: 'FOCUS',
-  shortBreak: 'SHORT_BREAK',
-  longBreak: 'LONG_BREAK',
-};
-const STATUS_TO_DB: Record<string, string> = {
-  COMPLETED: 'completed',
-  INTERRUPTED: 'interrupted',
-  SKIPPED: 'skipped',
-  completed: 'completed',
-  interrupted: 'interrupted',
-  skipped: 'skipped',
-};
-const DB_TO_STATUS: Record<string, string> = {
-  completed: 'COMPLETED',
-  interrupted: 'INTERRUPTED',
-  skipped: 'SKIPPED',
-};
+interface SessionRow {
+  id: string;
+  type: string;
+  session_number: number;
+  planned_duration: number;
+  actual_duration: number;
+  start_time: string;
+  end_time: string | null;
+  paused_time: number;
+  completion_status: string;
+  remaining_time: number;
+  plan_id: string | null;
+  created_date: string;
+}
 
-function toDbSession(s: any) {
-  const startDate = new Date(s.startTime).toISOString().split('T')[0];
+// Columns hold the domain enum values ('focus', 'completed', ...) unchanged;
+// the schema's CHECK constraints guarantee them.
+function toDbSession(s: SessionRecord): SessionRow {
+  const start = new Date(s.startTime);
   return {
     id: s.id,
-    type: SESSION_TYPE_TO_DB[s.type] || 'focus',
-    session_number: s.sessionNumber || 0,
-    planned_duration: s.plannedDuration || 0,
-    actual_duration: s.actualDuration || 0,
-    start_time: new Date(s.startTime).toISOString(),
+    type: s.type,
+    session_number: s.sessionNumber,
+    planned_duration: s.plannedDuration,
+    actual_duration: s.actualDuration,
+    start_time: start.toISOString(),
     end_time: s.endTime ? new Date(s.endTime).toISOString() : null,
-    paused_time: s.pausedTime || 0,
-    completion_status: STATUS_TO_DB[s.completionStatus] || 'completed',
-    remaining_time: s.remainingTime || 0,
-    plan_id: s.planId || null,
-    created_date: startDate,
+    paused_time: s.pausedTime,
+    completion_status: s.completionStatus,
+    remaining_time: s.remainingTime,
+    plan_id: null,
+    created_date: start.toISOString().split('T')[0],
   };
 }
 
-function fromDbSession(row: any) {
+function fromDbSession(row: SessionRow): SessionRecord {
   return {
     id: row.id,
-    type: DB_TO_SESSION_TYPE[row.type] || row.type,
+    type: row.type as SessionType,
     sessionNumber: row.session_number,
     plannedDuration: row.planned_duration,
     actualDuration: row.actual_duration,
     startTime: new Date(row.start_time),
     endTime: row.end_time ? new Date(row.end_time) : null,
     pausedTime: row.paused_time,
-    completionStatus: DB_TO_STATUS[row.completion_status] || row.completion_status,
+    completionStatus: row.completion_status as CompletionStatus,
     remainingTime: row.remaining_time,
   };
 }
 
-export function insert(db: Database.Database, session: any): void {
-  const d = toDbSession(session);
+export function insert(db: Database.Database, session: SessionRecord): void {
   db.prepare(
     `
     INSERT OR REPLACE INTO sessions (id, type, session_number, planned_duration, actual_duration,
@@ -70,25 +64,26 @@ export function insert(db: Database.Database, session: any): void {
     VALUES (@id, @type, @session_number, @planned_duration, @actual_duration,
       @start_time, @end_time, @paused_time, @completion_status, @remaining_time, @plan_id, @created_date)
   `,
-  ).run(d);
+  ).run(toDbSession(session));
 
   // Enforce date-based retention (no cap on how many sessions a day may hold)
   db.prepare('DELETE FROM sessions WHERE created_date < ?').run(retentionCutoff().date);
 }
 
-export function getByDate(db: Database.Database, date: string): any[] {
+export function getByDate(db: Database.Database, date: string): SessionRecord[] {
   const rows = db
     .prepare('SELECT * FROM sessions WHERE created_date = ? ORDER BY start_time ASC')
-    .all(date);
+    .all(date) as SessionRow[];
   return rows.map(fromDbSession);
 }
 
 /** Most recent sessions first; all retained sessions when `limit` is omitted. */
-export function getHistory(db: Database.Database, limit?: number): any[] {
-  const rows =
+export function getHistory(db: Database.Database, limit?: number): SessionRecord[] {
+  const rows = (
     limit === undefined
       ? db.prepare('SELECT * FROM sessions ORDER BY start_time DESC').all()
-      : db.prepare('SELECT * FROM sessions ORDER BY start_time DESC LIMIT ?').all(limit);
+      : db.prepare('SELECT * FROM sessions ORDER BY start_time DESC LIMIT ?').all(limit)
+  ) as SessionRow[];
   return rows.map(fromDbSession);
 }
 

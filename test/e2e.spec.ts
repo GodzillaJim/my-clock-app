@@ -3,6 +3,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { type ElectronApplication, type Page, _electron as electron } from 'playwright';
 import { beforeAll, afterAll, describe, expect, test } from 'vitest';
+import type { ElectronAPI } from '../electron/ipc/contract';
+
+/** The page's window as tests probe it: the bridge plus arbitrary globals. */
+type ProbeWindow = Window & Record<string, unknown> & { electronAPI: ElectronAPI };
 
 const root = path.join(__dirname, '..');
 const screenshotDir = path.join(root, 'test', 'screenshots');
@@ -87,7 +91,7 @@ if (process.platform === 'linux') {
 
     test('exposes only the named bridge API, without raw IPC or Node', async () => {
       const surface = await page.evaluate(() => {
-        const w = window as any;
+        const w = window as unknown as ProbeWindow;
         return {
           ipcRenderer: typeof w.ipcRenderer,
           require: typeof w.require,
@@ -139,7 +143,10 @@ if (process.platform === 'linux') {
     test('writes main and renderer logs to the log file', async () => {
       const logFile = path.join(userDataDir, 'logs', 'main.log');
       await page.evaluate(() =>
-        (window as any).electronAPI.log('warn', 'e2e', ['renderer log probe', { n: 1 }]),
+        (window as unknown as ProbeWindow).electronAPI.log('warn', 'e2e', [
+          'renderer log probe',
+          { n: 1 },
+        ]),
       );
       const deadline = Date.now() + 5000;
       let contents = '';
@@ -160,7 +167,7 @@ if (process.platform === 'linux') {
 
       // (eval can't be probed from here: DevTools evaluation is exempt from CSP)
       const probes = await page.evaluate(async () => {
-        const w = window as any;
+        const w = window as unknown as ProbeWindow;
         const script = document.createElement('script');
         script.textContent = 'window.__cspInlineProbe = true';
         document.head.appendChild(script);
@@ -223,9 +230,32 @@ if (process.platform === 'linux') {
       await back.click();
       await back.waitFor({ state: 'hidden', timeout: 10000 });
     }, 30000);
+    test('rejects malformed IPC calls in the main process', async () => {
+      const errors = await page.evaluate(async () => {
+        const db = (window as unknown as ProbeWindow).electronAPI.db as unknown as Record<
+          string,
+          Record<string, (...args: unknown[]) => Promise<unknown>>
+        >;
+        const attempt = (p: Promise<unknown>) =>
+          p.then(
+            () => 'resolved',
+            (e: Error) => e.message,
+          );
+        return [
+          await attempt(db.sessions.getByDate('../../etc')),
+          await attempt(db.kv.get('secrets')),
+          await attempt(db.sessions.save({ id: 'x', type: 'FOCUS' })),
+        ];
+      });
+      for (const message of errors) {
+        expect(message).toContain('Invalid arguments for db:');
+      }
+      const log = fs.readFileSync(path.join(userDataDir, 'logs', 'main.log'), 'utf8');
+      expect(log).toMatch(/\(ipc\)\s*Invalid arguments for db:sessions:getByDate/);
+    });
     test('retains every session from the last 90 days and prunes older ones', async () => {
       const result = await page.evaluate(async () => {
-        const sessions = (window as any).electronAPI.db.sessions;
+        const sessions = (window as unknown as ProbeWindow).electronAPI.db.sessions;
         const DAY = 24 * 60 * 60 * 1000;
         const make = (id: string, start: number) => ({
           id,

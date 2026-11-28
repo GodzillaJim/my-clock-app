@@ -311,7 +311,12 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
           <Select
             value={filters.status}
             label="Status"
-            onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value as any }))}
+            onChange={(e) =>
+              setFilters((prev) => ({
+                ...prev,
+                status: e.target.value as FeedbackItem['status'] | 'all',
+              }))
+            }
           >
             <MenuItem value="all">All</MenuItem>
             <MenuItem value="open">Open</MenuItem>
@@ -326,7 +331,12 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
           <Select
             value={filters.type}
             label="Type"
-            onChange={(e) => setFilters((prev) => ({ ...prev, type: e.target.value as any }))}
+            onChange={(e) =>
+              setFilters((prev) => ({
+                ...prev,
+                type: e.target.value as FeedbackItem['type'] | 'all',
+              }))
+            }
           >
             <MenuItem value="all">All</MenuItem>
             <MenuItem value="bug">Bug</MenuItem>
@@ -341,7 +351,12 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
           <Select
             value={filters.severity}
             label="Severity"
-            onChange={(e) => setFilters((prev) => ({ ...prev, severity: e.target.value as any }))}
+            onChange={(e) =>
+              setFilters((prev) => ({
+                ...prev,
+                severity: e.target.value as FeedbackItem['severity'] | 'all',
+              }))
+            }
           >
             <MenuItem value="all">All</MenuItem>
             <MenuItem value="low">Low</MenuItem>

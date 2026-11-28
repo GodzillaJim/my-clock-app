@@ -39,8 +39,6 @@ export default tseslint.config(
 
   {
     rules: {
-      // Tracked separately in #37 (eliminate `any`)
-      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' },

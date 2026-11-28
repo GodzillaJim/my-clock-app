@@ -128,10 +128,13 @@ formatting and lint issues are caught before they reach a commit. Bypass in an e
 ```
 electron/
   main/
-    index.ts          # app lifecycle, window, tray, global shortcuts, IPC
+    index.ts          # app lifecycle, window, tray, global shortcuts
+    ipc.ts            # typed, schema-validated ipcMain.handle (ipcSchemas.ts: zod schemas)
+    security.ts, csp.ts, logger.ts
     update.ts         # auto-updater wiring (not yet configured to publish)
     database/         # SQLite connection, migrations, repositories, IPC handlers, retention
-  preload/index.ts    # contextBridge API exposed to the renderer
+  ipc/contract.ts     # IPC contract: every channel's arguments and result, and window.electronAPI
+  preload/index.ts    # contextBridge API built from the contract (sandboxed)
 src/
   components/
     timer/            # focus timer, countdown, stopwatch, recovery banner
