@@ -1,13 +1,9 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { Box, CssBaseline, ThemeProvider, useMediaQuery } from '@mui/material';
 import { buildAppTheme } from './theme/buildAppTheme';
-import { DashboardLayout } from './components/layout/DashboardLayout';
-import { CommandCenterLayout } from './components/layout/CommandCenterLayout';
 import { ZenFocusTimer } from './components/timer/ZenFocusTimer';
 import { ZenCountdownTimer } from './components/timer/ZenCountdownTimer';
 import { ZenStopwatch } from './components/timer/ZenStopwatch';
-import { HistoryView } from './components/history/HistoryView';
-import { FocusSettings } from './components/settings/FocusSettings';
 import { AppSettings, DEFAULT_SETTINGS, SessionPlan } from './features/timer/types';
 import { services } from '@/services/domain';
 import { notificationService } from './services/notificationService';
@@ -21,9 +17,29 @@ import { createLogger } from '@/services/logger';
 
 const log = createLogger('App');
 
+// Loaded on first use, keeping them out of the startup bundle: most launches only show
+// the Zen timer (budget: docs/performance.md)
+const DashboardLayout = lazy(() =>
+  import('./components/layout/DashboardLayout').then((m) => ({ default: m.DashboardLayout })),
+);
+const CommandCenterLayout = lazy(() =>
+  import('./components/layout/CommandCenterLayout').then((m) => ({
+    default: m.CommandCenterLayout,
+  })),
+);
+const HistoryView = lazy(() =>
+  import('./components/history/HistoryView').then((m) => ({ default: m.HistoryView })),
+);
+const FocusSettings = lazy(() =>
+  import('./components/settings/FocusSettings').then((m) => ({ default: m.FocusSettings })),
+);
+
 const App: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Settings mounts on first open and then stays, so its closing animation still plays
+  const [settingsMounted, setSettingsMounted] = useState(false);
+  if (settingsOpen && !settingsMounted) setSettingsMounted(true);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [currentTool, setCurrentTool] = useState(0);
   const { recoveryInfo, dismiss: dismissRecovery, resume: resumeRecovery } = useRecovery();
@@ -195,63 +211,67 @@ const App: React.FC = () => {
           />
         )}
 
-        {/* Render layout based on settings */}
-        {settings.layout === 'commandCenter' && (
-          <CommandCenterLayout
-            settings={settings}
-            onOpenSettings={() => setSettingsOpen(true)}
-            onOpenHistory={() => setHistoryOpen(true)}
-          />
-        )}
+        <Suspense fallback={null}>
+          {/* Render layout based on settings */}
+          {settings.layout === 'commandCenter' && (
+            <CommandCenterLayout
+              settings={settings}
+              onOpenSettings={() => setSettingsOpen(true)}
+              onOpenHistory={() => setHistoryOpen(true)}
+            />
+          )}
 
-        {settings.layout === 'dashboard' && (
-          <DashboardLayout
-            settings={settings}
-            onOpenSettings={() => setSettingsOpen(true)}
-            onOpenHistory={() => setHistoryOpen(true)}
-            onReportProblem={reportProblem}
-            initialTool={currentTool}
-            onToolChange={setCurrentTool}
-          />
-        )}
+          {settings.layout === 'dashboard' && (
+            <DashboardLayout
+              settings={settings}
+              onOpenSettings={() => setSettingsOpen(true)}
+              onOpenHistory={() => setHistoryOpen(true)}
+              onReportProblem={reportProblem}
+              initialTool={currentTool}
+              onToolChange={setCurrentTool}
+            />
+          )}
 
-        {settings.layout === 'zen' && (
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: '100vh',
-              p: 4,
-            }}
-          >
-            {currentTool === 0 && (
-              <ZenFocusTimer
-                settings={settings}
-                onOpenSettings={() => setSettingsOpen(true)}
-                onOpenHistory={() => setHistoryOpen(true)}
-              />
-            )}
-            {currentTool === 1 && <ZenCountdownTimer />}
-            {currentTool === 2 && <ZenStopwatch />}
-          </Box>
-        )}
+          {settings.layout === 'zen' && (
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '100vh',
+                p: 4,
+              }}
+            >
+              {currentTool === 0 && (
+                <ZenFocusTimer
+                  settings={settings}
+                  onOpenSettings={() => setSettingsOpen(true)}
+                  onOpenHistory={() => setHistoryOpen(true)}
+                />
+              )}
+              {currentTool === 1 && <ZenCountdownTimer />}
+              {currentTool === 2 && <ZenStopwatch />}
+            </Box>
+          )}
 
-        {historyOpen && (
-          <HistoryView
-            settings={settings}
-            onClose={() => setHistoryOpen(false)}
-            onResumePlan={handleResumePlan}
-          />
-        )}
+          {historyOpen && (
+            <HistoryView
+              settings={settings}
+              onClose={() => setHistoryOpen(false)}
+              onResumePlan={handleResumePlan}
+            />
+          )}
 
-        <FocusSettings
-          open={settingsOpen}
-          onClose={() => setSettingsOpen(false)}
-          settings={settings}
-          onSettingsChange={handleSettingsChange}
-        />
+          {settingsMounted && (
+            <FocusSettings
+              open={settingsOpen}
+              onClose={() => setSettingsOpen(false)}
+              settings={settings}
+              onSettingsChange={handleSettingsChange}
+            />
+          )}
+        </Suspense>
       </Box>
     </ThemeProvider>
   );
