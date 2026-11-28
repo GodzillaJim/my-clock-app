@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Box, Typography, CircularProgress } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import React, { useState, useEffect } from 'react';
+import { Box, Button, IconButton, Skeleton, Tooltip, Typography, useTheme } from '@mui/material';
+import { ArrowBack } from '@mui/icons-material';
 import {
   LifetimeStats,
   SessionPlan,
@@ -11,8 +11,9 @@ import {
   getTodayDateString,
   DailyHistory,
 } from '@/features/timer/types';
+import { datesUpTo } from '@/features/stats/stats';
+import { todaySummary } from '@/features/stats/historyCopy';
 import { services } from '@/services/domain';
-import { MomentumHeader } from './MomentumHeader';
 import { FocusHeatmap } from './FocusHeatmap';
 import { DayTimeline } from './DayTimeline';
 import { RhythmTrends } from './RhythmTrends';
@@ -27,17 +28,16 @@ interface HistoryViewProps {
 }
 
 const HEATMAP_WEEKS = 12;
-const dateKey = (d: Date): string => d.toISOString().split('T')[0];
 
-const formatDayLabel = (dateStr: string): string => {
-  const today = getTodayDateString();
-  const yesterday = dateKey(new Date(Date.now() - 86400000));
-  if (dateStr === today) return 'Today';
-  if (dateStr === yesterday) return 'Yesterday';
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', {
+/** "Today", "Yesterday", or "Monday, November 23" for a store date. */
+const dayLabel = (date: string, today: string): string => {
+  if (date === today) return 'Today';
+  if (date === datesUpTo(today, 2)[0]) return 'Yesterday';
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
+    timeZone: 'UTC',
   });
 };
 
@@ -87,76 +87,68 @@ const synthesizePlanFromSessions = (date: string, history: DailyHistory | null):
   ];
 };
 
+/** Placeholder in the shape of the page while the history loads. */
+const HistorySkeleton: React.FC = () => (
+  <Box aria-busy="true" aria-label="Loading your history">
+    <Skeleton variant="text" sx={{ fontSize: '1.375rem', maxWidth: 560 }} />
+    <Skeleton variant="rounded" height={150} sx={{ mt: 5, maxWidth: 260 }} />
+    <Box
+      sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.35fr 1fr' }, gap: 5, mt: 5 }}
+    >
+      <Skeleton variant="rounded" height={120} />
+      <Skeleton variant="rounded" height={220} />
+    </Box>
+  </Box>
+);
+
+/** Your focus over time: a sentence about today, twelve weeks of days, and one day in detail. */
 export const HistoryView: React.FC<HistoryViewProps> = ({ settings, onClose, onResumePlan }) => {
   const theme = useTheme();
-  const todayKey = getTodayDateString();
+  const today = getTodayDateString();
 
   const [stats, setStats] = useState<LifetimeStats | null>(null);
   const [focusByDate, setFocusByDate] = useState<Map<string, number>>(new Map());
-  const [series, setSeries] = useState<{ date: string; seconds: number }[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string>(todayKey);
+  const [selectedDate, setSelectedDate] = useState<string>(today);
   const [dayPlans, setDayPlans] = useState<SessionPlan[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadOverview = async () => {
+      try {
+        const lifetime = await services.stats.recalculate();
+        const range = datesUpTo(today, HEATMAP_WEEKS * 7);
+        const histories = await services.history.forPeriod(range[0], today);
+        setFocusByDate(new Map(histories.map((h) => [h.date, h.totalFocusTime || 0])));
+        setStats(lifetime);
+      } catch (err) {
+        log.error('Failed to load history overview:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
     loadOverview();
-  }, []);
+  }, [today]);
 
   useEffect(() => {
-    loadDay(selectedDate);
+    const loadDay = async () => {
+      try {
+        const plans = await services.plans.forDate(selectedDate);
+        if (plans.length > 0) return setDayPlans(plans);
+        const history = await services.history.byDate(selectedDate);
+        setDayPlans(synthesizePlanFromSessions(selectedDate, history));
+      } catch (err) {
+        log.error('Failed to load day:', err);
+        setDayPlans([]);
+      }
+    };
+    loadDay();
   }, [selectedDate]);
 
-  const loadOverview = async () => {
-    try {
-      setLoading(true);
-      const lifetime = await services.stats.recalculate();
-
-      const today = new Date();
-      const start = new Date(today);
-      start.setDate(today.getDate() - (HEATMAP_WEEKS * 7 - 1));
-      const histories = await services.history.forPeriod(dateKey(start), dateKey(today));
-
-      const map = new Map<string, number>();
-      histories.forEach((h) => map.set(h.date, h.totalFocusTime || 0));
-
-      const daily: { date: string; seconds: number }[] = [];
-      for (let i = 29; i >= 0; i--) {
-        const d = new Date(today);
-        d.setDate(today.getDate() - i);
-        const k = dateKey(d);
-        daily.push({ date: k, seconds: map.get(k) || 0 });
-      }
-
-      setStats(lifetime);
-      setFocusByDate(map);
-      setSeries(daily);
-    } catch (err) {
-      log.error('Failed to load history overview:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadDay = async (date: string) => {
-    try {
-      const plans = await services.plans.forDate(date);
-      if (plans.length > 0) {
-        setDayPlans(plans);
-        return;
-      }
-      const history = await services.history.byDate(date);
-      setDayPlans(synthesizePlanFromSessions(date, history));
-    } catch (err) {
-      log.error('Failed to load day:', err);
-      setDayPlans([]);
-    }
-  };
-
-  const todayFocusSeconds = focusByDate.get(todayKey) || 0;
-  const hasAnyData = useMemo(
-    () => (stats?.totalSessions ?? 0) > 0 || focusByDate.size > 0,
-    [stats, focusByDate],
-  );
+  const series = datesUpTo(today, 30).map((date) => ({
+    date,
+    seconds: focusByDate.get(date) ?? 0,
+  }));
+  const hasAnyData = (stats?.totalSessions ?? 0) > 0 || focusByDate.size > 0;
 
   return (
     <Box
@@ -168,87 +160,79 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ settings, onClose, onR
         overflowY: 'auto',
       }}
     >
-      <Box sx={{ maxWidth: 1120, mx: 'auto', px: { xs: 2.5, md: 5 }, py: { xs: 3, md: 5 } }}>
+      <Box
+        component="main"
+        sx={{ maxWidth: 1080, mx: 'auto', px: { xs: 3, md: 6 }, py: { xs: 3, md: 5 } }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3, ml: -1 }}>
+          <Tooltip title="Back (Esc)">
+            <IconButton aria-label="Back" onClick={onClose}>
+              <ArrowBack />
+            </IconButton>
+          </Tooltip>
+          <Typography variant="h5" component="h1">
+            History
+          </Typography>
+        </Box>
+
         {loading || !stats ? (
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: '60vh',
-              gap: 2,
-            }}
-          >
-            <CircularProgress size={28} />
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Gathering your history…
+          <HistorySkeleton />
+        ) : !hasAnyData ? (
+          <Box sx={{ py: 8, maxWidth: 520 }}>
+            <Typography variant="h6" component="p" gutterBottom>
+              Nothing here yet.
             </Typography>
+            <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3 }}>
+              Each focus session you finish is added here, so you can see your days and weeks take
+              shape.
+            </Typography>
+            <Button variant="contained" onClick={onClose}>
+              Back to the timer
+            </Button>
           </Box>
         ) : (
           <>
-            <MomentumHeader
-              todayFocusSeconds={todayFocusSeconds}
-              streakDays={stats.currentDayStreak}
-              avgDailyFocusSeconds={stats.averageDailyFocusTime}
-              onClose={onClose}
-            />
+            <Typography
+              sx={{ fontSize: '1.375rem', lineHeight: 1.45, maxWidth: '38ch', textWrap: 'pretty' }}
+            >
+              {todaySummary(
+                focusByDate.get(today) ?? 0,
+                stats.averageDailyFocusTime,
+                stats.currentDayStreak,
+              )}
+            </Typography>
 
-            {!hasAnyData ? (
-              <Box sx={{ textAlign: 'center', py: 10 }}>
-                <Typography variant="h6" gutterBottom>
-                  No focus history yet
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Finish your first session and it will start filling in here.
-                </Typography>
+            <Box component="section" aria-labelledby="weeks-heading" sx={{ mt: 5, mb: 6 }}>
+              <Typography id="weeks-heading" variant="h6" component="h2" sx={{ mb: 1.5 }}>
+                Last 12 weeks
+              </Typography>
+              <Box sx={{ overflowX: 'auto', pb: 0.5 }}>
+                <FocusHeatmap
+                  focusByDate={focusByDate}
+                  today={today}
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                  weeks={HEATMAP_WEEKS}
+                />
               </Box>
-            ) : (
-              <>
-                {/* Heatmap centerpiece */}
-                <Box sx={{ mt: 5, mb: 2 }}>
-                  <Typography
-                    variant="overline"
-                    sx={{ letterSpacing: '0.14em', color: 'text.secondary' }}
-                  >
-                    Last 12 weeks
-                  </Typography>
-                </Box>
-                <Box sx={{ mb: 5, overflowX: 'auto' }}>
-                  <FocusHeatmap
-                    focusByDate={focusByDate}
-                    selectedDate={selectedDate}
-                    onSelectDate={setSelectedDate}
-                    weeks={HEATMAP_WEEKS}
-                  />
-                </Box>
+            </Box>
 
-                {/* Detail + trends */}
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', md: '1.35fr 1fr' },
-                    gap: { xs: 4, md: 5 },
-                    alignItems: 'start',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      pr: { md: 4 },
-                      borderRight: { md: `1px solid ${theme.palette.divider}` },
-                    }}
-                  >
-                    <DayTimeline
-                      dateLabel={formatDayLabel(selectedDate)}
-                      plans={dayPlans}
-                      settings={settings}
-                      onResumePlan={onResumePlan}
-                    />
-                  </Box>
-                  <RhythmTrends stats={stats} series={series} />
-                </Box>
-              </>
-            )}
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: '1.35fr 1fr' },
+                gap: { xs: 5, md: 7 },
+                alignItems: 'start',
+              }}
+            >
+              <DayTimeline
+                dateLabel={dayLabel(selectedDate, today)}
+                plans={dayPlans}
+                settings={settings}
+                onResumePlan={onResumePlan}
+              />
+              <RhythmTrends stats={stats} series={series} timeFormat={settings.timeFormat} />
+            </Box>
           </>
         )}
       </Box>
