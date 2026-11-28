@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Button, Typography } from '@mui/material';
 import { ErrorOutlined } from '@mui/icons-material';
 import { createLogger } from '@/services/logger';
+import { defaultScheme as scheme, typography } from '@/theme/tokens';
 
 const log = createLogger('ErrorBoundary');
 
@@ -73,22 +74,22 @@ function CrashScreen({ error, onRetry, onReload }: CrashScreenProps) {
         gap: 2,
         p: 4,
         textAlign: 'center',
-        bgcolor: '#0b0b0d',
-        color: '#e5e7eb',
+        bgcolor: scheme.surface.page,
+        color: scheme.text.primary,
       }}
     >
-      <ErrorOutlined sx={{ fontSize: 56, color: '#f87171' }} />
+      <ErrorOutlined sx={{ fontSize: 56, color: scheme.error }} />
       <Typography variant="h5" component="h1" sx={{ fontWeight: 500 }}>
         Something went wrong
       </Typography>
-      <Typography variant="body2" sx={{ maxWidth: 440, color: '#9ca3af' }}>
+      <Typography variant="body2" sx={{ maxWidth: 440, color: scheme.text.secondary }}>
         This view hit an unexpected error. Your focus session is kept: its progress is saved and a
         running timer keeps going. The details are in the app log.
       </Typography>
       <Typography
         variant="caption"
         component="code"
-        sx={{ maxWidth: 520, color: '#6b7280', fontFamily: 'ui-monospace, monospace' }}
+        sx={{ maxWidth: 520, color: scheme.text.muted, fontFamily: typography.monoFamily }}
       >
         {error.message}
       </Typography>

@@ -96,54 +96,57 @@ class NotificationService {
   }
 
   private showVisualNotification(notification: SessionNotification): void {
-    const existingNotification = document.querySelector('.visual-notification');
-    if (existingNotification) {
-      existingNotification.remove();
-    }
+    document.querySelector('.visual-notification')?.remove();
 
+    // Text goes in as textContent: notification text never becomes markup.
+    // Colours come from the theme's --fs-* variables (see src/theme/tokens.ts).
     const notificationEl = document.createElement('div');
     notificationEl.className = 'visual-notification';
-    notificationEl.innerHTML = `
-      <div class="visual-notification-content">
-        <h3>${notification.title}</h3>
-        <p>${notification.body}</p>
-      </div>
-    `;
-
-    notificationEl.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: white;
-      border: 2px solid #2196f3;
-      border-radius: 8px;
-      padding: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      z-index: 10000;
-      max-width: 300px;
-      animation: slideIn 0.3s ease-out;
-    `;
+    notificationEl.setAttribute('role', 'status');
+    const title = document.createElement('h3');
+    title.textContent = notification.title;
+    const body = document.createElement('p');
+    body.textContent = notification.body;
+    notificationEl.append(title, body);
 
     const style = document.createElement('style');
     style.textContent = `
-      @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
+      .visual-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        max-width: 300px;
+        padding: 16px;
+        z-index: 10000;
+        background: var(--fs-raised);
+        border: 1px solid var(--fs-line-raised);
+        border-radius: var(--fs-radius-md);
+        box-shadow: var(--fs-shadow-toast);
+        animation: fs-toast-in var(--fs-motion-slow) var(--fs-ease-out);
       }
-      @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
+      .visual-notification.leaving {
+        animation: fs-toast-out var(--fs-motion-slow) ease-in forwards;
       }
-      .visual-notification-content h3 {
-        margin: 0 0 8px 0;
-        font-size: 16px;
-        font-weight: bold;
-        color: #333;
+      .visual-notification h3 {
+        margin: 0 0 6px;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--fs-text);
       }
-      .visual-notification-content p {
+      .visual-notification p {
         margin: 0;
         font-size: 14px;
-        color: #666;
+        color: var(--fs-text-secondary);
+      }
+      @keyframes fs-toast-in {
+        from { transform: translateX(24px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes fs-toast-out {
+        to { transform: translateX(24px); opacity: 0; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .visual-notification, .visual-notification.leaving { animation: none; }
       }
     `;
 
@@ -151,7 +154,7 @@ class NotificationService {
     document.body.appendChild(notificationEl);
 
     setTimeout(() => {
-      notificationEl.style.animation = 'slideOut 0.3s ease-in';
+      notificationEl.classList.add('leaving');
       setTimeout(() => {
         notificationEl.remove();
         style.remove();

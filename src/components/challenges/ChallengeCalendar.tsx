@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Tooltip } from '@mui/material';
+import { Box, Typography, Tooltip, useTheme } from '@mui/material';
 import { ChallengeDay, ChallengeDayStatus } from '@/features/timer/types';
 import dayjs from 'dayjs';
 
@@ -14,17 +14,18 @@ export const ChallengeCalendar: React.FC<ChallengeCalendarProps> = ({
   onDayClick,
   compact = false,
 }) => {
+  const { tokens } = useTheme();
   const getStatusColor = (status: ChallengeDayStatus): string => {
     switch (status) {
       case ChallengeDayStatus.COMPLETED:
-        return '#4ADE80';
+        return tokens.success;
       case ChallengeDayStatus.FAILED:
-        return '#F87171';
+        return tokens.error;
       case ChallengeDayStatus.SKIPPED:
-        return '#FBBF24';
+        return tokens.warning;
       case ChallengeDayStatus.PENDING:
       default:
-        return 'rgba(255, 255, 255, 0.1)';
+        return tokens.overlay.track;
     }
   };
 

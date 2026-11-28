@@ -92,7 +92,6 @@ export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningS
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <Typography
               variant="h1"
-              className={isRunning ? 'neon-text' : ''}
               sx={{
                 fontSize: '4rem',
                 fontWeight: 200,

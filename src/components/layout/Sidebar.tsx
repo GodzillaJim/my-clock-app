@@ -43,9 +43,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       sx={{
         width: 64,
         minHeight: '100vh',
-        backgroundColor: 'rgba(18, 18, 22, 0.95)',
+        backgroundColor: (t) => t.tokens.surface.panel,
         backdropFilter: 'blur(12px)',
-        borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+        borderRight: (t) => `1px solid ${t.tokens.line.default}`,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -64,16 +64,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 height: 44,
                 borderRadius: 2,
                 color: currentTool === tool.index ? 'primary.main' : 'text.secondary',
-                backgroundColor:
-                  currentTool === tool.index ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-                border:
+                backgroundColor: (t) =>
+                  currentTool === tool.index ? t.tokens.overlay.hover : 'transparent',
+                border: (t) =>
                   currentTool === tool.index
-                    ? '1px solid rgba(255, 255, 255, 0.15)'
+                    ? `1px solid ${t.tokens.line.strong}`
                     : '1px solid transparent',
                 transition: 'all 0.2s ease',
                 '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  backgroundColor: (t) => t.tokens.overlay.hover,
+                  borderColor: (t) => t.tokens.line.hover,
                 },
               }}
             >
@@ -83,7 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ))}
       </Box>
 
-      <Divider sx={{ width: 32, my: 2, borderColor: 'rgba(255, 255, 255, 0.08)' }} />
+      <Divider sx={{ width: 32, my: 2, borderColor: (t) => t.tokens.line.default }} />
 
       {/* Spacer */}
       <Box sx={{ flex: 1 }} />
@@ -102,7 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 transition: 'all 0.2s ease',
                 '&:hover': {
                   color: 'primary.main',
-                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  backgroundColor: (t) => t.tokens.overlay.hover,
                 },
               }}
             >

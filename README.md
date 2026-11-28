@@ -148,6 +148,7 @@ src/
     settings/         # settings dialog
   features/timer/     # timer engine (pure state machines in engine/), React hooks, domain types
   features/stats/     # pure statistics: day summaries, streaks, lifetime stats
+  theme/              # design tokens (tokens.ts) and the MUI theme generated from them
   services/domain/    # domain services (settings, sessions, plans, history, stats, challenges)
   services/           # data store (db.ts), notifications, sounds, crash-recovery snapshot
   __tests__/          # unit tests (Vitest + Testing Library)

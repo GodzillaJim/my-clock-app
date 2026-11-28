@@ -3,6 +3,8 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ZenFocusTimer } from '@/components/timer/ZenFocusTimer';
 import { FocusTimerProvider, useFocusTimerContext } from '@/features/timer/FocusTimerContext';
+import { ThemeProvider } from '@mui/material';
+import { buildAppTheme } from '@/theme/buildAppTheme';
 import { AppSettings, DEFAULT_SETTINGS, SessionPlan, SessionType } from '@/features/timer/types';
 
 const mocks = vi.hoisted(() => ({
@@ -49,10 +51,12 @@ const ResumeOnMount: React.FC<{ plan: SessionPlan }> = ({ plan }) => {
 
 const renderTimer = (settings: AppSettings = baseSettings, resumePlan?: SessionPlan) =>
   render(
-    <FocusTimerProvider initialMinutes={settings.focusDuration}>
-      <ZenFocusTimer onOpenSettings={() => {}} onOpenHistory={() => {}} settings={settings} />
-      {resumePlan && <ResumeOnMount plan={resumePlan} />}
-    </FocusTimerProvider>,
+    <ThemeProvider theme={buildAppTheme(settings, true)}>
+      <FocusTimerProvider initialMinutes={settings.focusDuration}>
+        <ZenFocusTimer onOpenSettings={() => {}} onOpenHistory={() => {}} settings={settings} />
+        {resumePlan && <ResumeOnMount plan={resumePlan} />}
+      </FocusTimerProvider>
+    </ThemeProvider>,
   );
 
 /** Advance fake time and flush the React updates it triggers. */

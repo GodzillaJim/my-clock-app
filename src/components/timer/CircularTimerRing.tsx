@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box } from '@mui/material';
+import { Box, useTheme } from '@mui/material';
 
 interface CircularTimerRingProps {
   progress: number; // 0-100
@@ -22,8 +22,9 @@ export const CircularTimerRing: React.FC<CircularTimerRingProps> = ({
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
-  // Clean, non-neon colors
-  const primaryColor = isBreak ? '#A78BFA' : '#60A5FA';
+  const { palette, tokens } = useTheme();
+  // Focus uses the primary accent, breaks the secondary one
+  const primaryColor = isBreak ? palette.secondary.main : palette.primary.main;
 
   return (
     <Box
@@ -50,7 +51,7 @@ export const CircularTimerRing: React.FC<CircularTimerRingProps> = ({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="rgba(255, 255, 255, 0.08)"
+          stroke={tokens.line.default}
           strokeWidth={strokeWidth}
         />
         {/* Progress circle */}

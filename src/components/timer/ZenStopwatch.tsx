@@ -68,7 +68,6 @@ export const ZenStopwatch: React.FC<ZenStopwatchProps> = ({ onRunningStateChange
       >
         <Typography
           variant="h1"
-          className={isRunning ? 'neon-text' : ''}
           sx={{
             fontSize: '3.5rem',
             fontWeight: 200,

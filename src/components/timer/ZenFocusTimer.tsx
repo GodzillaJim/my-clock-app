@@ -157,7 +157,6 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       >
         <Typography
           variant="h1"
-          className={isActive ? (isBreak ? 'neon-text-secondary' : 'neon-text') : ''}
           sx={{
             fontSize: '4rem',
             fontWeight: 200,

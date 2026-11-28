@@ -127,7 +127,7 @@ _Exit criteria: User data survives crashes, upgrades and migrations — proven b
 
 _Exit criteria: Design review and a WCAG 2.1 AA audit both pass; the first-run experience is guided._
 
-- [ ] [#58](https://github.com/GodzillaJim/my-clock-app/issues/58) design tokens as the single theme source
+- [x] [#58](https://github.com/GodzillaJim/my-clock-app/issues/58) design tokens as the single theme source
 - [ ] [#59](https://github.com/GodzillaJim/my-clock-app/issues/59) visual design pass across all screens
 - [ ] [#60](https://github.com/GodzillaJim/my-clock-app/issues/60) first-run onboarding and empty states
 - [ ] [#61](https://github.com/GodzillaJim/my-clock-app/issues/61) simplify and group settings

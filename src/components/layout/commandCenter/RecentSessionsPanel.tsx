@@ -8,9 +8,9 @@ export const RecentSessionsPanel: React.FC<{ sessions: SessionRecord[] }> = ({ s
     sx={{
       flex: 1,
       p: 2,
-      backgroundColor: 'rgba(24, 24, 28, 0.9)',
+      backgroundColor: (t) => t.tokens.surface.card,
       backdropFilter: 'blur(12px)',
-      border: '1px solid rgba(255, 255, 255, 0.08)',
+      border: (t) => `1px solid ${t.tokens.line.default}`,
       display: 'flex',
       flexDirection: 'column',
     }}
@@ -32,8 +32,8 @@ export const RecentSessionsPanel: React.FC<{ sessions: SessionRecord[] }> = ({ s
               justifyContent: 'space-between',
               alignItems: 'center',
               py: 1,
-              borderBottom:
-                index < sessions.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+              borderBottom: (t) =>
+                index < sessions.length - 1 ? `1px solid ${t.tokens.line.subtle}` : 'none',
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
