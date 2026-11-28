@@ -11,6 +11,7 @@ import {
   net,
   session,
   dialog,
+  powerMonitor,
 } from 'electron';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
@@ -24,6 +25,7 @@ import { migrate } from './database/migrationRunner';
 import { registerDatabaseHandlers } from './database/ipcHandlers';
 import { handle } from './ipc';
 import { crashAction, recordReload } from './crashRecovery';
+import { forwardPowerEvents } from './power';
 import { createLogger, initLogging, logFilePath } from './logger';
 import { buildIssueUrl } from './reportProblem';
 import pkg from '../../package.json';
@@ -302,6 +304,8 @@ async function createWindow() {
       sandbox: true,
       webSecurity: true,
       webviewTag: false,
+      // The focus timer must tick on time while the window is hidden in the tray
+      backgroundThrottling: false,
     },
   });
 
@@ -341,6 +345,7 @@ async function createWindow() {
     return { action: 'deny' };
   });
   watchRendererHealth(win);
+  forwardPowerEvents(powerMonitor, win, log);
 
   win.webContents.on('will-navigate', (event, url) => {
     if (!isAllowedNavigation(url, VITE_DEV_SERVER_URL)) {

@@ -29,3 +29,9 @@ crash-recovery snapshots), pauses were counted as focus time, and the stopwatch 
 - Behaviour fixes (pause accounting, exact segment switches, Command Center records) came for free.
 - Side effects are data, so a new one (for example a webhook) means one new effect type and one
   handler in `runFocusEffect`.
+
+## Update (2026-11-28, #56): sleep and clock changes
+
+- **Sleep pauses the session.** The main process forwards `powerMonitor`'s `suspend` with its timestamp; the machine pauses at that moment, even if the renderer only processes it after waking. As a fallback for any freeze (hibernate, a suspended VM), a gap of more than 30 s between ticks pauses the session as of the last tick. Time asleep never counts as focus, a segment never "completes" because of it, and a notification says the session was paused.
+- **The window is never throttled** (`backgroundThrottling: false`), so ticks keep arriving every 250 ms in the tray and segment ends are not delayed by Chromium's background timer throttling.
+- **Clock jumps.** A backwards jump of more than 2 s shifts the running span by the same amount, so the countdown neither stalls nor repeats. Smaller jitter is ignored. A forward jump under 30 s counts as elapsed time; a larger one is indistinguishable from sleep and pauses.

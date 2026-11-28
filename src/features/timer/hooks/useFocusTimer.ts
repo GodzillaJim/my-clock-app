@@ -78,6 +78,12 @@ export function useFocusTimer() {
     return () => window.removeEventListener('pagehide', flush);
   }, [dispatch]);
 
+  // The system going to sleep pauses a running session at that moment
+  useEffect(
+    () => window.electronAPI?.onSystemSuspend((at) => dispatch({ type: 'SUSPEND', at })),
+    [dispatch],
+  );
+
   const running = state.phase === 'running';
   useEffect(() => {
     if (!running) return;

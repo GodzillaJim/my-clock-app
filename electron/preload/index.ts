@@ -42,6 +42,15 @@ const api: ElectronAPI = {
   onTrayOpenSettings: subscribe('tray-open-settings'),
   onTrayOpenHistory: subscribe('tray-open-history'),
   onGlobalShortcutStartSession: subscribe('global-shortcut-start-session'),
+  onSystemSuspend: (callback) => {
+    const listener = (_event: unknown, at: unknown) => {
+      if (typeof at === 'number' && Number.isFinite(at)) callback(at);
+    };
+    ipcRenderer.on('system-suspend', listener);
+    return () => {
+      ipcRenderer.removeListener('system-suspend', listener);
+    };
+  },
 
   // SQLite database
   db: {

@@ -117,7 +117,7 @@ _Exit criteria: User data survives crashes, upgrades and migrations — proven b
 - [x] [#53](https://github.com/GodzillaJim/my-clock-app/issues/53) migration tests and automatic pre-migration backup
 - [x] [#54](https://github.com/GodzillaJim/my-clock-app/issues/54) crash-recovery e2e (kill mid-session, relaunch, resume)
 - [ ] [#55](https://github.com/GodzillaJim/my-clock-app/issues/55) data export/import and backup/restore
-- [ ] [#56](https://github.com/GodzillaJim/my-clock-app/issues/56) timer accuracy across sleep/hibernate and clock changes
+- [x] [#56](https://github.com/GodzillaJim/my-clock-app/issues/56) timer accuracy across sleep/hibernate and clock changes
 - [ ] [#57](https://github.com/GodzillaJim/my-clock-app/issues/57) performance budget checked locally
 - [ ] [#100](https://github.com/GodzillaJim/my-clock-app/issues/100) e2e coverage for the Dashboard and Command Center layouts
 
