@@ -1,184 +1,69 @@
-# Focus Sessions - Pomodoro Timer App
+# Focus Sessions
 
-[![Built with Electron](https://img.shields.io/badge/Built%20with-Electron-47848f.svg)](https://electronjs.org/)
-[![React](https://img.shields.io/badge/React-18.3.1-61dafb.svg)](https://reactjs.org/)
-[![Vite](https://img.shields.io/badge/Vite-5.4.11-646cff.svg)](https://vitejs.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4.2-3178c6.svg)](https://www.typescriptlang.org/)
-[![MUI](https://img.shields.io/badge/MUI-6.3.0-0081cb.svg)](https://mui.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+A Windows desktop focus timer. Pick how long you want to work; Focus Sessions splits it into focus and
+break segments, runs them back to back, survives crashes mid-session, and keeps 90 days of history so you
+can see when and how well you focus.
 
-## 👀 Overview
+Built with Electron, React and TypeScript, with all data stored locally in SQLite.
 
-A modern, feature-rich Pomodoro Timer application built with Electron, React, and TypeScript. Focus Sessions helps you maintain productivity through structured work sessions with comprehensive tracking and customization options.
+> **Status:** in active development toward v1.0. See the [roadmap](ROADMAP.md) for what's planned and
+> what's in progress. There are no installers yet — build from source (below).
 
-### ✨ Key Features
+## Features
 
-🍅 **Smart Pomodoro Timer**
-- Customizable focus sessions (1-240 minutes)
-- Automatic break scheduling (short & long breaks)
-- Quick duration presets for flexible session lengths
-- Accurate timing with pause/resume functionality
+**Focus runs**
+- Choose a total length (quick presets, configurable) and start; the run is split into focus and break
+  segments using your focus/break durations
+- Pause, resume, skip to the next segment, or stop; the timer shows when the current segment and the whole
+  run will end
+- Synthesized notification sounds with in-settings preview, optional tick during the last 10 seconds,
+  and Windows system notifications
 
-📊 **Session Tracking & Analytics**
-- Daily session history with completion status
-- Real-time statistics (focus time, streaks, averages)
-- Export data to CSV/JSON formats
-- Persistent storage with IndexedDB
+**Crash recovery**
+- The active run is snapshotted every 5 seconds; if the app or PC goes down mid-session, the next launch
+  offers to **Resume** the remaining segments or **Dismiss** the run, which is kept in history as interrupted
 
-🔔 **Rich Notification System**
-- Audio notifications with volume control
-- System tray integration with status updates
-- Visual and system notifications
-- Customizable notification sounds
+**History and insights**
+- Day timeline of every run and segment, focus heatmap, momentum header and rhythm trends
+- Streaks, average day start/end times and focus totals, computed from your local history
+- Sessions, plans and daily history are kept for 90 days
 
-⚙️ **Comprehensive Settings**
-- Light/dark/system theme support
-- Flexible time formats (12h/24h)
-- Auto-start options for sessions and breaks
-- Keyboard shortcuts for quick control
+**More tools**
+- Countdown timer and stopwatch
+- Challenges: multi-day goals tracked on a calendar
+- In-app feedback log with CSV export
 
-🖥️ **Cross-Platform Desktop App**
-- System tray integration for background operation
-- Window state persistence
-- Global keyboard shortcuts
-- Auto-updater support  
+**Look and feel**
+- Three layouts: *Zen* (centered timer), *Dashboard* (sidebar + stats), *Command Center* (all-in-one with timeline)
+- Two visual styles: *Deep Focus* (dark, OLED-friendly) and *Aerogel* (glassy pastels, light, dark or
+  following the system theme)
+- Lives in the system tray; **Ctrl+Shift+Alt+T** brings the window to the front from anywhere
+- In-app shortcuts: **Ctrl+S** settings, **Ctrl+H** history, **Ctrl+F** feedback, **Esc** closes dialogs
 
-## 🚀 Quick Start
+**Known gaps** (tracked on the roadmap): the tray's *Start Focus Session* item, **Ctrl+Shift+S** and
+**Space** don't control the timer yet ([#82](https://github.com/GodzillaJim/my-clock-app/issues/82)); there's
+no auto-update or signed installer yet (milestone M5).
 
-### Prerequisites
-- Windows 10 or later
-- Node.js 22 (see `.nvmrc`) and npm
+## Getting started
 
-### Installation & Development
+**Prerequisites:** Windows 10 or later, Node.js 22 (see `.nvmrc`) and npm.
 
 ```bash
-# Clone the repository
 git clone https://github.com/GodzillaJim/my-clock-app.git
 cd my-clock-app
-
-# Install exact locked dependencies (also rebuilds better-sqlite3 for Electron)
-npm ci
-
-# Start development server
-npm run dev
+npm ci          # installs locked dependencies and rebuilds better-sqlite3 for Electron
+npm run dev     # starts Vite and launches the app with hot reload
 ```
 
-### Building for Production
+Your data lives in a `focus-sessions.db` SQLite file in the app's folder under `%APPDATA%`.
+
+### Build an installer
 
 ```bash
-# Build for current platform
-npm run build
-
-# Build for specific platforms
-npm run build:win    # Windows
-npm run build:mac    # macOS
-npm run build:linux  # Linux
-
-# Create distribution packages
-npm run dist         # Current platform
-npm run dist:win     # Windows installer
+npm run dist    # NSIS installer + portable .exe in release/<version>/
 ```
 
-## 🏗️ Technical Architecture
-
-### Built With
-- **Frontend**: React 18, TypeScript, Material-UI (MUI)
-- **Desktop**: Electron 33 with secure IPC communication
-- **Build Tool**: Vite for fast development and optimized builds
-- **Storage**: IndexedDB for persistent local data
-- **Styling**: Emotion CSS-in-JS with MUI theme system
-- **Testing**: Vitest for unit tests, Playwright for E2E testing
-
-## 📂 Project Structure
-
-```tree
-├── electron/                    # Electron main process
-│   ├── main/                   # Main process source code
-│   │   ├── index.ts           # Application entry point
-│   │   └── update.ts          # Auto-updater implementation
-│   └── preload/               # Preload scripts for secure IPC
-│
-├── src/                        # React application source
-│   ├── components/            # UI components
-│   │   ├── timer/            # Timer-related components
-│   │   │   ├── FocusTimer.tsx # Main timer interface
-│   │   │   └── TimerDisplay.tsx
-│   │   ├── history/          # Session history components
-│   │   │   └── SessionHistory.tsx
-│   │   └── settings/         # Settings interface
-│   │       └── FocusSettings.tsx
-│   ├── features/             # Feature modules
-│   │   └── timer/           # Timer business logic
-│   │       ├── hooks/       # Custom React hooks
-│   │       ├── types/       # TypeScript type definitions
-│   │       └── utils/       # Utility functions
-│   ├── services/            # Application services
-│   │   ├── focusStorage.ts  # Data persistence layer
-│   │   └── notificationService.ts # Notification handling
-│   └── styles/              # Theme and styling
-│
-├── public/                     # Static assets
-│   ├── sounds/                # Notification sounds
-│   └── icon.svg              # Application icon
-│
-├── build/                     # Build configuration
-├── release/                   # Production builds (generated)
-└── test/                     # Test files
-```
-
-<!--
-## 🚨 Be aware
-
-This template integrates Node.js API to the renderer process by default. If you want to follow **Electron Security Concerns** you might want to disable this feature. You will have to expose needed API by yourself.  
-
-To get started, remove the option as shown below. This will [modify the Vite configuration and disable this feature](https://github.com/electron-vite/vite-plugin-electron-renderer#config-presets-opinionated).
-
-```diff
-# vite.config.ts
-
-export default {
-  plugins: [
-    ...
--   // Use Node.js API in the Renderer-process
--   renderer({
--     nodeIntegration: true,
--   }),
-    ...
-  ],
-}
-```
--->
-
-## 🎯 Core Features
-
-### Timer Functionality
-- **Flexible Session Lengths**: Set focus sessions from 1-240 minutes
-- **Smart Break System**: Automatic short (5min) and long (15min) breaks
-- **Quick Presets**: Common durations (15, 25, 30, 45, 60 minutes)
-- **Pause & Resume**: Full control over session timing
-- **Progress Tracking**: Visual progress indicators and remaining time
-
-### Data Management
-- **Session History**: Complete record of daily sessions
-- **Statistics**: Focus time, completion rates, streak tracking
-- **Data Export**: Export session data to CSV or JSON
-- **Persistent Storage**: Data survives app restarts
-- **Daily Reset**: Automatic daily history organization
-
-### User Experience
-- **System Tray**: Background operation with tray icon
-- **Notifications**: Audio, visual, and system notifications
-- **Themes**: Light, dark, and system-based themes
-- **Keyboard Shortcuts**: Quick access to all functions
-- **Time Formats**: 12-hour or 24-hour display options
-
-### Advanced Features
-- **Auto-updater**: Seamless application updates
-- **Multi-platform**: Windows, macOS, and Linux support
-- **Accessibility**: Screen reader friendly interface
-- **Performance**: Optimized for minimal resource usage
-
-## 🧪 Checks
+## Checks
 
 There is no hosted CI: checks run locally. **Run `npm run check` before every push** — it must pass
 before a PR is merged.
@@ -195,39 +80,54 @@ npx vite build      # production build
 The e2e suite launches the real Electron app against a throwaway profile in your temp directory; it
 never touches your own Focus Sessions data, and works while the app is open.
 
-## 📋 Available Scripts
+## Scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production (current platform) |
-| `npm run build:win` | Build for Windows |
-| `npm run build:mac` | Build for macOS |
-| `npm run build:linux` | Build for Linux |
-| `npm run dist` | Create distribution package |
-| `npm run dist:win` | Create Windows installer |
-| `npm run preview` | Preview production build |
+| `npm run dev` | Run the app in development with hot reload |
 | `npm run check` | Typecheck, knip, all tests and production build — run before every push |
 | `npm run typecheck` | TypeScript type check |
 | `npm run knip` | Find unused files, dependencies and exports |
 | `npm test` | Build in test mode, then run unit and e2e tests |
+| `npm run build` | Typecheck, build and package for Windows |
+| `npm run dist` | Same as `build`, never publishes |
+| `npm run preview` | Preview the renderer build in a browser |
 
-## 🤝 Contributing
+## Project structure
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+```
+electron/
+  main/
+    index.ts          # app lifecycle, window, tray, global shortcuts, IPC
+    update.ts         # auto-updater wiring (not yet configured to publish)
+    database/         # SQLite connection, migrations, repositories, IPC handlers, retention
+  preload/index.ts    # contextBridge API exposed to the renderer
+src/
+  components/
+    timer/            # focus timer, countdown, stopwatch, recovery banner
+    layout/           # Dashboard and Command Center layouts, sidebar, stats panel
+    history/          # history view: timeline, heatmap, trends
+    challenges/       # challenges view, calendar, create dialog
+    settings/         # settings dialog
+    feedback/         # feedback form and manager
+  features/timer/     # domain types and timer hooks
+  services/           # storage, notifications, sounds, crash-recovery snapshots
+  __tests__/          # unit tests (Vitest + Testing Library)
+test/                 # e2e tests (Playwright driving Electron) and main-process unit tests
+```
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+## Tech stack
 
-## 📄 License
+Electron 33 · React 18 · TypeScript (strict) · MUI 6 · Vite 5 · better-sqlite3 · Vitest + Testing Library ·
+Playwright (Electron e2e) · knip · electron-builder (NSIS)
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Contributing
 
-## 🙏 Acknowledgments
+1. Pick an issue from the [roadmap](ROADMAP.md) (`priority:high` first within a milestone)
+2. Branch from `main`, make the change, and add or update tests
+3. Run `npm run check` — it must pass
+4. Open a PR that says `Closes #N` and ticks the matching box in `ROADMAP.md`
 
-- Built on the foundation of [electron-vite-react](https://github.com/electron-vite/electron-vite-react)
-- Material-UI for the beautiful component library
-- The Electron and Vite communities for excellent tooling
+## License
+
+[MIT](LICENSE)
