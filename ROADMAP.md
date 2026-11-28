@@ -113,7 +113,7 @@ _Exit criteria: One storage path, a typed IPC contract, a pure tested timer engi
 
 _Exit criteria: User data survives crashes, upgrades and migrations — proven by tests._
 
-- [ ] [#52](https://github.com/GodzillaJim/my-clock-app/issues/52) repository integration tests against real SQLite
+- [x] [#52](https://github.com/GodzillaJim/my-clock-app/issues/52) repository integration tests against real SQLite
 - [x] [#53](https://github.com/GodzillaJim/my-clock-app/issues/53) migration tests and automatic pre-migration backup
 - [x] [#54](https://github.com/GodzillaJim/my-clock-app/issues/54) crash-recovery e2e (kill mid-session, relaunch, resume)
 - [x] [#55](https://github.com/GodzillaJim/my-clock-app/issues/55) data export/import and backup/restore

@@ -15,7 +15,7 @@ interface HistoryRow {
   updated_at: string;
   day_start_time: number | null;
   day_end_time: number | null;
-  session_plan_ids: string | null;
+  session_plan_ids: string; // NOT NULL DEFAULT '[]'
   total_planned_time: number;
   total_actual_time: number;
   completion_rate: number;
@@ -36,7 +36,7 @@ function fromDbHistory(row: HistoryRow): DailyHistory {
     updatedAt: new Date(row.updated_at),
     dayStartTime: row.day_start_time,
     dayEndTime: row.day_end_time,
-    sessionPlanIds: JSON.parse(row.session_plan_ids || '[]') as string[],
+    sessionPlanIds: JSON.parse(row.session_plan_ids) as string[],
     totalPlannedTime: row.total_planned_time,
     totalActualTime: row.total_actual_time,
     completionRate: row.completion_rate,
