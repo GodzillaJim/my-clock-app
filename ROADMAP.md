@@ -28,10 +28,10 @@ no hosted CI — checks run locally with `npm run check`.
 - [ ] [#15](https://github.com/GodzillaJim/my-clock-app/issues/15) close stale Dependabot PRs and remove automated version updates
 
 ### Dead code & boilerplate removal
-- [ ] [#16](https://github.com/GodzillaJim/my-clock-app/issues/16) delete unreferenced modules
-- [ ] [#17](https://github.com/GodzillaJim/my-clock-app/issues/17) remove unused dependencies
-- [ ] [#18](https://github.com/GodzillaJim/my-clock-app/issues/18) remove electron-vite-react template leftovers
-- [ ] [#19](https://github.com/GodzillaJim/my-clock-app/issues/19) remove the open-win IPC handler
+- [x] [#16](https://github.com/GodzillaJim/my-clock-app/issues/16) delete unreferenced modules
+- [x] [#17](https://github.com/GodzillaJim/my-clock-app/issues/17) remove unused dependencies
+- [x] [#18](https://github.com/GodzillaJim/my-clock-app/issues/18) remove electron-vite-react template leftovers
+- [x] [#19](https://github.com/GodzillaJim/my-clock-app/issues/19) remove the open-win IPC handler
 
 ### Identity & config
 - [ ] [#20](https://github.com/GodzillaJim/my-clock-app/issues/20) fix package and installer metadata
@@ -76,6 +76,7 @@ no hosted CI — checks run locally with `npm run check`.
 
 ### Security (highest priority)
 - [ ] [#38](https://github.com/GodzillaJim/my-clock-app/issues/38) restrict storage IPC to a sandboxed directory **(priority)**
+- [ ] [#80](https://github.com/GodzillaJim/my-clock-app/issues/80) re-enable webSecurity on the main window **(priority)**
 - [ ] [#39](https://github.com/GodzillaJim/my-clock-app/issues/39) add a Content-Security-Policy
 - [ ] [#40](https://github.com/GodzillaJim/my-clock-app/issues/40) enable renderer sandbox and minimize the preload surface
 - [ ] [#41](https://github.com/GodzillaJim/my-clock-app/issues/41) validate IPC inputs with schemas

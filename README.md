@@ -7,8 +7,6 @@
 [![MUI](https://img.shields.io/badge/MUI-6.3.0-0081cb.svg)](https://mui.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-English | [简体中文](README.zh-CN.md)
-
 ## 👀 Overview
 
 A modern, feature-rich Pomodoro Timer application built with Electron, React, and TypeScript. Focus Sessions helps you maintain productivity through structured work sessions with comprehensive tracking and customization options.
@@ -189,6 +187,7 @@ before a PR is merged.
 npm run check       # everything below, in order; stops at the first failure
 
 npm run typecheck   # tsc --noEmit
+npm run knip        # no unused files, dependencies or exports
 npm test            # builds the app in test mode, then runs unit (jsdom) and e2e (Electron) suites
 npx vite build      # production build
 ```
@@ -208,8 +207,9 @@ never touches your own Focus Sessions data, and works while the app is open.
 | `npm run dist` | Create distribution package |
 | `npm run dist:win` | Create Windows installer |
 | `npm run preview` | Preview production build |
-| `npm run check` | Typecheck, all tests and production build — run before every push |
+| `npm run check` | Typecheck, knip, all tests and production build — run before every push |
 | `npm run typecheck` | TypeScript type check |
+| `npm run knip` | Find unused files, dependencies and exports |
 | `npm test` | Build in test mode, then run unit and e2e tests |
 
 ## 🤝 Contributing

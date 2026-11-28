@@ -1,0 +1,14 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "electron/main/index.ts",
+    "electron/preload/index.ts",
+    "build/*.js"
+  ],
+  "project": ["src/**/*.{ts,tsx}", "electron/**/*.ts", "test/**/*.ts", "build/*.js"],
+  "vitest": {
+    "config": ["vitest.config.ts", "vitest.config.e2e.ts"],
+    "entry": ["src/**/*.test.{ts,tsx}", "src/__tests__/setup.ts", "test/**/*.spec.ts"]
+  },
+  "ignoreExportsUsedInFile": true
+}

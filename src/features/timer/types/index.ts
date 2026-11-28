@@ -131,48 +131,6 @@ export interface SessionNotification {
   timestamp: Date;
 }
 
-// Time display information
-export interface TimeDisplay {
-  current: string; // Current time
-  sessionStart: string; // When session started
-  expectedEnd: string; // When session should end
-  actualEnd?: string; // When session actually ended
-  remainingTime: string; // Time left in session
-  progress: number; // 0-100 percentage
-}
-
-// Export history data
-export interface HistoryExport {
-  exportDate: Date;
-  dateRange: {
-    start: string;
-    end: string;
-  };
-  sessions: SessionRecord[];
-  summary: {
-    totalSessions: number;
-    totalFocusTime: number;
-    totalBreakTime: number;
-    averageSessionLength: number;
-    completionRate: number;
-  };
-}
-
-// Service errors
-export interface ServiceError {
-  origin: 'storage' | 'timer' | 'notification' | 'export';
-  error: Error;
-  context?: Record<string, unknown>;
-  timestamp: Date;
-}
-
-// Keyboard shortcut definitions
-export interface KeyboardShortcut {
-  key: string;
-  action: 'start' | 'pause' | 'stop' | 'skip' | 'settings' | 'history';
-  description: string;
-}
-
 // Default settings
 export const DEFAULT_SETTINGS: AppSettings = {
   focusDuration: 25,
@@ -199,66 +157,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   exportFormat: 'csv'
 };
 
-// Type Guards
-export const isFocusSession = (session: SessionRecord): boolean => 
-  session.type === SessionType.FOCUS;
-
-export const isBreakSession = (session: SessionRecord): boolean =>
-  session.type === SessionType.SHORT_BREAK;
-
-export const isActiveSession = (state: TimerState): boolean =>
-  state === TimerState.RUNNING || state === TimerState.PAUSED;
-
-// Backward compatibility types for legacy components
-export interface SessionItem extends SessionRecord {
-  minutes: number; // Same as plannedDuration
-  remainingMinutes: number; // Calculated from remainingTime
-  completedAt?: Date; // Same as endTime
-  isCurrent?: boolean; // Indicates if this session is the current active session
-}
-
-// Utility functions for backward compatibility
-export const toSessionItem = (record: SessionRecord): SessionItem => ({
-  ...record,
-  minutes: record.plannedDuration,
-  remainingMinutes: Math.ceil(record.remainingTime / 60),
-  completedAt: record.endTime || undefined
-});
-
-export const fromSessionItem = (item: SessionItem): SessionRecord => ({
-  id: item.id,
-  type: item.type,
-  sessionNumber: item.sessionNumber,
-  plannedDuration: item.minutes,
-  actualDuration: item.actualDuration,
-  startTime: item.startTime,
-  endTime: item.completedAt || item.endTime,
-  pausedTime: item.pausedTime,
-  completionStatus: item.completionStatus,
-  remainingTime: item.remainingMinutes * 60
-});
-
-export const isCompletedSession = (session: SessionRecord): boolean =>
-  session.completionStatus === CompletionStatus.COMPLETED;
-
-// Utility Functions
-export const formatDuration = (minutes: number): string => {
-  if (minutes < 1) {
-    return '< 1m';
-  }
-  const roundedMinutes = Math.round(minutes);
-  if (roundedMinutes < 60) {
-    return `${roundedMinutes}m`;
-  }
-  const hours = Math.floor(roundedMinutes / 60);
-  const mins = roundedMinutes % 60;
-  if (mins === 0) {
-    return `${hours}h`;
-  }
-  return `${hours}h ${mins}m`;
-};
-
-// New helper: format seconds directly (used by updated session records now in seconds)
+// Format seconds directly (used by updated session records now in seconds)
 export const formatDurationFromSeconds = (seconds: number): string => {
   if (seconds < 60) return '< 1m';
   const totalMinutes = Math.round(seconds / 60);
@@ -410,25 +309,4 @@ export interface LifetimeStats {
 
   last7Days: PeriodSummary;
   last30Days: PeriodSummary;
-}
-
-// Export types for external use and backward compatibility
-export type {
-  SessionRecord as Session,
-  DailyHistory as History,
-  AppSettings as Settings,
-  TimerSession as CurrentSession,
-  SessionStats as Stats
-};
-
-// Backward compatibility exports
-export interface TaskType {
-  id: string;
-  title: string;
-  description?: string;
-  durationInMinutes: number;
-  completed: boolean;
-  createdAt: Date;
-  completedAt?: Date;
-  sessions: SessionRecord[];
 }
