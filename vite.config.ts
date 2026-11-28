@@ -3,7 +3,7 @@ import path from 'node:path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import electron from 'vite-plugin-electron/simple';
-import pkg from './package.json';
+import pkg from './package.json' with { type: 'json' };
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => {
@@ -16,7 +16,7 @@ export default defineConfig(({ command }) => {
   return {
     resolve: {
       alias: {
-        '@': path.join(__dirname, 'src'),
+        '@': path.join(import.meta.dirname, 'src'),
       },
     },
     optimizeDeps: {
@@ -41,7 +41,7 @@ export default defineConfig(({ command }) => {
               sourcemap,
               minify: isBuild,
               outDir: 'dist-electron/main',
-              rollupOptions: {
+              rolldownOptions: {
                 external: Object.keys('dependencies' in pkg ? pkg.dependencies : {}),
               },
             },
@@ -56,11 +56,11 @@ export default defineConfig(({ command }) => {
               sourcemap: sourcemap ? 'inline' : undefined, // #332
               minify: isBuild,
               outDir: 'dist-electron/preload',
-              rollupOptions: {
+              rolldownOptions: {
                 external: Object.keys('dependencies' in pkg ? pkg.dependencies : {}),
                 // Emit CommonJS with a .cjs name: Electron loads .mjs preloads as ES
                 // modules, and an unsandboxed CJS preload is the most compatible form.
-                output: { format: 'cjs', entryFileNames: '[name].cjs', inlineDynamicImports: true },
+                output: { format: 'cjs', entryFileNames: '[name].cjs' },
               },
             },
           },
