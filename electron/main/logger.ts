@@ -2,6 +2,7 @@ import path from 'node:path';
 import { app, ipcMain } from 'electron';
 import log from 'electron-log/main';
 import { parseRendererLog } from './logMessage';
+import { isTrustedSender } from './security';
 
 /**
  * Application logger. Writes to `<userData>/logs/main.log` (rotated to
@@ -17,7 +18,11 @@ export function initLogging(): void {
   log.errorHandler.startCatching({ showDialog: false });
   log.eventLogger.startLogging();
 
-  ipcMain.on('log:write', (_event, level: unknown, scope: unknown, args: unknown) => {
+  ipcMain.on('log:write', (event, level: unknown, scope: unknown, args: unknown) => {
+    // Only the app's own page may write to the log; anything else is dropped
+    const frame = event.senderFrame;
+    const isMainFrame = !!frame && frame === event.sender.mainFrame;
+    if (!isTrustedSender(frame?.url, isMainFrame, process.env.VITE_DEV_SERVER_URL)) return;
     const entry = parseRendererLog(level, scope, args);
     if (!entry) return;
     log.scope(`renderer:${entry.scope}`)[entry.level](...entry.args);

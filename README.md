@@ -131,7 +131,6 @@ electron/
     index.ts          # app lifecycle, window, tray, global shortcuts
     ipc.ts            # typed, schema-validated ipcMain.handle (ipcSchemas.ts: zod schemas)
     security.ts, csp.ts, logger.ts
-    update.ts         # auto-updater wiring (not yet configured to publish)
     database/         # SQLite connection, migrations, repositories, IPC handlers, retention
   ipc/contract.ts     # IPC contract: every channel's arguments and result, and window.electronAPI
   preload/index.ts    # contextBridge API built from the contract (sandboxed)
@@ -153,6 +152,10 @@ test/                 # e2e tests (Playwright driving Electron) and main-process
 
 Electron 45 · React 19 · TypeScript (strict) · MUI 9 · Vite 8 · better-sqlite3 · Vitest + Testing Library ·
 Playwright (Electron e2e) · knip · electron-builder (NSIS)
+
+## Security
+
+The renderer is sandboxed with a strict CSP and reaches the main process only through a typed, schema-validated IPC contract. See [docs/security.md](docs/security.md) for the Electron checklist review, findings and accepted risks.
 
 ## Contributing
 
