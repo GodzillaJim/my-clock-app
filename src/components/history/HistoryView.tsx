@@ -180,7 +180,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ settings, onClose, onR
             }}
           >
             <CircularProgress size={28} />
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               Gathering your history…
             </Typography>
           </Box>
@@ -198,7 +198,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ settings, onClose, onR
                 <Typography variant="h6" gutterBottom>
                   No focus history yet
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                   Finish your first session and it will start filling in here.
                 </Typography>
               </Box>

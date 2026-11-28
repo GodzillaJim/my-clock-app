@@ -165,7 +165,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
       </Typography>
 
       <Grid container spacing={3}>
-        <Grid item xs={12}>
+        <Grid size={12}>
           <Card>
             <CardContent sx={{ pb: 4 }}>
               <Typography variant="subtitle2" gutterBottom>
@@ -207,11 +207,11 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
                   onChange={(e) =>
                     handleSettingChange('focusDuration', parseInt(e.target.value) || 25)
                   }
-                  inputProps={{ min: 1, max: 240 }}
+                  slotProps={{ htmlInput: { min: 1, max: 240 } }}
                   sx={{ width: 100 }}
                   label="Minutes"
                 />
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                   1-240 minutes
                 </Typography>
               </Box>
@@ -219,7 +219,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Card>
             <CardContent>
               <Typography variant="subtitle2" gutterBottom>
@@ -245,7 +245,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
                 onChange={(e) =>
                   handleSettingChange('shortBreakDuration', parseInt(e.target.value) || 5)
                 }
-                inputProps={{ min: 1, max: 30 }}
+                slotProps={{ htmlInput: { min: 1, max: 30 } }}
                 sx={{ mt: 1 }}
                 fullWidth
                 helperText="1-30 minutes"
@@ -259,7 +259,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
         <Typography variant="subtitle2" gutterBottom>
           Crash Recovery / Resume Strategy
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
           How the timer behaves if the app is closed/crashes while running
         </Typography>
         <Select
@@ -279,11 +279,11 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
         <Typography variant="subtitle2" gutterBottom>
           Quick Presets
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
           Customize the quick duration buttons shown in the timer
         </Typography>
 
-        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2 }}>
+        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', mb: 2 }}>
           {localSettings.quickPresets.map((preset, index) => (
             <Chip
               key={`preset-${preset}-${index}`}
@@ -301,9 +301,9 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
             size="small"
             type="number"
             placeholder="Add preset"
-            inputProps={{ min: 1, max: 240 }}
+            slotProps={{ htmlInput: { min: 1, max: 240 } }}
             sx={{ width: 120 }}
-            onKeyPress={(e) => {
+            onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 const value = parseInt((e.target as HTMLInputElement).value);
                 if (value >= 1 && value <= 240 && !localSettings.quickPresets.includes(value)) {
@@ -548,12 +548,12 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
       <Typography variant="h6" gutterBottom>
         Visual Style
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
         Choose between two distinct UI themes
       </Typography>
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Card
             onClick={() => handleSettingChange('uiTheme', 'deepFocus')}
             sx={{
@@ -574,17 +574,17 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
                     background: 'linear-gradient(135deg, #60A5FA, #A78BFA)',
                   }}
                 />
-                <Typography variant="subtitle1" fontWeight={600}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                   Deep Focus
                 </Typography>
               </Box>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 Clean dark theme. OLED-optimized for reduced eye strain.
               </Typography>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6}>
+        <Grid size={{ xs: 12, sm: 6 }}>
           <Card
             onClick={() => handleSettingChange('uiTheme', 'aerogel')}
             sx={{
@@ -605,11 +605,11 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
                     background: 'linear-gradient(135deg, #6366F1, #EC4899)',
                   }}
                 />
-                <Typography variant="subtitle1" fontWeight={600}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                   Aerogel
                 </Typography>
               </Box>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 Light, airy theme with glassmorphism and soft pastel tones.
               </Typography>
             </CardContent>
@@ -635,7 +635,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
               <MenuItem value="dark">Dark</MenuItem>
             </Select>
           </FormControl>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
             Aerogel supports both light and dark modes
           </Typography>
         </Box>
@@ -646,7 +646,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
       <Typography variant="h6" gutterBottom>
         Layout
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+      <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
         Choose how the app interface is organized
       </Typography>
       <FormControl sx={{ minWidth: 300 }}>
@@ -728,7 +728,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
       onClose={handleCancel}
       maxWidth="md"
       fullWidth
-      PaperProps={{ sx: { height: '80vh' } }}
+      slotProps={{ paper: { sx: { height: '80vh' } } }}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <SettingsIcon />

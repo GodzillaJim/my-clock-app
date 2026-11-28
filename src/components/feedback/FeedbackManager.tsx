@@ -224,7 +224,7 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
   const renderOverviewTab = () => (
     <Box>
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -237,13 +237,13 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography>Open:</Typography>
-                  <Typography variant="h6" color="warning.main">
+                  <Typography variant="h6" sx={{ color: 'warning.main' }}>
                     {stats.open}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Typography>Resolved:</Typography>
-                  <Typography variant="h6" color="success.main">
+                  <Typography variant="h6" sx={{ color: 'success.main' }}>
                     {stats.resolved}
                   </Typography>
                 </Box>
@@ -252,7 +252,7 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
           </Card>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -276,7 +276,7 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
           </Card>
         </Grid>
 
-        <Grid item xs={12}>
+        <Grid size={12}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -498,11 +498,11 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
             </Box>
 
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <Typography variant="subtitle2">Category:</Typography>
                 <Typography variant="body2">{selectedFeedback.category}</Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid size={6}>
                 <Typography variant="subtitle2">Submitted:</Typography>
                 <Typography variant="body2">
                   {selectedFeedback.timestamp.toLocaleString()}
@@ -569,7 +569,7 @@ export const FeedbackManager: React.FC<FeedbackManagerProps> = ({ open, onClose 
         <DialogTitle>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             Feedback Management
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               {stats.total} total items
             </Typography>
           </Box>

@@ -120,7 +120,7 @@ export const RecoveryBanner: React.FC<RecoveryBannerProps> = ({
                 variant="filled"
                 sx={{ minWidth: 80 }}
               />
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                 {Math.round(seg.plannedDuration / 60)}m planned
                 {seg.actualDuration !== null && (
                   <> / {Math.round(seg.actualDuration / 60)}m actual</>

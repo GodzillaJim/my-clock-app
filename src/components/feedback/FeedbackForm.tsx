@@ -129,7 +129,7 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ open, onClose, onSub
           </Alert>
         ) : (
           <Stack spacing={3}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               Help us improve Focus Sessions by reporting bugs, suggesting features, or sharing your
               experience.
             </Typography>
@@ -219,7 +219,7 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ open, onClose, onSub
             />
 
             <Box sx={{ p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                 <strong>Tips for good feedback:</strong>
                 <br />
                 • Be specific about what happened

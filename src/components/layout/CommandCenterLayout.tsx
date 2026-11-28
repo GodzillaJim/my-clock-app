@@ -7,7 +7,7 @@ import {
   Settings,
   History,
   SkipNext,
-  CheckCircleOutline,
+  CheckCircleOutlined,
   FastForward,
   AccessTime,
 } from '@mui/icons-material';
@@ -392,7 +392,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
             textAlign: 'center',
           }}
         >
-          <CheckCircleOutline
+          <CheckCircleOutlined
             sx={{
               fontSize: 100,
               color: 'success.main',
