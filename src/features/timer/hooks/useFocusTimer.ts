@@ -78,6 +78,13 @@ export function useFocusTimer() {
     effects.forEach(runFocusEffect);
   }, []);
 
+  // Leaving the page (reload, quit, crash recovery): keep the latest progress
+  useEffect(() => {
+    const flush = () => dispatch({ type: 'SNAPSHOT', now: Date.now() });
+    window.addEventListener('pagehide', flush);
+    return () => window.removeEventListener('pagehide', flush);
+  }, [dispatch]);
+
   const running = state.phase === 'running';
   useEffect(() => {
     if (!running) return;
@@ -95,6 +102,8 @@ export function useFocusTimer() {
       skip: () => dispatch({ type: 'SKIP', now: Date.now() }),
       stop: () => dispatch({ type: 'STOP', now: Date.now() }),
       reset: () => dispatch({ type: 'RESET' }),
+      /** Save the crash-recovery snapshot immediately. */
+      flushSnapshot: () => dispatch({ type: 'SNAPSHOT', now: Date.now() }),
       fastForward: (seconds = 30) => dispatch({ type: 'FAST_FORWARD', now: Date.now(), seconds }),
     }),
     [dispatch],

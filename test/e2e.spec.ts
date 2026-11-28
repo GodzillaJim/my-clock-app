@@ -340,5 +340,29 @@ if (process.platform === 'linux') {
       expect(result.recent).toBe(1005);
       expect(result.hasOld).toBe(false);
     }, 30000);
+
+    // Runs last: it crashes and reloads the renderer
+    test('reloads the window after the renderer crashes', async () => {
+      await electronApp.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()[0].webContents.forcefullyCrashRenderer(),
+      );
+      const logFile = path.join(userDataDir, 'logs', 'main.log');
+      const deadline = Date.now() + 15000;
+      let reloaded = false;
+      while (Date.now() < deadline && !reloaded) {
+        await new Promise((r) => setTimeout(r, 250));
+        reloaded = await electronApp.evaluate(async ({ BrowserWindow }) => {
+          const wc = BrowserWindow.getAllWindows()[0].webContents;
+          if (wc.isCrashed() || wc.isLoading()) return false;
+          return wc
+            .executeJavaScript(`document.body.innerText.includes('READY')`)
+            .catch(() => false);
+        });
+      }
+      expect(reloaded).toBe(true);
+      expect(fs.readFileSync(logFile, 'utf8')).toMatch(
+        /Renderer process gone \((crashed|killed)[^)]*\); reload/,
+      );
+    }, 30000);
   });
 }

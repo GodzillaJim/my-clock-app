@@ -98,7 +98,7 @@ _Exit criteria: One storage path, a typed IPC contract, a pure tested timer engi
 - [x] [#82](https://github.com/GodzillaJim/my-clock-app/issues/82) tray Start, Ctrl+Shift+S and Space don't control the timer
 - [ ] [#46](https://github.com/GodzillaJim/my-clock-app/issues/46) split focusStorage into domain services
 - [ ] [#47](https://github.com/GodzillaJim/my-clock-app/issues/47) break up oversized components
-- [ ] [#50](https://github.com/GodzillaJim/my-clock-app/issues/50) error boundaries and process crash handling
+- [x] [#50](https://github.com/GodzillaJim/my-clock-app/issues/50) error boundaries and process crash handling
 - [ ] [#51](https://github.com/GodzillaJim/my-clock-app/issues/51) architecture decision records
 
 ### Decisions
