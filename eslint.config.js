@@ -29,6 +29,7 @@ export default tseslint.config(
       '*.config.{js,ts}',
       'vitest.workspace.ts',
       '.vscode/**/*.mjs',
+      'scripts/**/*.mjs',
     ],
     languageOptions: { globals: globals.node },
   },

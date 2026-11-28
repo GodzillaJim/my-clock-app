@@ -99,6 +99,9 @@ improves — commit the bumped numbers with your change.
 The first unit run after installing or upgrading dependencies can fail with an "outdated
 optimized dependency" error while Vitest re-bundles React/MUI; just run it again.
 
+**Before a release**, also run `npm run perf`: it builds the production app and fails if startup
+JavaScript, cold start or idle memory exceed the budgets in [docs/performance.md](docs/performance.md).
+
 The e2e suite launches the real Electron app against a throwaway profile in your temp directory; it
 never touches your own Focus Sessions data, and works while the app is open.
 
