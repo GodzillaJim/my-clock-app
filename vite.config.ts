@@ -58,8 +58,8 @@ export default defineConfig(({ command }) => {
               outDir: 'dist-electron/preload',
               rolldownOptions: {
                 external: Object.keys('dependencies' in pkg ? pkg.dependencies : {}),
-                // Emit CommonJS with a .cjs name: Electron loads .mjs preloads as ES
-                // modules, and an unsandboxed CJS preload is the most compatible form.
+                // Emit CommonJS with a .cjs name: sandboxed preloads cannot be ES
+                // modules, and may only `require('electron')`.
                 output: { format: 'cjs', entryFileNames: '[name].cjs' },
               },
             },

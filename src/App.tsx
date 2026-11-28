@@ -48,13 +48,14 @@ const App: React.FC = () => {
 
   useEffect(() => {
     initializeApp();
-    setupKeyboardShortcuts();
+    document.addEventListener('keydown', handleKeyDown);
+    const unsubscribeFromTray = subscribeToTray();
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+      unsubscribeFromTray();
     };
-    // Mount-only: one-time init and listener registration; handleKeyDown only calls state setters.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Mount-only: one-time init and listener registration; the handlers only call state setters.
   }, []);
 
   useEffect(() => {
@@ -417,32 +418,16 @@ const App: React.FC = () => {
     notificationService.setSettings(newSettings);
   };
 
-  const setupKeyboardShortcuts = () => {
-    document.addEventListener('keydown', handleKeyDown);
-
-    // Setup Electron IPC listeners for tray and global shortcuts
-    try {
-      if (window.electronAPI) {
-        window.electronAPI.onTrayStartSession(() => {
-          // This would trigger the start session functionality
-          // We'll need to expose this through a ref or context
-        });
-
-        window.electronAPI.onTrayOpenSettings(() => {
-          setSettingsOpen(true);
-        });
-
-        window.electronAPI.onTrayOpenHistory(() => {
-          setHistoryOpen(true);
-        });
-
-        window.electronAPI.onGlobalShortcutStartSession(() => {
-          // This would trigger the start session functionality
-        });
-      }
-    } catch (error) {
-      log.warn('Electron API not available:', error);
-    }
+  /** Listens for tray menu actions; returns a function that stops listening. */
+  const subscribeToTray = (): (() => void) => {
+    const api = window.electronAPI;
+    if (!api) return () => {};
+    // Tray "Start Focus Session" and Ctrl+Shift+S are not wired to the timer yet (#82)
+    const unsubscribers = [
+      api.onTrayOpenSettings(() => setSettingsOpen(true)),
+      api.onTrayOpenHistory(() => setHistoryOpen(true)),
+    ];
+    return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
   };
 
   const handleKeyDown = (event: KeyboardEvent) => {

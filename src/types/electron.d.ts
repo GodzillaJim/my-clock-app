@@ -64,14 +64,11 @@ interface ElectronAPI {
   // SQLite database API
   db: ElectronDbAPI;
 
-  // Event listeners for tray actions
-  onTrayStartSession: (callback: () => void) => void;
-  onTrayOpenSettings: (callback: () => void) => void;
-  onTrayOpenHistory: (callback: () => void) => void;
-  onGlobalShortcutStartSession: (callback: () => void) => void;
-
-  // Remove listeners
-  removeAllListeners: (channel: string) => void;
+  // Tray and global-shortcut events; each returns an unsubscribe function
+  onTrayStartSession: (callback: () => void) => () => void;
+  onTrayOpenSettings: (callback: () => void) => () => void;
+  onTrayOpenHistory: (callback: () => void) => () => void;
+  onGlobalShortcutStartSession: (callback: () => void) => () => void;
 }
 
 declare global {
