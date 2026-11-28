@@ -1,4 +1,5 @@
 import { SessionNotification, AppSettings } from '@/features/timer/types';
+import { renderSound } from './sounds';
 
 class NotificationService {
   private audioContext: AudioContext | null = null;
@@ -152,6 +153,11 @@ class NotificationService {
     }, 4000);
   }
 
+  /** Play a sound regardless of notification settings, e.g. to preview a choice in Settings. */
+  async previewSound(soundName: string): Promise<void> {
+    await this.playSound(soundName);
+  }
+
   private async playSound(soundName: string): Promise<void> {
     if (!this.audioContext || !this.settings) return;
 
@@ -164,7 +170,7 @@ class NotificationService {
       let audioBuffer = this.sounds.get(soundName);
 
       if (!audioBuffer) {
-        audioBuffer = await this.loadSound(soundName);
+        audioBuffer = this.createSoundBuffer(soundName);
         this.sounds.set(soundName, audioBuffer);
       }
 
@@ -183,41 +189,11 @@ class NotificationService {
     }
   }
 
-  private async loadSound(soundName: string): Promise<AudioBuffer> {
-    const soundUrls: Record<string, string> = {
-      'default': '/sounds/notification.wav',
-      'complete': '/sounds/complete.wav',
-      'break': '/sounds/break.wav',
-      'tick': '/sounds/tick.wav'
-    };
-
-    const url = soundUrls[soundName] || soundUrls['default'];
-    
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to load sound: ${response.statusText}`);
-      }
-      
-      const arrayBuffer = await response.arrayBuffer();
-      return await this.audioContext!.decodeAudioData(arrayBuffer);
-    } catch (error) {
-      console.warn(`Failed to load sound ${soundName}, using fallback:`, error);
-      return this.createFallbackSound();
-    }
-  }
-
-  private createFallbackSound(): AudioBuffer {
-    const sampleRate = this.audioContext!.sampleRate;
-    const duration = 0.2;
-    const buffer = this.audioContext!.createBuffer(1, sampleRate * duration, sampleRate);
-    const data = buffer.getChannelData(0);
-
-    for (let i = 0; i < data.length; i++) {
-      const t = i / sampleRate;
-      data[i] = Math.sin(2 * Math.PI * 800 * t) * Math.exp(-t * 5) * 0.3;
-    }
-
+  private createSoundBuffer(soundName: string): AudioBuffer {
+    const ctx = this.audioContext!;
+    const samples = renderSound(soundName, ctx.sampleRate);
+    const buffer = ctx.createBuffer(1, samples.length, ctx.sampleRate);
+    buffer.getChannelData(0).set(samples);
     return buffer;
   }
 

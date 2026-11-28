@@ -24,8 +24,8 @@ no hosted CI — checks run locally with `npm run check`.
 - [x] [PR #11](https://github.com/GodzillaJim/my-clock-app/pull/11) — ZenFocusTimer tests; e2e isolated from real user data
 - [x] [#12](https://github.com/GodzillaJim/my-clock-app/issues/12) remove GitHub workflows; run checks locally with `npm run check` **(priority)**
 - [x] [#13](https://github.com/GodzillaJim/my-clock-app/issues/13) commit package-lock.json for reproducible installs **(priority)**
-- [ ] [#14](https://github.com/GodzillaJim/my-clock-app/issues/14) untrack .claude/settings.local.json
-- [ ] [#15](https://github.com/GodzillaJim/my-clock-app/issues/15) close stale Dependabot PRs and remove automated version updates
+- [x] [#14](https://github.com/GodzillaJim/my-clock-app/issues/14) untrack .claude/settings.local.json
+- [x] [#15](https://github.com/GodzillaJim/my-clock-app/issues/15) close stale Dependabot PRs and remove automated version updates
 
 ### Dead code & boilerplate removal
 - [x] [#16](https://github.com/GodzillaJim/my-clock-app/issues/16) delete unreferenced modules
@@ -34,15 +34,15 @@ no hosted CI — checks run locally with `npm run check`.
 - [x] [#19](https://github.com/GodzillaJim/my-clock-app/issues/19) remove the open-win IPC handler
 
 ### Identity & config
-- [ ] [#20](https://github.com/GodzillaJim/my-clock-app/issues/20) fix package and installer metadata
-- [ ] [#21](https://github.com/GodzillaJim/my-clock-app/issues/21) make packaging Windows-only
+- [x] [#20](https://github.com/GodzillaJim/my-clock-app/issues/20) fix package and installer metadata
+- [x] [#21](https://github.com/GodzillaJim/my-clock-app/issues/21) make packaging Windows-only
 - [ ] [#22](https://github.com/GodzillaJim/my-clock-app/issues/22) rename repository to match the product
-- [ ] [#23](https://github.com/GodzillaJim/my-clock-app/issues/23) rewrite README to match the current app
+- [x] [#23](https://github.com/GodzillaJim/my-clock-app/issues/23) rewrite README to match the current app
 
 ### Known bugs
 - [x] [#78](https://github.com/GodzillaJim/my-clock-app/issues/78) better-sqlite3 is not rebuilt for Electron in dev and test **(priority)**
-- [ ] [#24](https://github.com/GodzillaJim/my-clock-app/issues/24) replace 1000-session cap with 90-day retention
-- [ ] [#25](https://github.com/GodzillaJim/my-clock-app/issues/25) notification sounds setting has no sound files
+- [x] [#24](https://github.com/GodzillaJim/my-clock-app/issues/24) replace 1000-session cap with 90-day retention
+- [x] [#25](https://github.com/GodzillaJim/my-clock-app/issues/25) notification sounds setting has no sound files
 
 ---
 
@@ -86,6 +86,7 @@ no hosted CI — checks run locally with `npm run check`.
 - [ ] [#43](https://github.com/GodzillaJim/my-clock-app/issues/43) make SQLite the single storage path
 - [ ] [#44](https://github.com/GodzillaJim/my-clock-app/issues/44) typed IPC contract shared by main, preload and renderer
 - [ ] [#45](https://github.com/GodzillaJim/my-clock-app/issues/45) extract the timer into a pure state machine
+- [ ] [#82](https://github.com/GodzillaJim/my-clock-app/issues/82) tray Start, Ctrl+Shift+S and Space don't control the timer
 - [ ] [#46](https://github.com/GodzillaJim/my-clock-app/issues/46) split focusStorage into domain services
 - [ ] [#47](https://github.com/GodzillaJim/my-clock-app/issues/47) break up oversized components
 - [ ] [#50](https://github.com/GodzillaJim/my-clock-app/issues/50) error boundaries and process crash handling

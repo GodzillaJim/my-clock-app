@@ -27,6 +27,7 @@ import { notificationService } from "@/services/notificationService";
 import { focusStorage as focusStorageService } from "@/services/focusStorage";
 import { persistenceService } from "@/services/persistenceService";
 import { v4 as uuidv4 } from "uuid";
+import { useTickSound } from "@/features/timer/hooks/useTickSound";
 
 dayjs.extend(duration);
 
@@ -347,6 +348,8 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     autoStart: false,
     onExpire: handleExpire,
   });
+
+  useTickSound(hours * 3600 + minutes * 60 + seconds, isRunning);
 
   const resetToIdle = () => {
     setIsComplete(false);

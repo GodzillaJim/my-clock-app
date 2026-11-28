@@ -20,6 +20,7 @@ import dayjs from 'dayjs';
 import { CircularTimerRing } from './CircularTimerRing';
 import { notificationService } from '@/services/notificationService';
 import { persistenceService } from '@/services/persistenceService';
+import { useTickSound } from '@/features/timer/hooks/useTickSound';
 
 const TIMER_SNAPSHOT_KEY = 'TIMER_SNAPSHOT';
 
@@ -51,6 +52,8 @@ export const ZenCountdownTimer: React.FC<ZenCountdownTimerProps> = ({ onRunningS
     autoStart: false,
     onExpire: handleComplete,
   });
+
+  useTickSound(hours * 3600 + timerMinutes * 60 + seconds, isRunning);
 
   useEffect(() => {
     onRunningStateChange?.(isRunning);

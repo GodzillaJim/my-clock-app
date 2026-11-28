@@ -33,3 +33,6 @@ yarn.lock
 
 # e2e test artifacts
 /test/screenshots/
+
+# Per-machine Claude Code settings
+.claude/settings.local.json

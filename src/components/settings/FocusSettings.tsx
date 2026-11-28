@@ -42,6 +42,7 @@ import {
 } from '@/features/timer/types';
 import { focusStorage } from '@/services/focusStorage';
 import { notificationService } from '@/services/notificationService';
+import { SOUND_OPTIONS } from '@/services/sounds';
 
 interface FocusSettingsProps {
   open: boolean;
@@ -512,14 +513,17 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
         </Typography>
         <Select
           value={localSettings.sessionCompleteSound}
-          onChange={(e) => handleSettingChange('sessionCompleteSound', e.target.value)}
+          onChange={(e) => {
+            handleSettingChange('sessionCompleteSound', e.target.value);
+            void notificationService.previewSound(e.target.value);
+          }}
           size="small"
           disabled={!localSettings.enableAudioNotifications}
           sx={{ minWidth: 200 }}
         >
-          <MenuItem value="default">Default</MenuItem>
-          <MenuItem value="complete">Achievement</MenuItem>
-          <MenuItem value="chime">Chime</MenuItem>
+          {SOUND_OPTIONS.sessionComplete.map((o) => (
+            <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+          ))}
         </Select>
       </Box>
 
@@ -529,14 +533,17 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
         </Typography>
         <Select
           value={localSettings.breakCompleteSound}
-          onChange={(e) => handleSettingChange('breakCompleteSound', e.target.value)}
+          onChange={(e) => {
+            handleSettingChange('breakCompleteSound', e.target.value);
+            void notificationService.previewSound(e.target.value);
+          }}
           size="small"
           disabled={!localSettings.enableAudioNotifications}
           sx={{ minWidth: 200 }}
         >
-          <MenuItem value="default">Default</MenuItem>
-          <MenuItem value="break">Gentle Bell</MenuItem>
-          <MenuItem value="soft">Soft Chime</MenuItem>
+          {SOUND_OPTIONS.breakComplete.map((o) => (
+            <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+          ))}
         </Select>
       </Box>
     </Box>

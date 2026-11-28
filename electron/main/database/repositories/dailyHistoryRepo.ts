@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { retentionCutoff } from '../retention';
 
 function fromDbHistory(row: any): any {
   return {
@@ -48,11 +49,8 @@ export function save(db: Database.Database, history: any): void {
     history.completionRate || 0
   );
 
-  // Enforce 90-day retention
-  const ninetyDaysAgo = new Date();
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-  const cutoff = ninetyDaysAgo.toISOString().split('T')[0];
-  db.prepare('DELETE FROM daily_history WHERE date < ?').run(cutoff);
+  // Enforce date-based retention
+  db.prepare('DELETE FROM daily_history WHERE date < ?').run(retentionCutoff().date);
 }
 
 export function getByDate(db: Database.Database, date: string): any | null {

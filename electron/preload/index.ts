@@ -65,7 +65,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     sessions: {
       save: (session: any) => ipcRenderer.invoke('db:sessions:save', session),
       getByDate: (date: string) => ipcRenderer.invoke('db:sessions:getByDate', date),
-      getHistory: (limit: number) => ipcRenderer.invoke('db:sessions:getHistory', limit),
+      getHistory: (limit?: number) => ipcRenderer.invoke('db:sessions:getHistory', limit),
       delete: (id: string) => ipcRenderer.invoke('db:sessions:delete', id),
       deleteByDate: (date: string) => ipcRenderer.invoke('db:sessions:deleteByDate', date),
       deleteAll: () => ipcRenderer.invoke('db:sessions:deleteAll'),

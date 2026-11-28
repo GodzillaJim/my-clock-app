@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { retentionCutoff } from '../retention';
 
 const TYPE_TO_DB: Record<string, string> = {
   FOCUS: 'focus', SHORT_BREAK: 'shortBreak', LONG_BREAK: 'longBreak',
@@ -69,10 +70,10 @@ export function saveWithSegments(db: Database.Database, plan: any): void {
       );
     }
 
-    // Enforce 90-day retention
-    const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
-    db.prepare('DELETE FROM plan_segments WHERE plan_id IN (SELECT id FROM session_plans WHERE created_at < ?)').run(ninetyDaysAgo);
-    db.prepare('DELETE FROM session_plans WHERE created_at < ?').run(ninetyDaysAgo);
+    // Enforce date-based retention
+    const { timestamp: cutoff } = retentionCutoff();
+    db.prepare('DELETE FROM plan_segments WHERE plan_id IN (SELECT id FROM session_plans WHERE created_at < ?)').run(cutoff);
+    db.prepare('DELETE FROM session_plans WHERE created_at < ?').run(cutoff);
   });
   saveTx();
 }

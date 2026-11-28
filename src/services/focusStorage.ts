@@ -107,7 +107,8 @@ class FocusStorageService {
       } else {
         const sessions = await this.sessionsStorage.load() || [];
         sessions.push(session);
-        await this.sessionsStorage.save(sessions.slice(-1000));
+        const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+        await this.sessionsStorage.save(sessions.filter(s => new Date(s.startTime).getTime() >= cutoff));
       }
       await this.updateDailyStats(getTodayDateString());
     } catch (error) {
@@ -152,7 +153,7 @@ class FocusStorageService {
   async getSessionStats(): Promise<SessionStats> {
     try {
       if (this.useDb) {
-        const sessions = await this.db.sessions.getHistory(1000);
+        const sessions = await this.db.sessions.getHistory();
         return this.calculateStats(sessions);
       }
       const sessions = await this.sessionsStorage.load() || [];

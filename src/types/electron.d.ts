@@ -2,7 +2,7 @@ interface ElectronDbAPI {
   sessions: {
     save: (session: any) => Promise<void>;
     getByDate: (date: string) => Promise<any[]>;
-    getHistory: (limit: number) => Promise<any[]>;
+    getHistory: (limit?: number) => Promise<any[]>;
     delete: (id: string) => Promise<void>;
     deleteByDate: (date: string) => Promise<void>;
     deleteAll: () => Promise<void>;

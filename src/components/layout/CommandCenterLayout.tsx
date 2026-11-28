@@ -23,6 +23,7 @@ import {
 import { CircularTimerRing } from '../timer/CircularTimerRing';
 import { AppSettings, SessionRecord, SessionType, CompletionStatus, SessionPlan } from '@/features/timer/types';
 import { focusStorage } from '@/services/focusStorage';
+import { useTickSound } from '@/features/timer/hooks/useTickSound';
 import { useTimer } from 'react-timer-hook';
 import dayjs from 'dayjs';
 
@@ -184,6 +185,8 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
     autoStart: false,
     onExpire: handleExpire,
   });
+
+  useTickSound(hours * 3600 + minutes * 60 + seconds, isRunning);
 
   const resetToIdle = () => {
     setIsComplete(false);
