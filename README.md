@@ -42,13 +42,14 @@ Built with Electron, React and TypeScript, with all data stored locally in SQLit
 - Three layouts: _Zen_ (centered timer), _Dashboard_ (sidebar + stats), _Command Center_ (all-in-one with timeline)
 - Two visual styles: _Deep Focus_ (dark, OLED-friendly) and _Aerogel_ (glassy pastels, light, dark or
   following the system theme)
-- Lives in the system tray; **Ctrl+Shift+Alt+T** brings the window to the front from anywhere
-- In-app shortcuts: **Ctrl+1–4** switch tool, **Ctrl+S** settings, **Ctrl+H** history, **Ctrl+F** feedback,
-  **Esc** closes dialogs
+- Lives in the system tray, whose _Start Focus Session_ item starts (or resumes) the timer
+- Global shortcuts, from any app: **Ctrl+Shift+Alt+T** brings the window to the front,
+  **Ctrl+Shift+Alt+S** starts (or resumes) a focus session
+- In-app shortcuts: **Space** starts, pauses and resumes the focus timer, **Ctrl+1–4** switch tool,
+  **Ctrl+S** settings, **Ctrl+H** history, **Ctrl+F** feedback, **Esc** closes dialogs
+- Switching tools or layouts never interrupts a running session
 
-**Known gaps** (tracked on the roadmap): the tray's _Start Focus Session_ item, **Ctrl+Shift+S** and
-**Space** don't control the timer yet ([#82](https://github.com/GodzillaJim/my-clock-app/issues/82)); there's
-no auto-update or signed installer yet (milestone M5).
+**Known gaps** (tracked on the roadmap): no auto-update or signed installer yet (milestone M5).
 
 ## Getting started
 

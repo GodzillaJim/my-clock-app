@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, CssBaseline, ThemeProvider } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
 import { DashboardLayout } from './components/layout/DashboardLayout';
@@ -15,6 +15,8 @@ import { focusStorage } from './services/focusStorage';
 import { notificationService } from './services/notificationService';
 import { useRecovery } from './features/timer/hooks/useRecovery';
 import { RecoveryBanner } from './components/timer/RecoveryBanner';
+import { useFocusTimerContext } from './features/timer/FocusTimerContext';
+import { isTimerSpace } from './features/timer/isTimerSpace';
 import './App.css';
 import { createLogger } from '@/services/logger';
 
@@ -28,22 +30,41 @@ const App: React.FC = () => {
   const [feedbackManagerOpen, setFeedbackManagerOpen] = useState(false);
   const [currentTool, setCurrentTool] = useState(0);
   const [theme, setTheme] = useState(createTheme());
-  const [resumePlan, setResumePlan] = useState<SessionPlan | null>(null);
   const { recoveryInfo, dismiss: dismissRecovery, resume: resumeRecovery } = useRecovery();
+  const timer = useFocusTimerContext();
+
+  // Latest values for the listeners registered once on mount
+  const latest = useRef({ settings, currentTool, historyOpen });
+  latest.current = { settings, currentTool, historyOpen };
+
+  // The next session's length follows the setting until the user picks a preset
+  const { phase, setPlannedMinutes } = timer;
+  useEffect(() => {
+    if (phase === 'idle') setPlannedMinutes(settings.focusDuration);
+    // Only when the setting changes, not on every phase change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.focusDuration]);
+
+  const resumeInterruptedPlan = (plan: SessionPlan) => {
+    timer.actions.resumePlan(plan);
+    setCurrentTool(0); // Switch to focus timer
+  };
 
   const handleResume = () => {
     const plan = resumeRecovery();
-    if (plan) {
-      setResumePlan(plan);
-      setCurrentTool(0); // Switch to focus timer
-    }
+    if (plan) resumeInterruptedPlan(plan);
   };
 
   // Resume an interrupted plan chosen from the History view.
   const handleResumePlan = (plan: SessionPlan) => {
-    setResumePlan(plan);
-    setCurrentTool(0); // Switch to focus timer
+    resumeInterruptedPlan(plan);
     setHistoryOpen(false);
+  };
+
+  /** Tray Start and the global shortcut: show the focus timer and start (or resume) it. */
+  const startFromOutside = () => {
+    setCurrentTool(0);
+    timer.startOrResume(latest.current.settings);
   };
 
   useEffect(() => {
@@ -55,7 +76,9 @@ const App: React.FC = () => {
       document.removeEventListener('keydown', handleKeyDown);
       unsubscribeFromTray();
     };
-    // Mount-only: one-time init and listener registration; the handlers only call state setters.
+    // Mount-only: one-time init and listener registration. The handlers use only state setters,
+    // the stable timer callbacks, and `latest` for current values.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -422,8 +445,9 @@ const App: React.FC = () => {
   const subscribeToTray = (): (() => void) => {
     const api = window.electronAPI;
     if (!api) return () => {};
-    // Tray "Start Focus Session" and Ctrl+Shift+S are not wired to the timer yet (#82)
     const unsubscribers = [
+      api.onTrayStartSession(startFromOutside),
+      api.onGlobalShortcutStartSession(startFromOutside),
       api.onTrayOpenSettings(() => setSettingsOpen(true)),
       api.onTrayOpenHistory(() => setHistoryOpen(true)),
     ];
@@ -435,9 +459,13 @@ const App: React.FC = () => {
       return;
     }
 
-    // Registered once on mount, so only state setters may be used here (state values would be stale).
-    // Space-to-start/pause is not wired yet (#82); it must not preventDefault, or Space stops
-    // activating focused buttons.
+    // Registered once on mount: read state through `latest`, never directly (it would be stale).
+    if (isTimerSpace(event, latest.current.currentTool, latest.current.historyOpen)) {
+      event.preventDefault();
+      timer.toggle(latest.current.settings);
+      return;
+    }
+
     switch (event.key.toLowerCase()) {
       case 'escape':
         setSettingsOpen(false);
@@ -516,8 +544,6 @@ const App: React.FC = () => {
             settings={settings}
             onOpenSettings={() => setSettingsOpen(true)}
             onOpenHistory={() => setHistoryOpen(true)}
-            resumePlan={resumePlan}
-            onResumeConsumed={() => setResumePlan(null)}
           />
         )}
 
@@ -529,8 +555,6 @@ const App: React.FC = () => {
             onOpenFeedback={() => setFeedbackOpen(true)}
             initialTool={currentTool}
             onToolChange={setCurrentTool}
-            resumePlan={resumePlan}
-            onResumeConsumed={() => setResumePlan(null)}
           />
         )}
 
@@ -550,8 +574,6 @@ const App: React.FC = () => {
                 settings={settings}
                 onOpenSettings={() => setSettingsOpen(true)}
                 onOpenHistory={() => setHistoryOpen(true)}
-                resumePlan={resumePlan}
-                onResumeConsumed={() => setResumePlan(null)}
               />
             )}
             {currentTool === 1 && <ZenCountdownTimer />}

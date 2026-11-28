@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ZenFocusTimer } from '@/components/timer/ZenFocusTimer';
+import { FocusTimerProvider, useFocusTimerContext } from '@/features/timer/FocusTimerContext';
 import { AppSettings, DEFAULT_SETTINGS, SessionPlan, SessionType } from '@/features/timer/types';
 
 const mocks = vi.hoisted(() => ({
@@ -34,17 +35,19 @@ const baseSettings: AppSettings = {
   quickPresets: [15, 25, 50],
 };
 
-const renderTimer = (
-  settings: AppSettings = baseSettings,
-  props: Partial<React.ComponentProps<typeof ZenFocusTimer>> = {},
-) =>
+/** Resumes plan through the shared timer once mounted, as App does for History/recovery. */
+const ResumeOnMount: React.FC<{ plan: SessionPlan }> = ({ plan }) => {
+  const { actions } = useFocusTimerContext();
+  React.useEffect(() => actions.resumePlan(plan), [actions, plan]);
+  return null;
+};
+
+const renderTimer = (settings: AppSettings = baseSettings, resumePlan?: SessionPlan) =>
   render(
-    <ZenFocusTimer
-      onOpenSettings={() => {}}
-      onOpenHistory={() => {}}
-      settings={settings}
-      {...props}
-    />,
+    <FocusTimerProvider initialMinutes={settings.focusDuration}>
+      <ZenFocusTimer onOpenSettings={() => {}} onOpenHistory={() => {}} settings={settings} />
+      {resumePlan && <ResumeOnMount plan={resumePlan} />}
+    </FocusTimerProvider>,
   );
 
 /** Advance fake time and flush the React updates it triggers. */
@@ -287,12 +290,9 @@ describe('ZenFocusTimer', () => {
       totalElapsed: 10 * 60,
       lastUpdated: Date.now(),
     };
-    const onResumeConsumed = vi.fn();
-
-    renderTimer(baseSettings, { resumePlan: interrupted, onResumeConsumed });
+    renderTimer(baseSettings, interrupted);
     await tick(1000);
 
-    expect(onResumeConsumed).toHaveBeenCalled();
     expect(screen.getByText('FOCUS')).toBeInTheDocument();
     expect(screen.getByText('1 / 2')).toBeInTheDocument();
     // 15 minutes of focus remained; one second has elapsed since resuming

@@ -6,7 +6,7 @@ import { ZenFocusTimer } from '../timer/ZenFocusTimer';
 import { ZenCountdownTimer } from '../timer/ZenCountdownTimer';
 import { ZenStopwatch } from '../timer/ZenStopwatch';
 import { ChallengesView } from '../challenges';
-import { AppSettings, SessionPlan } from '@/features/timer/types';
+import { AppSettings } from '@/features/timer/types';
 
 interface DashboardLayoutProps {
   settings: AppSettings;
@@ -15,8 +15,6 @@ interface DashboardLayoutProps {
   onOpenFeedback: () => void;
   initialTool?: number;
   onToolChange?: (tool: number) => void;
-  resumePlan?: SessionPlan | null;
-  onResumeConsumed?: () => void;
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
@@ -26,8 +24,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   onOpenFeedback,
   initialTool = 0,
   onToolChange,
-  resumePlan,
-  onResumeConsumed,
 }) => {
   const [currentTool, setCurrentTool] = useState(initialTool);
 
@@ -79,8 +75,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                 onOpenHistory={onOpenHistory}
                 settings={settings}
                 hideTopControls
-                resumePlan={resumePlan}
-                onResumeConsumed={onResumeConsumed}
               />
             </Box>
           )}

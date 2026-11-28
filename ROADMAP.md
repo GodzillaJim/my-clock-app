@@ -95,7 +95,7 @@ _Exit criteria: One storage path, a typed IPC contract, a pure tested timer engi
 - [ ] [#43](https://github.com/GodzillaJim/my-clock-app/issues/43) make SQLite the single storage path
 - [x] [#44](https://github.com/GodzillaJim/my-clock-app/issues/44) typed IPC contract shared by main, preload and renderer
 - [x] [#45](https://github.com/GodzillaJim/my-clock-app/issues/45) extract the timer into a pure state machine
-- [ ] [#82](https://github.com/GodzillaJim/my-clock-app/issues/82) tray Start, Ctrl+Shift+S and Space don't control the timer
+- [x] [#82](https://github.com/GodzillaJim/my-clock-app/issues/82) tray Start, Ctrl+Shift+S and Space don't control the timer
 - [ ] [#46](https://github.com/GodzillaJim/my-clock-app/issues/46) split focusStorage into domain services
 - [ ] [#47](https://github.com/GodzillaJim/my-clock-app/issues/47) break up oversized components
 - [ ] [#50](https://github.com/GodzillaJim/my-clock-app/issues/50) error boundaries and process crash handling
