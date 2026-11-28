@@ -38,6 +38,13 @@ if (os.release().startsWith('6.1')) app.disableHardwareAcceleration()
 // Set application name for Windows 10+ notifications
 if (process.platform === 'win32') app.setAppUserModelId(app.getName())
 
+// Let automated tests run against a throwaway profile instead of the user's
+// real database. Must happen before anything reads `userData` (including the
+// single-instance lock below).
+if (process.env.FOCUS_USER_DATA_DIR) {
+  app.setPath('userData', process.env.FOCUS_USER_DATA_DIR)
+}
+
 if (!app.requestSingleInstanceLock()) {
   app.quit()
   process.exit(0)
