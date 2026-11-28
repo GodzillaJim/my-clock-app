@@ -82,10 +82,17 @@ npm run lint        # ESLint (typescript-eslint, react-hooks, jsx-a11y), zero wa
 npm run format:check # Prettier; `npm run format` fixes
 npm run knip        # no unused files, dependencies or exports
 npm test            # test:unit, then test:e2e
-  npm run test:unit #   unit tests (jsdom), a few seconds, no build needed
+  npm run test:unit #   unit tests (jsdom) with coverage, a few seconds, no build needed
   npm run test:e2e  #   builds in test mode, then drives the real Electron app with Playwright
 npx vite build      # production build
 ```
+
+**Coverage** is measured on unit tests (report in `coverage/index.html`). Thresholds in
+`vitest.config.ts` ratchet: the run fails if coverage drops, and they're raised automatically when it
+improves — commit the bumped numbers with your change.
+
+The first unit run after installing or upgrading dependencies can fail with an "outdated
+optimized dependency" error while Vitest re-bundles React/MUI; just run it again.
 
 The e2e suite launches the real Electron app against a throwaway profile in your temp directory; it
 never touches your own Focus Sessions data, and works while the app is open.
