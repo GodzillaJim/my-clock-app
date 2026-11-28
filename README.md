@@ -104,20 +104,21 @@ formatting and lint issues are caught before they reach a commit. Bypass in an e
 
 ## Scripts
 
-| Command             | Description                                                                                 |
-| ------------------- | ------------------------------------------------------------------------------------------- |
-| `npm run dev`       | Run the app in development with hot reload                                                  |
-| `npm run check`     | Typecheck, lint, format check, knip, all tests and production build — run before every push |
-| `npm run typecheck` | TypeScript type check                                                                       |
-| `npm run lint`      | ESLint with zero warnings allowed                                                           |
-| `npm run format`    | Format everything with Prettier (`format:check` only checks)                                |
-| `npm run knip`      | Find unused files, dependencies and exports                                                 |
-| `npm test`          | Unit tests, then e2e tests                                                                  |
-| `npm run test:unit` | Unit tests only (jsdom) — fast, no build                                                    |
-| `npm run test:e2e`  | Build in test mode, then e2e tests against the real Electron app                            |
-| `npm run build`     | Typecheck, build and package for Windows                                                    |
-| `npm run dist`      | Same as `build`, never publishes                                                            |
-| `npm run preview`   | Preview the renderer build in a browser                                                     |
+| Command                   | Description                                                                                 |
+| ------------------------- | ------------------------------------------------------------------------------------------- |
+| `npm run dev`             | Run the app in development with hot reload                                                  |
+| `npm run check`           | Typecheck, lint, format check, knip, all tests and production build — run before every push |
+| `npm run typecheck`       | TypeScript type check                                                                       |
+| `npm run lint`            | ESLint with zero warnings allowed                                                           |
+| `npm run format`          | Format everything with Prettier (`format:check` only checks)                                |
+| `npm run knip`            | Find unused files, dependencies and exports                                                 |
+| `npm test`                | Unit tests, then e2e tests                                                                  |
+| `npm run test:unit`       | Unit tests only (jsdom) — fast, no build                                                    |
+| `npm run test:e2e`        | Build in test mode, then e2e tests against the real Electron app                            |
+| `npm run build`           | Typecheck, build and package for Windows                                                    |
+| `npm run dist`            | Same as `build`, never publishes                                                            |
+| `npm run preview`         | Preview the renderer build in a browser                                                     |
+| `npm run release:version` | Bump version, update CHANGELOG.md and tag from Conventional Commits                         |
 
 ## Project structure
 
@@ -152,7 +153,9 @@ Playwright (Electron e2e) · knip · electron-builder (NSIS)
 1. Pick an issue from the [roadmap](ROADMAP.md) (`priority:high` first within a milestone)
 2. Branch from `main`, make the change, and add or update tests
 3. Run `npm run check` — it must pass
-4. Open a PR that says `Closes #N` and ticks the matching box in `ROADMAP.md`
+4. Use [Conventional Commits](https://www.conventionalcommits.org) (`feat: …`, `fix: …`) — the
+   `commit-msg` hook enforces it — and give the PR a conventional title (squash merges use it)
+5. Open a PR that says `Closes #N` and ticks the matching box in `ROADMAP.md`
 
 ## License
 

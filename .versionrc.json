@@ -1,0 +1,17 @@
+{
+  "types": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "perf", "section": "Performance" },
+    { "type": "refactor", "section": "Refactoring" },
+    { "type": "docs", "section": "Documentation" },
+    { "type": "test", "section": "Tests" },
+    { "type": "build", "section": "Build" },
+    { "type": "chore", "hidden": true },
+    { "type": "style", "hidden": true },
+    { "type": "ci", "hidden": true }
+  ],
+  "commitUrlFormat": "https://github.com/GodzillaJim/my-clock-app/commit/{{hash}}",
+  "compareUrlFormat": "https://github.com/GodzillaJim/my-clock-app/compare/{{previousTag}}...{{currentTag}}",
+  "issueUrlFormat": "https://github.com/GodzillaJim/my-clock-app/issues/{{id}}"
+}

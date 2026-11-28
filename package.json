@@ -1,6 +1,6 @@
 {
   "name": "focus-sessions",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A Windows focus timer with planned focus/break sessions, crash recovery, history and challenges.",
   "author": "Jimna Njoroge",
   "license": "MIT",
@@ -37,7 +37,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "knip": "knip",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm run knip && npm test && vite build"
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm run knip && npm test && vite build",
+    "release:version": "commit-and-tag-version"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -52,6 +53,8 @@
     "uuid": "^11.0.3"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
     "@eslint/js": "^9.39.5",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^6.8.0",
@@ -63,6 +66,7 @@
     "@vitejs/plugin-react": "^4.3.3",
     "@vitest/coverage-v8": "^2.1.9",
     "autoprefixer": "^10.4.20",
+    "commit-and-tag-version": "^13.5.0",
     "electron": "^33.2.0",
     "electron-builder": "^24.13.3",
     "eslint": "^9.39.5",
@@ -88,7 +92,8 @@
     "vitest": "^2.1.5"
   },
   "simple-git-hooks": {
-    "pre-commit": "if [ -x node_modules/.bin/lint-staged ]; then node_modules/.bin/lint-staged; else echo \"pre-commit: lint-staged not installed, run npm ci\"; fi"
+    "pre-commit": "if [ -x node_modules/.bin/lint-staged ]; then node_modules/.bin/lint-staged; else echo \"pre-commit: lint-staged not installed, run npm ci\"; fi",
+    "commit-msg": "if [ -x node_modules/.bin/commitlint ]; then node_modules/.bin/commitlint --edit \"$1\"; else echo \"commit-msg: commitlint not installed, run npm ci\"; fi"
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": [
