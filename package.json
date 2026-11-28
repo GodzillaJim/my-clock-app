@@ -60,8 +60,8 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@types/uuid": "^10.0.0",
-    "@vitejs/plugin-react": "^4.3.3",
-    "@vitest/coverage-v8": "^2.1.9",
+    "@vitejs/plugin-react": "^6.3.0",
+    "@vitest/coverage-v8": "^5.1.2",
     "autoprefixer": "^10.4.20",
     "commit-and-tag-version": "^13.5.0",
     "dayjs": "^1.11.13",
@@ -86,10 +86,10 @@
     "typescript": "^5.4.2",
     "typescript-eslint": "^8.74.0",
     "uuid": "^11.0.3",
-    "vite": "^5.4.11",
-    "vite-plugin-electron": "^0.29.0",
-    "vite-plugin-electron-renderer": "^0.14.6",
-    "vitest": "^2.1.5"
+    "vite": "^8.4.0",
+    "vite-plugin-electron": "^1.2.0",
+    "vite-plugin-electron-renderer": "^1.0.0",
+    "vitest": "^5.1.2"
   },
   "simple-git-hooks": {
     "pre-commit": "if [ -x node_modules/.bin/lint-staged ]; then node_modules/.bin/lint-staged; else echo \"pre-commit: lint-staged not installed, run npm ci\"; fi",
