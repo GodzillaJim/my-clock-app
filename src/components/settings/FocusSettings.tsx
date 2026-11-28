@@ -39,6 +39,9 @@ import { AppSettings, DEFAULT_SETTINGS } from '@/features/timer/types';
 import { focusStorage } from '@/services/focusStorage';
 import { notificationService } from '@/services/notificationService';
 import { SOUND_OPTIONS } from '@/services/sounds';
+import { createLogger } from '@/services/logger';
+
+const log = createLogger('FocusSettings');
 
 interface FocusSettingsProps {
   open: boolean;
@@ -83,7 +86,6 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
 
   useEffect(() => {
     if (open) {
-      console.log('Settings dialog opened, resetting local settings to:', settings);
       setLocalSettings(settings);
       setIsDirty(false);
       setIsSaving(false);
@@ -93,12 +95,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
   }, [open, settings]);
 
   const handleSettingChange = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
-    console.log('Setting change:', key, 'to:', value);
-    setLocalSettings((prev) => {
-      const newSettings = { ...prev, [key]: value };
-      console.log('New local settings:', newSettings);
-      return newSettings;
-    });
+    setLocalSettings((prev) => ({ ...prev, [key]: value }));
     setIsDirty(true);
   };
 
@@ -109,21 +106,18 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
     setSaveError(null);
 
     try {
-      console.log('Saving settings with presets:', localSettings.quickPresets);
       const appState = await focusStorage.getAppState();
       appState.settings = localSettings;
-      console.log('App state before save:', appState);
       await focusStorage.saveAppState(appState);
       onSettingsChange(localSettings);
       setIsDirty(false);
-      console.log('Settings saved successfully');
 
       // Show success state briefly before closing
       setTimeout(() => {
         onClose();
       }, 800);
     } catch (error) {
-      console.error('Failed to save settings:', error);
+      log.error('Failed to save settings:', error);
       setSaveError(error instanceof Error ? error.message : 'Unknown error occurred');
     } finally {
       setIsSaving(false);
@@ -136,9 +130,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
   };
 
   const handlePresetAdd = (value: number) => {
-    console.log('Adding preset:', value, 'Current presets:', localSettings.quickPresets);
     const newPresets = [...localSettings.quickPresets, value].sort((a, b) => a - b);
-    console.log('New presets array:', newPresets);
     handleSettingChange('quickPresets', newPresets);
   };
 

@@ -29,6 +29,9 @@ import { focusStorage as focusStorageService } from '@/services/focusStorage';
 import { persistenceService } from '@/services/persistenceService';
 import { v4 as uuidv4 } from 'uuid';
 import { useTickSound } from '@/features/timer/hooks/useTickSound';
+import { createLogger } from '@/services/logger';
+
+const log = createLogger('ZenFocusTimer');
 
 dayjs.extend(duration);
 
@@ -188,7 +191,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     persistenceService.savePlanSnapshot(updated);
     focusStorageService
       .saveSessionPlan(updated)
-      .catch((err) => console.error('Failed to persist plan:', err));
+      .catch((err) => log.error('Failed to persist plan:', err));
     return updated;
   };
 
@@ -230,7 +233,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     try {
       await focusStorageService.addSession(record);
     } catch (error) {
-      console.error('Failed to save session record:', error);
+      log.error('Failed to save session record:', error);
     }
   };
 
@@ -261,7 +264,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       };
 
       focusStorageService.addSession(record).catch((error) => {
-        console.error('Failed to save session record:', error);
+        log.error('Failed to save session record:', error);
       });
 
       // Update plan segment as completed
@@ -297,7 +300,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
           persistenceService.savePlanSnapshot(updated);
           focusStorageService
             .saveSessionPlan(updated)
-            .catch((err) => console.error('Failed to persist plan:', err));
+            .catch((err) => log.error('Failed to persist plan:', err));
         } else {
           // Last segment — plan is completed
           updatePlanSegment(plan, currentIndex, segUpdates, {
@@ -308,7 +311,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
           // Recalculate lifetime stats
           focusStorageService
             .recalculateLifetimeStats()
-            .catch((err) => console.error('Failed to recalculate stats:', err));
+            .catch((err) => log.error('Failed to recalculate stats:', err));
           setCurrentPlan(null);
           currentPlanRef.current = null;
         }
@@ -434,7 +437,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     currentPlanRef.current = plan;
     focusStorageService
       .saveSessionPlan(plan)
-      .catch((err) => console.error('Failed to save initial plan:', err));
+      .catch((err) => log.error('Failed to save initial plan:', err));
     persistenceService.savePlanSnapshot(plan);
 
     const firstSessionDuration = newSessions[0]?.duration || 0;
@@ -538,7 +541,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     // Persist
     focusStorageService
       .saveSessionPlan(newPlan)
-      .catch((err) => console.error('Failed to save resumed plan:', err));
+      .catch((err) => log.error('Failed to save resumed plan:', err));
     persistenceService.savePlanSnapshot(newPlan);
 
     // Finalize the old plan: its remaining work has been carried into the new
@@ -569,7 +572,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
     };
     focusStorageService
       .saveSessionPlan(finalizedOld)
-      .catch((err) => console.error('Failed to finalize old plan:', err));
+      .catch((err) => log.error('Failed to finalize old plan:', err));
 
     // Start timer
     const firstExpiry = dayjs().add(firstDuration, 'second').toDate();
@@ -638,11 +641,11 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
       currentPlanRef.current = null;
       focusStorageService
         .saveSessionPlan(abandoned)
-        .catch((err) => console.error('Failed to save abandoned plan:', err));
+        .catch((err) => log.error('Failed to save abandoned plan:', err));
       persistenceService.clearPlanSnapshot();
       focusStorageService
         .recalculateLifetimeStats()
-        .catch((err) => console.error('Failed to recalculate stats:', err));
+        .catch((err) => log.error('Failed to recalculate stats:', err));
     }
 
     const newExpiryTimestamp = dayjs()
@@ -697,7 +700,7 @@ export const ZenFocusTimer: React.FC<ZenFocusTimerProps> = ({
         persistenceService.savePlanSnapshot(updated);
         focusStorageService
           .saveSessionPlan(updated)
-          .catch((err) => console.error('Failed to persist plan:', err));
+          .catch((err) => log.error('Failed to persist plan:', err));
       }
 
       const nextIndex = currentSessionIndex + 1;

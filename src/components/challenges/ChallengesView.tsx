@@ -25,6 +25,9 @@ import { ChallengeCard } from './ChallengeCard';
 import { ChallengeCalendar } from './ChallengeCalendar';
 import { CreateChallengeDialog } from './CreateChallengeDialog';
 import dayjs from 'dayjs';
+import { createLogger } from '@/services/logger';
+
+const log = createLogger('ChallengesView');
 
 export const ChallengesView: React.FC = () => {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
@@ -48,7 +51,7 @@ export const ChallengesView: React.FC = () => {
       const data = await focusStorage.getChallenges();
       setChallenges(data);
     } catch (error) {
-      console.error('Failed to load challenges:', error);
+      log.error('Failed to load challenges:', error);
     } finally {
       setLoading(false);
     }

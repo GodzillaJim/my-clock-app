@@ -62,6 +62,9 @@ npm run dev     # starts Vite and launches the app with hot reload
 ```
 
 Your data lives in a `focus-sessions.db` SQLite file in the app's folder under `%APPDATA%`.
+Logs from both processes go to `logs\main.log` in the same folder (rotated to `main.old.log`
+at 5 MB). App code logs through `createLogger(scope)` from `src/services/logger.ts` (renderer)
+or `electron/main/logger.ts` (main); `console.*` is a lint error.
 
 ### Build an installer
 

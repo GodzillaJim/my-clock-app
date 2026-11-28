@@ -23,6 +23,9 @@ import { focusStorage } from '@/services/focusStorage';
 import { useTickSound } from '@/features/timer/hooks/useTickSound';
 import { useTimer } from 'react-timer-hook';
 import dayjs from 'dayjs';
+import { createLogger } from '@/services/logger';
+
+const log = createLogger('CommandCenterLayout');
 
 interface SimpleSession {
   type: 'focus' | 'break';
@@ -127,7 +130,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
     try {
       await focusStorage.addSession(record);
     } catch (error) {
-      console.error('Failed to save session record:', error);
+      log.error('Failed to save session record:', error);
     }
   };
 
@@ -157,7 +160,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
       };
 
       focusStorage.addSession(record).catch((error) => {
-        console.error('Failed to save session record:', error);
+        log.error('Failed to save session record:', error);
       });
     }
 
@@ -209,7 +212,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
         setRecentSessions(history.sessions?.slice(-5).reverse() || []);
       }
     } catch (error) {
-      console.error('Failed to load stats:', error);
+      log.error('Failed to load stats:', error);
     }
   };
 
@@ -302,7 +305,7 @@ export const CommandCenterLayout: React.FC<CommandCenterLayoutProps> = ({
         totalElapsed: finalizedSegments.reduce((sum, s) => sum + (s.actualDuration || 0), 0),
         lastUpdated: nowTs,
       } as SessionPlan)
-      .catch((err) => console.error('Failed to finalize resumed plan:', err));
+      .catch((err) => log.error('Failed to finalize resumed plan:', err));
   };
 
   // Auto-trigger resume when a resumePlan prop is provided.

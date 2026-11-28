@@ -15,6 +15,9 @@ import { MomentumHeader } from './MomentumHeader';
 import { FocusHeatmap } from './FocusHeatmap';
 import { DayTimeline } from './DayTimeline';
 import { RhythmTrends } from './RhythmTrends';
+import { createLogger } from '@/services/logger';
+
+const log = createLogger('HistoryView');
 
 interface HistoryViewProps {
   settings: AppSettings;
@@ -130,7 +133,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ settings, onClose, onR
       setFocusByDate(map);
       setSeries(daily);
     } catch (err) {
-      console.error('Failed to load history overview:', err);
+      log.error('Failed to load history overview:', err);
     } finally {
       setLoading(false);
     }
@@ -146,7 +149,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ settings, onClose, onR
       const history = await focusStorage.getHistoryByDate(date);
       setDayPlans(synthesizePlanFromSessions(date, history));
     } catch (err) {
-      console.error('Failed to load day:', err);
+      log.error('Failed to load day:', err);
       setDayPlans([]);
     }
   };

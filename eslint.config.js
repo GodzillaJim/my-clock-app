@@ -47,4 +47,12 @@ export default tseslint.config(
       ],
     },
   },
+
+  // App code logs through the leveled loggers (src/services/logger.ts,
+  // electron/main/logger.ts), which persist to the log file
+  {
+    files: ['src/**/*.{ts,tsx}', 'electron/**/*.ts'],
+    ignores: ['**/__tests__/**'],
+    rules: { 'no-console': 'error' },
+  },
 );

@@ -19,6 +19,9 @@ import {
 import { BugReport, Lightbulb, Warning, ThumbDown } from '@mui/icons-material';
 
 import { FeedbackItem } from '@/types/feedback';
+import { createLogger } from '@/services/logger';
+
+const log = createLogger('FeedbackForm');
 
 interface FeedbackFormProps {
   open: boolean;
@@ -93,7 +96,7 @@ export const FeedbackForm: React.FC<FeedbackFormProps> = ({ open, onClose, onSub
         handleClose();
       }, 1500);
     } catch (error) {
-      console.error('Failed to submit feedback:', error);
+      log.error('Failed to submit feedback:', error);
     } finally {
       setIsSubmitting(false);
     }

@@ -1,5 +1,8 @@
 import { SessionNotification, AppSettings } from '@/features/timer/types';
 import { renderSound } from './sounds';
+import { createLogger } from '@/services/logger';
+
+const log = createLogger('notificationService');
 
 class NotificationService {
   private audioContext: AudioContext | null = null;
@@ -14,7 +17,7 @@ class NotificationService {
     try {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     } catch (error) {
-      console.warn('Audio context not supported:', error);
+      log.warn('Audio context not supported:', error);
     }
   }
 
@@ -88,7 +91,7 @@ class NotificationService {
         }
       }
     } catch (error) {
-      console.error('Failed to show system notification:', error);
+      log.error('Failed to show system notification:', error);
     }
   }
 
@@ -188,7 +191,7 @@ class NotificationService {
 
       source.start(0);
     } catch (error) {
-      console.error('Failed to play sound:', error);
+      log.error('Failed to play sound:', error);
     }
   }
 
@@ -207,7 +210,7 @@ class NotificationService {
 
   async requestPermission(): Promise<boolean> {
     if (!('Notification' in window)) {
-      console.warn('This browser does not support notifications');
+      log.warn('This browser does not support notifications');
       return false;
     }
 
