@@ -35,6 +35,17 @@ export type KvKey = keyof KvValues;
 /** A key together with its value, as `db:kv:set` receives it. */
 export type KvEntry = { [K in KvKey]: [key: K, value: KvValues[K]] }[KvKey];
 
+/** A database backup in the backups folder. */
+export interface BackupInfo {
+  name: string;
+  createdAt: number;
+  sizeBytes: number;
+}
+
+/** Rows per table after an import or restore. */
+export type ReplaceOutcome =
+  { status: 'done'; counts: Record<string, number> } | { status: 'cancelled' };
+
 export interface SessionNotificationPayload {
   title: string;
   body: string;
@@ -48,6 +59,16 @@ export interface InvokeChannels {
   'update-tray-status': { args: [status: string]; result: void };
   'session-notification': { args: [notification: SessionNotificationPayload]; result: void };
   'app:reportProblem': { args: []; result: void };
+
+  // Data export, import, backup and restore (dialogs shown by main)
+  'data:export': {
+    args: [];
+    result: { status: 'done'; fileName: string } | { status: 'cancelled' };
+  };
+  'data:import': { args: []; result: ReplaceOutcome };
+  'data:backupNow': { args: []; result: BackupInfo };
+  'data:listBackups': { args: []; result: BackupInfo[] };
+  'data:restoreBackup': { args: [name: string]; result: ReplaceOutcome };
 
   // Sessions
   'db:sessions:save': { args: [session: SessionRecord]; result: void };
@@ -117,6 +138,14 @@ export interface ElectronAPI {
   updateTrayStatus: Invoker<'update-tray-status'>;
   sessionNotification: Invoker<'session-notification'>;
   reportProblem: Invoker<'app:reportProblem'>;
+
+  data: {
+    export: Invoker<'data:export'>;
+    import: Invoker<'data:import'>;
+    backupNow: Invoker<'data:backupNow'>;
+    listBackups: Invoker<'data:listBackups'>;
+    restoreBackup: Invoker<'data:restoreBackup'>;
+  };
 
   onTrayStartSession: Subscriber;
   onTrayOpenSettings: Subscriber;

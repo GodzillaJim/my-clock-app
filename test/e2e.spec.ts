@@ -108,6 +108,7 @@ if (process.platform === 'linux') {
         require: 'undefined',
         process: 'undefined',
         api: [
+          'data',
           'db',
           'log',
           'minimizeToTray',
@@ -301,6 +302,66 @@ if (process.platform === 'linux') {
       await page.getByRole('button', { name: 'Stop session' }).first().click();
       await page.getByText('READY', { exact: true }).waitFor({ timeout: 10000 });
     }, 30000);
+    test('exports, backs up, imports and restores all data from Settings → Data', async () => {
+      const exportFile = path.join(userDataDir, 'export-e2e.json');
+      // Stub the native dialogs in main: save/open pick exportFile, confirmations say yes
+      const stubbed = await electronApp.evaluate(({ dialog }, file) => {
+        const stubs = {
+          showSaveDialog: async () => ({ canceled: false, filePath: file }),
+          showOpenDialog: async () => ({ canceled: false, filePaths: [file] }),
+          showMessageBox: async () => ({ response: 0, checkboxChecked: false }),
+        };
+        Object.assign(dialog, stubs);
+        return dialog.showSaveDialog === stubs.showSaveDialog;
+      }, exportFile);
+      expect(stubbed).toBe(true);
+
+      const sessionIds = () =>
+        page.evaluate(async () =>
+          (await (window as unknown as ProbeWindow).electronAPI.db.sessions.getHistory())
+            .map((s) => s.id)
+            .sort(),
+        );
+      const openDataTab = async () => {
+        await page.keyboard.press('Control+s');
+        await page.getByRole('tab', { name: /data/i }).click();
+      };
+      const before = await sessionIds();
+      expect(before.length).toBeGreaterThan(0);
+
+      // Export
+      await openDataTab();
+      await page.getByRole('button', { name: 'Export data…' }).click();
+      await page.getByText('Exported to export-e2e.json.').waitFor({ timeout: 10000 });
+      const exported = JSON.parse(fs.readFileSync(exportFile, 'utf8'));
+      expect(exported.format).toBe('focus-sessions-export');
+      expect(exported.tables.sessions).toHaveLength(before.length);
+
+      // Back up now
+      await page.getByRole('button', { name: 'Back up now' }).click();
+      await page.getByText('Backup created.').waitFor({ timeout: 10000 });
+      await page.getByText(/Manual backup/).waitFor({ timeout: 10000 });
+
+      // Change the data, then import the export: the app reloads with the exported data
+      await page.evaluate(async (id) => {
+        await (window as unknown as ProbeWindow).electronAPI.db.sessions.delete(id);
+      }, before[0]);
+      expect(await sessionIds()).toHaveLength(before.length - 1);
+      await page.getByRole('button', { name: 'Import data…' }).click();
+      await page.getByText('READY', { exact: true }).waitFor({ timeout: 15000 });
+      expect(await sessionIds()).toEqual(before);
+
+      // Restore the manual backup (also the full data set) from the list
+      await page.evaluate(async (id) => {
+        await (window as unknown as ProbeWindow).electronAPI.db.sessions.delete(id);
+      }, before[0]);
+      await openDataTab();
+      await page.getByText(/Before an import/).waitFor({ timeout: 10000 });
+      const manual = page.getByRole('listitem').filter({ hasText: 'Manual backup' });
+      await manual.getByRole('button', { name: /Restore backup/ }).click();
+      await page.getByText('READY', { exact: true }).waitFor({ timeout: 15000 });
+      expect(await sessionIds()).toEqual(before);
+    }, 60000);
     test('opens settings and history from the tray menu', async () => {
       const send = (channel: string) =>
         electronApp.evaluate(

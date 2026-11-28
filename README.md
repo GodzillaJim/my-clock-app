@@ -35,6 +35,7 @@ Built with Electron, React and TypeScript, with all data stored locally in SQLit
 
 - Countdown timer and stopwatch
 - Challenges: multi-day goals tracked on a calendar
+- Export and import all data, back up on demand, and restore any backup (Settings → Data)
 - _Report a problem_ (settings or sidebar) opens a pre-filled GitHub issue and shows the log file to attach
 
 **Look and feel**

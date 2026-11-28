@@ -134,6 +134,11 @@ export const ipcArgSchemas: ArgSchemas = {
   'show-window': none,
   'update-tray-status': one(z.string().max(200)),
   'app:reportProblem': none,
+  'data:export': none,
+  'data:import': none,
+  'data:backupNow': none,
+  'data:listBackups': none,
+  'data:restoreBackup': one(z.string().min(1).max(200)),
   'session-notification': one(z.object({ title: z.string().max(200), body: z.string().max(1000) })),
 
   'db:sessions:save': one(sessionRecord),

@@ -85,10 +85,6 @@ export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   uiTheme: 'deepFocus' | 'aerogel'; // Visual style theme
   layout: 'zen' | 'dashboard' | 'commandCenter'; // UI layout style
-
-  // Data Settings
-  autoResetDaily: boolean;
-  exportFormat: 'csv' | 'json';
 }
 
 // Current timer state for persistence
@@ -144,8 +140,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
   uiTheme: 'deepFocus',
   layout: 'zen',
-  autoResetDaily: true,
-  exportFormat: 'csv',
 };
 
 // Format seconds directly (used by updated session records now in seconds)

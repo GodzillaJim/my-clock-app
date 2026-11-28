@@ -166,7 +166,7 @@ export const FocusSettings: React.FC<FocusSettingsProps> = ({
           <AppearanceSection settings={localSettings} onChange={handleSettingChange} />
         </TabPanel>
         <TabPanel value={activeTab} index={3}>
-          <DataSection settings={localSettings} onChange={handleSettingChange} />
+          <DataSection />
         </TabPanel>
       </DialogContent>
 
